@@ -7,6 +7,8 @@
 (require basedir)
 (require racket/os)
 (require racket/file)
+(require racket/function)
+(require racket/string)
 
 (require (for-syntax racket/base))
 (require (for-syntax syntax/parse))
@@ -284,7 +286,7 @@
                            [next-is-process? (values #f (pipeline-member-port-to next))]
                            [next (make-pipe)]
                            [(not from-line-port) (make-pipe)]
-                           [else from-line-port])]
+                           [else (values #f from-line-port)])]
                         [(err-ret err-use)
                          (if err-spec
                              (values #f err-spec)
@@ -297,7 +299,7 @@
                                  (with-handlers
                                    ([(λ (exn) #t)
                                      (λ (exn) (set-box! err-box exn))])
-                                   (let ([thread-ret (pipeline-member-thread m)])
+                                   (let ([thread-ret {(pipeline-member-thread m)}])
                                      (set-box! ret-box thread-ret))))))]
                     [ret-member (pipeline-member to-ret from-ret err-ret
                                                  #f ret-thread ret-box err-box
@@ -328,6 +330,13 @@
          [pline (run-pipeline pspec)])
     (pipeline-wait pline)))
 
+(define (program-ize-func f)
+  (λ ()
+    (let* ([in-str (port->string (current-input-port))]
+           [out-str (f in-str)])
+      (display out-str)
+      (flush-output))))
+
 
 (module+ main
   ;(display (pipe2 '(ls /dev) '(grep tty)))
@@ -335,8 +344,20 @@
   #;(define-values (proc out in err)
     (subprocess+ #:in (current-input-port) #:out (current-output-port) #:err (current-error-port) '(vim ~/test)))
 
+  (define (grep-func regex str)
+    (string-append
+     (string-join (filter identity
+                          (for/list ([line (string-split str "\n")])
+                            (and (regexp-match regex line) line)))
+                  "\n")
+     "\n"))
+  (define (my-grep regex)
+    (program-ize-func (λ (str) (grep-func regex str))))
 
-  (make-run-pipeline '(ls -l /dev) '(grep tty))
+
+  ;(make-run-pipeline '(ls -l /dev) '(grep tty))
+  ;(make-run-pipeline '(ls -l /dev) (program-ize-func (curry grep-func "tty")))
+  (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))
 
   #;(with-output-to-string
     (λ ()
