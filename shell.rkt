@@ -15,6 +15,7 @@
 
 (provide
  make-run-pipeline
+ make-run-pipeline->output
  program-ize-func
  )
 
@@ -61,11 +62,24 @@
 (define (pipeline-wait pline)
   (for ([m (pipeline-members pline)])
     (pipeline-member-wait m)))
-
+(define (pipeline-end-wait pline)
+  (pipeline-member-wait (car (reverse (pipeline-members pline)))))
 (define (pipeline-member-wait member)
   (if (pipeline-member-process? member)
       (subprocess-wait (pipeline-member-subprocess member))
       (thread-wait (pipeline-member-thread member))))
+
+(define (pipeline-status pline)
+  (pipeline-member-status (car (reverse (pipeline-members pline)))))
+(define (pipeline-member-status m)
+  (if (pipeline-member-process? m)
+      (subprocess-status (pipeline-member-subprocess m))
+      (let* ([dead (thread-dead? (pipeline-member-thread m))]
+             [ret (unbox (pipeline-member-thread-ret-box m))]
+             [err (unbox (pipeline-member-thread-exn-box m))])
+        (if (not dead)
+            'running
+            (or ret err)))))
 
 (define (run-pipeline pipeline-spec)
   (let* ([members (pipeline-members pipeline-spec)]
@@ -207,14 +221,44 @@
                                               [port-err (current-error-port)]))
                                            (pipeline-members pspec))])]
          [pline (run-pipeline pspec)])
-    (pipeline-wait pline)))
+    (pipeline-end-wait pline)))
+
+(define (make-run-pipeline->output #:in [in ""]. specs)
+  (let* ([out (open-output-string)]
+         [err (open-output-string)]
+         [in-use (if (string? in)
+                     (open-input-string in)
+                     in)]
+         [pspec (apply make-pipeline-spec specs
+                       #:in in-use
+                       #:out out)]
+         [pspec (struct-copy pipeline pspec
+                             [members (map (λ (m)
+                                             (struct-copy
+                                              pipeline-member m
+                                              [port-err err]))
+                                           (pipeline-members pspec))])]
+         [pline (run-pipeline pspec)]
+         ;; TODO - if a pipeline ends with `head -n 1` and a middle process is taking
+         ;; forever spitting out tons of stuff, it keeps going.  In bash the pipeline
+         ;; would end quickly.
+         [wait (pipeline-end-wait pline)]
+         [status (pipeline-status pline)]
+         )
+    (if (not (equal? 0 status))
+        (error 'make-run-pipeline->output
+               "nonzero pipeline exit (~a) with stderr: ~v"
+               status
+               (get-output-string err))
+        (get-output-string out))))
 
 (define (program-ize-func f)
   (λ ()
     (let* ([in-str (port->string (current-input-port))]
            [out-str (f in-str)])
       (display out-str)
-      (flush-output))))
+      (flush-output)
+      0)))
 
 
 (module+ main
@@ -233,8 +277,27 @@
   ;(make-run-pipeline '(ls -l /dev) '(grep tty))
   ;(make-run-pipeline '(ls -l /dev) (program-ize-func (curry grep-func "tty")))
   ;(make-run-pipeline '(ls -l /dev) (my-grep "uucp"))
-  (with-output-to-string (λ () (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))))
+  ;(with-output-to-string (λ () (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))))
+  ;(make-run-pipeline->output '(ls -l /dev) '(grep uucp))
+  ;(make-run-pipeline->output '(ls -l /dev) '(grep "this string will not be there"))
 
+  (define (vim-some-rc-file)
+    (define file (string-trim
+                  (make-run-pipeline->output
+                   `(find ,(expand-user-path "~") -maxdepth 1 -regex ".*rc")
+                   '(sort)
+                   '(head -n 1))))
+    (make-run-pipeline `(vim ,file)))
+  ;(vim-some-rc-file)
+
+  ;; open a random file from etc
+  #;(make-run-pipeline `(vim ,(string-trim
+                             (make-run-pipeline->output
+                              '(find /etc -maxdepth 1 -type f)
+                              '(shuf)
+                              '(head -n 1)))))
+
+  (make-run-pipeline->output '(ls -l /dev) (my-grep "uucp"))
 
   #|
   TODO
