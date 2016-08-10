@@ -8,6 +8,9 @@
 (require racket/os)
 (require racket/file)
 
+(require (for-syntax racket/base))
+(require (for-syntax syntax/parse))
+
 (provide subprocess+
          pcom/standard
          )
@@ -115,15 +118,15 @@
       (values sproc2 to1 from2 err1-out err2-out)
       )))
 
-(define (pipeline #:in [in #f] #:out [out #f] #:errs [errs #f] argvs)
+(define (pipeline-v1 #:in [in #f] #:out [out #f] #:errs [errs #f] argvs)
   (let* ([n-argv (length argvs)]
          [zero-argvs? (if (equal? 0 n-argv)
-                          (error 'pipeline "Needs at least one subprocess specification.")
+                          (error 'pipeline-v1 "Needs at least one subprocess specification.")
                           #f)]
          [errspec-list (if errs errs (make-list n-argv #f))]
          [list-mismatch? (if (equal? n-argv (length errspec-list))
                              #f
-                             (error 'pipeline "Error port specification list didn't match the length of the subprocess list"))])
+                             (error 'pipeline-v1 "Error port specification list didn't match the length of the subprocess list"))])
     (let-values ([(reversed-sprocs reversed-errs reversed-froms)
                   (for/fold ([sprocs-r '()]
                              [errs-r '()]
@@ -159,6 +162,172 @@
         (let ([first-nonzero (memf (λ (x) (not (equal? x 0))) stati)])
           (if first-nonzero first-nonzero 0)))))
 
+(struct pipeline-member
+  (port-to port-from port-err
+           subprocess thread thread-ret-box thread-exn-box
+           spec?)
+  #:transparent)
+(define (pipeline-member-process? pmember)
+  (and (pipeline-member? pmember) (pipeline-member-subprocess pmember)))
+(define (pipeline-member-thread? pmember)
+  (and (pipeline-member? pmember) (pipeline-member-thread pmember)))
+
+(struct pipeline
+  (port-to port-from port-err-list members spec?)
+  #:transparent)
+
+
+(define (pipeline-wait pline)
+  (for ([m (pipeline-members pline)])
+    (pipeline-member-wait m)))
+
+(define (pipeline-member-wait member)
+  (if (pipeline-member-process? member)
+      (subprocess-wait (pipeline-member-subprocess member))
+      (thread-wait (pipeline-member-thread member))))
+
+(define (run-pipeline pipeline-spec)
+  (let* ([members (pipeline-members pipeline-spec)]
+         [to-port (pipeline-port-to pipeline-spec)]
+         [to-use (if (and (pipeline-member-process? (car members))
+                          (port? to-port)
+                          (not (file-stream-port? to-port)))
+                     #f
+                     to-port)]
+         [from-port (pipeline-port-from pipeline-spec)]
+         [from-use (if (and (pipeline-member-process? (car (reverse members)))
+                            (port? from-port)
+                            (not (file-stream-port? from-port)))
+                       #f
+                       from-port)]
+         [run-members (run-pipeline-members members to-use from-use)]
+         [err-outs (map pipeline-member-port-err run-members)]
+         [to-out (pipeline-member-port-to (car run-members))]
+         [from-out (pipeline-member-port-from (car (reverse run-members)))]
+         [sanitized (map (λ (m) (struct-copy pipeline-member m
+                                             [port-to #f]
+                                             [port-from #f]))
+                         run-members)]
+         [from-ret (if (equal? from-port from-use)
+                       from-out
+                       (begin
+                         (thread (λ () (copy-port from-out from-port)))
+                         #f))]
+         [to-ret (if (equal? to-port to-use)
+                     to-out
+                     (begin
+                       (thread (λ () (copy-port to-port to-out)))
+                       #f))])
+    (pipeline to-ret from-ret err-outs sanitized #f)))
+
+(define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
+  ;; This should only be called by run-pipeline
+  ;; Start a the pipeline, return started members.
+  ;; To-line-port and from-line-port should be file-stream-ports if they connect
+  ;; to processes.
+  (define pipeline-length (length pipeline-member-specs))
+  (define r1-members-rev
+    (for/fold ([m-outs '()])
+              ([m pipeline-member-specs]
+               [i (in-range pipeline-length)])
+      (cond
+        ;; leave thread starting to round 2
+        [(pipeline-member-thread? m) (cons m m-outs)]
+        [else
+         (let* ([to-spec (cond [(null? m-outs)
+                                to-line-port]
+                               [(pipeline-member-process? (car m-outs))
+                                (pipeline-member-port-from (car m-outs))]
+                               [else #f])]
+                [from-spec (if (equal? i (sub1 pipeline-length))
+                               from-line-port
+                               #f)]
+                [err-spec (pipeline-member-port-err m)]
+                [err-to-send (if (and (port? err-spec)
+                                      (not (file-stream-port? err-spec)))
+                                 #f
+                                 err-spec)])
+           (let-values ([(sproc from to err-from)
+                         (subprocess+ (pipeline-member-subprocess m)
+                                      #:err err-to-send
+                                      #:in to-spec
+                                      #:out from-spec)])
+             (let ([out-member (pipeline-member to from err-from sproc #f #f #f #f)])
+               (when (and err-spec err-from)
+                 ;; I need to wire up the file-stream-port output into the original port
+                 (thread (λ () (copy-port err-from err-spec))))
+               (cons out-member m-outs))))])))
+
+  (define r1-members (reverse r1-members-rev))
+  (define r2-members-rev
+    (for/fold ([m-outs '()])
+              ([m r1-members]
+               [i (in-range pipeline-length)])
+      (cond
+        [(pipeline-member-process? m) (cons m m-outs)]
+        [else
+         (let* ([prev (and (not (null? m-outs))
+                           (car m-outs))]
+                [next (and (< i (sub1 pipeline-length))
+                           (list-ref r1-members i))]
+                [next-is-process? (and next (pipeline-member-process? next))]
+                [err-spec (pipeline-member-port-err m)]
+                [ret-box (box #f)]
+                [err-box (box #f)])
+           (let-values ([(to-use to-ret)
+                         (cond
+                           [(and (not prev) (not to-line-port)) (make-pipe)]
+                           [prev (values (pipeline-member-port-from prev) #f)]
+                           [else (values to-line-port #f)])]
+                        [(from-ret from-use)
+                         (cond
+                           [next-is-process? (values #f (pipeline-member-port-to next))]
+                           [next (make-pipe)]
+                           [(not from-line-port) (make-pipe)]
+                           [else from-line-port])]
+                        [(err-ret err-use)
+                         (if err-spec
+                             (values #f err-spec)
+                             (make-pipe))])
+             (let* ([ret-thread
+                     (parameterize ([current-input-port to-use]
+                                    [current-output-port from-use]
+                                    [current-error-port err-use])
+                       (thread (λ ()
+                                 (with-handlers
+                                   ([(λ (exn) #t)
+                                     (λ (exn) (set-box! err-box exn))])
+                                   (let ([thread-ret (pipeline-member-thread m)])
+                                     (set-box! ret-box thread-ret))))))]
+                    [ret-member (pipeline-member to-ret from-ret err-ret
+                                                 #f ret-thread ret-box err-box
+                                                 #f)])
+               (cons ret-member m-outs))))])))
+  (define r2-members (reverse r2-members-rev))
+  r2-members)
+
+(define (make-pipeline-member-spec s-exp-or-thunk
+                                   #:err [err #f])
+  (if (procedure? s-exp-or-thunk)
+      (pipeline-member #f #f err #f s-exp-or-thunk #f #f #t)
+      (pipeline-member #f #f err s-exp-or-thunk #f #f #f #t)))
+(define (make-pipeline-spec #:in [in #f]
+                            #:out [out #f]
+                            . members)
+  (pipeline in out #f (map make-pipeline-member-spec members) #t))
+(define (make-run-pipeline . specs)
+  (let* ([pspec (apply make-pipeline-spec specs
+                       #:in (current-input-port)
+                       #:out (current-output-port))]
+         [pspec (struct-copy pipeline pspec
+                             [members (map (λ (m)
+                                             (struct-copy
+                                              pipeline-member m
+                                              [port-err (current-error-port)]))
+                                           (pipeline-members pspec))])]
+         [pline (run-pipeline pspec)])
+    (pipeline-wait pline)))
+
 
 (module+ main
   ;(display (pipe2 '(ls /dev) '(grep tty)))
@@ -167,24 +336,12 @@
     (subprocess+ #:in (current-input-port) #:out (current-output-port) #:err (current-error-port) '(vim ~/test)))
 
 
-  #;(subprocess-wait proc)
-  ;(pcom/standard 'ls '-l)
+  (make-run-pipeline '(ls -l /dev) '(grep tty))
+
   #;(with-output-to-string
     (λ ()
-      (define-values (sp o i e) (subprocess+ #:out (current-output-port) '(ls -a)))
-      (subprocess-wait sp)
-      ))
-
-  ;(collect-garbage)
-  ;(pcom/standard 'date)
-  ;(sleep 5)
-  ;(collect-garbage)
-  ;(pcom/standard 'vi)
-
-  (with-output-to-string
-    (λ ()
       (define-values (procs to-line from-line errs)
-        (pipeline (list '(ls -l) '(grep Jul) '(wc) ) #:out (current-output-port)))
+        (pipeline-v1 (list '(ls -l) '(grep Jul) '(wc) ) #:out (current-output-port)))
       (subprocesses-wait procs)))
 
 
