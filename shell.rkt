@@ -4,6 +4,9 @@
 (require racket/system)
 (require ffi/unsafe)
 (require racket/list)
+(require basedir)
+(require racket/os)
+(require racket/file)
 
 (provide subprocess+
          pcom/standard
@@ -15,17 +18,15 @@
   (apply subprocess (append (list out in err (find-executable-path cmd)) args)))
 
 (define (port->file-stream-port p)
-  (define fifo-name (string-append "/tmp/racket-shell-fifo-"
-                                   (number->string (random 1 4123456789))))
   (cond [(and (port? p) (file-stream-port? p)) p]
         [(input-port? p)
-         (let-values ([(from-pipe to-pipe) (open-os-fifo fifo-name)])
+         (let-values ([(from-pipe to-pipe) (open-os-fifo)])
            (thread (λ ()
                      (copy-port p to-pipe)
                      (close-output-port to-pipe)))
            from-pipe)]
         [(output-port? p)
-         (let-values ([(from-pipe to-pipe) (open-os-fifo fifo-name)])
+         (let-values ([(from-pipe to-pipe) (open-os-fifo)])
            (thread (λ ()
                      (copy-port from-pipe p)
                      (close-input-port from-pipe)))
@@ -43,7 +44,14 @@
                      -> (if (equal? 0 ret)
                             (void)
                             (error 'mkfifo "unable to create fifo")))))
-(define (open-os-fifo fifo-name)
+(define (open-os-fifo)
+  (define fifo-name
+    (writable-runtime-file
+     #:program "racket-shell"
+     (string-append "pid" (number->string (getpid)) "/"
+                    "fifo_ms" (number->string (current-milliseconds))
+                    "_r" (number->string (random 1 4123456789)))))
+  (make-parent-directory* fifo-name)
   (mkfifo fifo-name #o700)
   (let* ([to-fifo (open-output-file fifo-name #:exists 'append)]
          [from-fifo (open-input-file fifo-name)])
@@ -172,9 +180,65 @@
   ;(sleep 5)
   ;(collect-garbage)
   ;(pcom/standard 'vi)
-  (define-values (procs to-line from-line errs)
-    (pipeline (list '(ls -l) '(grep Jul) '(wc) ) #:out (current-output-port)))
-  (subprocesses-wait procs)
+
+  (with-output-to-string
+    (λ ()
+      (define-values (procs to-line from-line errs)
+        (pipeline (list '(ls -l) '(grep Jul) '(wc) ) #:out (current-output-port)))
+      (subprocesses-wait procs)))
+
+
+  #|
+  TODO
+  - I don't need the mkfifo nonsense, I just need to start subprocesses and get
+    the file-stream-ports that they give.  I just need to figure out the right
+    order to start things in and wire up the ports correctly.  If the whole-pipeline
+    input or output go to a non-file-stream port, I can just use copy-port.
+
+  - pipelines should be able to include racket functions, which should probably
+    be run in their own threads.  There should be a form to use racket functions
+    like processes (eg. they get a stdin, stdout, stderr, return a status of
+    some sort), and a form for them to get their stdin as a string argument and
+    probably just return a string for their output.
+
+  - the string version can just entail a wrapper function that reads everything
+    from a port, passes it as a string, then displays that output to the output port.
+  - pipelines should be runnable in the background
+
+  - at some point job control should be possible, in which case it should be
+    possible to suspend/resume jobs, send them to the background/foreground,
+    stop them, and disown them.  Disowning will probably only work for pipelines
+    without any racket functions or filters in them.  But perhaps you should
+    be able to mark a pipeline as disownable, which would start a new racket
+    process which would run the pipeline.  That might be difficult -- perhaps
+    some closure is used in the pipeline -- how could it be copied to the new
+    racket process?  It looks like bash and zsh can disown a backgrounded shell
+    function and have it survive the shell exiting if that function was started
+    in the background, which tells me that backgrounded bash/zsh functions are
+    run in a subshell.  Presumably this means the process is forked, so that
+    the subshell can still access all previously defined functions.  I feel
+    like this could have many cases of subtle weirdness, so I'm not sure I
+    want to follow that direction without something more explicit marking a
+    clear boundary.  Also, fork() only works on Unix, and it would be nice if
+    the shell worked on Windows too, so if I can reasonably avoid relying on
+    fork, I should.
+
+  - This means I ought to wrap subprocess calls and function calls into some
+    wrapper struct that I can have the pipeline function inspect to determine
+    how to launch each one.  These should probably be called "jobs".  Should
+    everything run from the top level of a script/interaction should be a job?
+    There could be pipelines and whatnot started below the top level, maybe in
+    a top-level function call wrapped in @().  But unless it is wrappen in a form
+    that marks it as a job, I don't think it should be.  The function will
+    return even if it has eg. a thread or something in it.  But maybe if a top-level
+    function returns a thread it should be counted as a job?  But at the same time,
+    it may start a thread, but not return it.  I don't think there is really
+    anything to be done about this -- a user could, if desired, wrap calls that
+    might start weird threads or something in a sandbox.
+
+  |#
+
+
   )
 
 
