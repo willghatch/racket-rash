@@ -4,7 +4,6 @@
 (require racket/system)
 (require ffi/unsafe)
 (require racket/list)
-(require basedir)
 (require racket/os)
 (require racket/file)
 (require racket/function)

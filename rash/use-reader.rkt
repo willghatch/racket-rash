@@ -1,4 +1,4 @@
-#lang reader "reader.rkt"
+#lang rash
 
 cat /etc/hostname
 ls -l /dev | grep uucp

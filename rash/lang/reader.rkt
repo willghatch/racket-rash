@@ -1,7 +1,7 @@
 #lang racket/base
 
-(require "readtable.rkt")
-(require "lang.rkt")
+(require "../readtable.rkt")
+(require "../lang.rkt")
 (provide (rename-out [line-read-syntax read-syntax]
                      [line-read read]))
 
