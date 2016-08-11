@@ -1,7 +1,7 @@
 #lang racket/base
 
 (require "../readtable.rkt")
-(require "../lang.rkt")
+(require "module-begin.rkt")
 (provide (rename-out [line-read-syntax read-syntax]
                      [line-read read]))
 
@@ -16,7 +16,7 @@
 (define (line-read-syntax src in)
   (parameterize ([current-readtable line-readtable])
     (with-syntax ([(s ...) (read-syntax-seq src in)])
-      #`(module something "lang.rkt" s ...))))
+      #`(module something rash/lang/module-begin s ...))))
 
 (define (line-read in)
   (syntax->datum (line-read-syntax #f in)))
