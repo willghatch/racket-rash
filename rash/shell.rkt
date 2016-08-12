@@ -54,7 +54,7 @@
   (and (pipeline-member? pmember) (pipeline-member-thread pmember)))
 
 (struct pipeline
-  (port-to port-from port-err-list members spec?)
+  (port-to port-from port-err-list members spec? kill-when-end-exits?)
   #:transparent)
 
 
@@ -67,6 +67,14 @@
   (if (pipeline-member-process? member)
       (subprocess-wait (pipeline-member-subprocess member))
       (thread-wait (pipeline-member-thread member))))
+
+(define (pipeline-kill pline)
+  (for ([m (pipeline-members pline)])
+    (pipeline-member-kill m)))
+(define (pipeline-member-kill m)
+  (if (pipeline-member-process? m)
+      (subprocess-kill (pipeline-member-subprocess m) #t)
+      (kill-thread (pipeline-member-thread m))))
 
 (define (pipeline-status pline)
   (pipeline-member-status (car (reverse (pipeline-members pline)))))
@@ -82,6 +90,7 @@
 
 (define (run-pipeline pipeline-spec)
   (let* ([members (pipeline-members pipeline-spec)]
+         [kill-at-end? (pipeline-kill-when-end-exits? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-use (if (and (pipeline-member-process? (car members))
                           (port? to-port)
@@ -111,8 +120,15 @@
                      to-out
                      (begin
                        (thread (λ () (copy-port to-port to-out)))
-                       #f))])
-    (pipeline to-ret from-ret err-outs sanitized #f)))
+                       #f))]
+         [pline (pipeline to-ret from-ret err-outs sanitized #f kill-at-end?)]
+         [killer (if kill-at-end?
+                     (thread (λ () (pipeline-end-wait pline)
+                                (pipeline-kill pline)))
+                     #f)]
+         [pline-with-killer (struct-copy pipeline pline
+                                         [kill-when-end-exits? killer])])
+    pline-with-killer))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   ;; This should only be called by run-pipeline
@@ -207,12 +223,15 @@
       (pipeline-member #f #f err s-exp-or-thunk #f #f #f #t)))
 (define (make-pipeline-spec #:in [in #f]
                             #:out [out #f]
+                            #:kill-when-end-exits? [kill-at-end? #t]
                             . members)
-  (pipeline in out #f (map make-pipeline-member-spec members) #t))
+  (pipeline in out #f (map make-pipeline-member-spec members) #t kill-at-end?))
+
 (define (make-run-pipeline . specs)
   (let* ([pspec (apply make-pipeline-spec specs
                        #:in (current-input-port)
-                       #:out (current-output-port))]
+                       #:out (current-output-port)
+                       #:kill-when-end-exits? #t)]
          [pspec (struct-copy pipeline pspec
                              [members (map (λ (m)
                                              (struct-copy
@@ -279,6 +298,7 @@
   ;(with-output-to-string (λ () (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))))
   ;(make-run-pipeline->output '(ls -l /dev) '(grep uucp))
   ;(make-run-pipeline->output '(ls -l /dev) '(grep "this string will not be there"))
+  (make-run-pipeline '(find /) '(head -n 1))
 
   (define (vim-some-rc-file)
     (define file (string-trim
