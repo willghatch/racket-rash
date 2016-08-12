@@ -1,12 +1,7 @@
 #lang racket/base
 
 (require racket/port)
-(require racket/system)
-(require ffi/unsafe)
-(require racket/list)
-(require racket/os)
 (require racket/exn)
-(require racket/file)
 (require racket/function)
 (require racket/string)
 
