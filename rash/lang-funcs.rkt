@@ -8,7 +8,7 @@
 (require (for-syntax racket/base
                      syntax/parse
                      ))
-(require "shell.rkt")
+(require "shell-funcs.rkt")
 
 
 (define-syntax (shell-line-parse stx)
@@ -30,9 +30,9 @@
     #:datum-literals (\|)
     [(shell-line) #'(void)]
     [(shell-line cmd:not-pipe arg:not-pipe ...)
-     #'(make-run-pipeline (quote (cmd arg ...)))]
+     #'(rash-pipeline (quote (cmd arg ...)))]
     [(shell-line cmd1:not-pipe arg1:not-pipe ... \| cmd2:not-pipe arg2:not-pipe ...)
-     #'(make-run-pipeline (quote (cmd1 arg1 ...)) (quote (cmd2 arg2 ...)))
+     #'(rash-pipeline (quote (cmd1 arg1 ...)) (quote (cmd2 arg2 ...)))
      ]))
 
 
