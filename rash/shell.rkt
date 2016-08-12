@@ -5,6 +5,7 @@
 (require ffi/unsafe)
 (require racket/list)
 (require racket/os)
+(require racket/exn)
 (require racket/file)
 (require racket/function)
 (require racket/string)
@@ -206,9 +207,14 @@
                        (thread (λ ()
                                  (with-handlers
                                    ([(λ (exn) #t)
-                                     (λ (exn) (set-box! err-box exn))])
+                                     (λ (exn)
+                                       (set-box! err-box exn)
+                                       (eprintf "~a~n" (exn->string exn)))])
                                    (let ([thread-ret {(pipeline-member-thread m)}])
-                                     (set-box! ret-box thread-ret))))))]
+                                     (set-box! ret-box thread-ret)))
+                                 (close-input-port (current-input-port))
+                                 (close-output-port (current-output-port))
+                                 (close-output-port (current-error-port)))))]
                     [ret-member (pipeline-member to-ret from-ret err-ret
                                                  #f ret-thread ret-box err-box
                                                  #f)])
@@ -298,7 +304,7 @@
   ;(with-output-to-string (λ () (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))))
   ;(make-run-pipeline->output '(ls -l /dev) '(grep uucp))
   ;(make-run-pipeline->output '(ls -l /dev) '(grep "this string will not be there"))
-  (make-run-pipeline '(find /) '(head -n 1))
+  ;(make-run-pipeline '(find /) '(head -n 1))
 
   (define (vim-some-rc-file)
     (define file (string-trim
@@ -316,7 +322,7 @@
                               '(shuf)
                               '(head -n 1)))))
 
-  (make-run-pipeline->output '(ls -l /dev) (my-grep "uucp"))
+  ;(make-run-pipeline->output '(ls -l /dev) (my-grep "uucp") (λ () (error 'foo "this is an error")) (shellify (λ () (printf "hello~n"))))
 
   #|
   TODO
