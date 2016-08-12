@@ -15,7 +15,7 @@
 (provide
  make-run-pipeline
  make-run-pipeline->output
- program-ize-func
+ shellify
  )
 
 (define real-output-port (current-output-port))
@@ -270,7 +270,7 @@
                (get-output-string err))
         (get-output-string out))))
 
-(define (program-ize-func f)
+(define (shellify f)
   (λ ()
     (let* ([in-str (port->string (current-input-port))]
            [out-str (f in-str)])
@@ -289,11 +289,11 @@
                   "\n")
      "\n"))
   (define (my-grep regex)
-    (program-ize-func (λ (str) (grep-func regex str))))
+    (shellify (λ (str) (grep-func regex str))))
 
 
   ;(make-run-pipeline '(ls -l /dev) '(grep tty))
-  ;(make-run-pipeline '(ls -l /dev) (program-ize-func (curry grep-func "tty")))
+  ;(make-run-pipeline '(ls -l /dev) (shellify (curry grep-func "tty")))
   ;(make-run-pipeline '(ls -l /dev) (my-grep "uucp"))
   ;(with-output-to-string (λ () (make-run-pipeline '(ls -l /dev) (my-grep "uucp"))))
   ;(make-run-pipeline->output '(ls -l /dev) '(grep uucp))
