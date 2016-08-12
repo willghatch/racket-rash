@@ -3,30 +3,37 @@
 (provide
  shell-line-parse
  shell-line
+ rash-read-syntax
+ rash-read
+ (all-from-out "shell-funcs.rkt")
  )
 
 (require (for-syntax racket/base
                      syntax/parse
                      ))
 (require "shell-funcs.rkt")
+(require "readtable.rkt")
+
+(define (rash-read-syntax src in)
+  (parameterize ([current-readtable line-readtable])
+    (read-syntax src in)))
+(define (rash-read in)
+  (parameterize ([current-readtable line-readtable])
+    (read in)))
 
 (begin-for-syntax
   (define-syntax-class not-pipe
     (pattern (~not (~literal \|))))
   (define-splicing-syntax-class pipeline-part
-    (pattern (~seq cmd:not-pipe arg:not-pipe ...)
-             #:attr argv #`(list #,(quote-if-id #'cmd)
-                                 #,@(quote-if-id #'(arg ...)))
+    (pattern (~seq arg:not-pipe ...+)
+             #:attr argv #`(list #,@(map quote-if-id (syntax->list #'(arg ...))))
              ))
   (define-splicing-syntax-class pipeline-part/not-first
     (pattern (~seq (~literal \|) part:pipeline-part)
-             #:attr argv #`(list #,(quote-if-id #'part.cmd)
-                                 #,@(quote-if-id #'(part.arg ...)))
+             #:attr argv #`(list #,@(map quote-if-id (syntax->list #'(part.arg ...))))
              ))
   (define (quote-if-id stx)
     (syntax-parse stx
-      [() '()]
-      [(x:id xs ...) (cons (quote-if-id #'x) (quote-if-id #'(xs ...)))]
       [x:id #'(quote x)]
       [else stx]))
   )
@@ -50,7 +57,3 @@
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
      #'(rash-pipeline p1.argv pn.argv ...)]))
 
-
-
-#;(module+ main
-  (shell-line-parse this is a test %%read-newline-symbol to see what happens))
