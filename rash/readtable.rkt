@@ -11,21 +11,37 @@
     [(ch port)
      read-newline-symbol]
     [(ch port src line col pos)
-     (datum->syntax #f read-newline-symbol)
-     ]))
+     (datum->syntax #f read-newline-symbol)]))
+
+(define (ignore-to-newline port)
+  (let ([out (read-char port)])
+    (if (or (equal? out #\newline)
+            (equal? out eof))
+        read-newline-symbol
+        (ignore-to-newline port))))
+
+(define read-line-comment
+  (case-lambda
+    [(ch port)
+     (ignore-to-newline port)
+     read-newline-symbol]
+    [(ch port src line col pos)
+     (ignore-to-newline port)
+     (datum->syntax #f read-newline-symbol)]))
 
 (define bare-line-readtable
   (make-readtable #f
                   #\newline 'terminating-macro read-newline
+                  #\; 'terminating-macro read-line-comment
                   ;; take away the special meanings of characters
                   #\| #\a #f
                   #\. #\a #f
-                  #\( #\a #f
-                  #\) #\a #f
-                  #\{ #\a #f
-                  #\} #\a #f
-                  #\[ #\a #f
-                  #\] #\a #f
+                  ;#\( #\a #f
+                  ;#\) #\a #f
+                  ;#\{ #\a #f
+                  ;#\} #\a #f
+                  ;#\[ #\a #f
+                  ;#\] #\a #f
                   ))
 
 (define line-readtable
