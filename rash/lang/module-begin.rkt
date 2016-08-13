@@ -15,4 +15,4 @@
 (define-syntax (module-begin stx)
   (syntax-parse stx
     [(m-b s ...)
-     #'(#%module-begin (shell-line-parse s ...))]))
+     #'(#%module-begin (rash-line-parse s ...))]))
