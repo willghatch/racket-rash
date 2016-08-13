@@ -3,8 +3,6 @@
 (provide
  rash-line-parse
  rash-line
- rash-read-syntax
- rash-read
  rash
  rash/out
  rash/values
@@ -43,12 +41,19 @@
     (pattern (~not (~literal %%read-newline-symbol))))
   (syntax-parse stx
     #:datum-literals (%%read-newline-symbol)
+    ;; strip any newlines at the beginning
     [(rash-line-parse %%read-newline-symbol post ...)
      #'(rash-line-parse post ...)]
-    [(rash-line-parse pre:not-newline ... %%read-newline-symbol post ...)
+    ;; strip any newlines at the end
+    [(rash-line-parse pre ... %%read-newline-symbol)
+     #'(rash-line-parse pre ...)]
+    ;; not last line
+    [(rash-line-parse pre:not-newline ...+ %%read-newline-symbol post ...+)
      #'(begin (rash-line pre ...) (rash-line-parse post ...))]
-    [(rash-line-parse foo:not-newline ...)
-     #'(rash-line foo ...)]))
+    ;; last line
+    [(rash-line-parse ll:not-newline ...+)
+     #'(rash-line ll ...)]
+    ))
 
 (define-syntax (rash-line stx)
   (syntax-parse stx
@@ -94,20 +99,6 @@
                (values ret-val (get-output-string out) (get-output-string err))))))]))
 
 (begin-for-syntax
-  (define (parse-at-reader-output argl)
-    (for/fold ([out-list '()])
-              ([lpart argl])
-      (if (string? (syntax->datum lpart))
-          (append
-           out-list
-           (rash-read-syntax-seq #f (open-input-string (syntax->datum lpart))))
-          (append out-list (list lpart)))))
-
-  (define (rash-read-syntax-seq src in)
-    (let ([result (rash-read-syntax src in)])
-      (if (equal? eof result)
-          '()
-          (cons result (rash-read-syntax-seq src in)))))
 
 
   )
