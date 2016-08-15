@@ -22,16 +22,20 @@
     (pattern (~not (~literal \|))))
   (define-splicing-syntax-class pipeline-part
     (pattern (~seq arg:not-pipe ...+)
-             #:attr argv #`(list #,@(map quote-if-id (syntax->list #'(arg ...))))
+             #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(arg ...))))
              ))
   (define-splicing-syntax-class pipeline-part/not-first
     (pattern (~seq (~literal \|) part:pipeline-part)
-             #:attr argv #`(list #,@(map quote-if-id (syntax->list #'(part.arg ...))))
+             #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(part.arg ...))))
              ))
-  (define (quote-if-id stx)
+  (define (quote-maybe stx)
     (syntax-parse stx
-      [x:id #'(quote x)]
+      [x:id
+       (if (syntax-property stx 'rash-mark-for-quoting)
+           #'(quote x)
+           #'x)]
       [else stx]))
+
   )
 
 

@@ -24,8 +24,14 @@
     (if (string? (syntax->datum str-or-atout))
         (append
          out-list
-         (rash-read-syntax-seq src (open-input-string (syntax->datum str-or-atout))))
+         (map mark-for-quoting
+              (rash-read-syntax-seq
+               src (open-input-string (syntax->datum str-or-atout)))))
         (append out-list (list str-or-atout)))))
+
+(define (mark-for-quoting stx)
+  (syntax-property stx 'rash-mark-for-quoting #t #t))
+
 
 (define (rash-read-syntax-seq src in)
   (let ([result (parameterize ([current-readtable line-readtable])
@@ -34,30 +40,29 @@
         '()
         (cons result (rash-read-syntax-seq src in)))))
 
-(define rash-newline-symbol '|%%rash-newline-symbol|)
 
 (define read-newline
   (case-lambda
     [(ch port)
-     rash-newline-symbol]
+     '%%rash-newline-symbol]
     [(ch port src line col pos)
-     (datum->syntax #f rash-newline-symbol)]))
+     (datum->syntax #f '%%rash-newline-symbol)]))
 
 (define (ignore-to-newline port)
   (let ([out (read-char port)])
     (if (or (equal? out #\newline)
             (equal? out eof))
-        rash-newline-symbol
+        '%%rash-newline-symbol
         (ignore-to-newline port))))
 
 (define read-line-comment
   (case-lambda
     [(ch port)
      (ignore-to-newline port)
-     rash-newline-symbol]
+     '%%rash-newline-symbol]
     [(ch port src line col pos)
      (ignore-to-newline port)
-     (datum->syntax #f rash-newline-symbol)]))
+     (datum->syntax #f '%%rash-newline-symbol)]))
 
 (define bare-line-readtable
   (make-readtable #f
