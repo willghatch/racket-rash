@@ -11,8 +11,9 @@
 (define ns (namespace-anchor->namespace ns-a))
 
 (define (rash-repl prev-lines-str last-ret-val)
-  (printf "~a >" last-ret-val)
+  (printf "~a ➤" last-ret-val)
   (let* ([next-line (read-line)]
+         [exit? (if (equal? next-line eof) (exit) #f)]
          [input (string-append prev-lines-str next-line)]
          [read-input (with-handlers ([(λ (ex) #t) (λ (ex) 'retry-line)])
                        ;; TODO - I really only want to keep adding lines if
