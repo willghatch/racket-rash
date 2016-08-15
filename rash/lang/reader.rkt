@@ -4,7 +4,7 @@ rash/lang/module-begin
 #:read rash-read
 #:whole-body-readers? #t
 
-(require "../read-funcs.rkt")
+(require "../private/read-funcs.rkt")
 (require (only-in scribble/reader
                   read-syntax-inside
                   read-inside))

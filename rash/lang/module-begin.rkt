@@ -1,14 +1,11 @@
 #lang racket/base
 
-(require "../lang-funcs.rkt")
-(require (for-syntax "../read-funcs.rkt"))
+(require rash)
 (provide
- (all-from-out "../lang-funcs.rkt")
- #;(except-out (all-from-out "../lang-funcs.rkt")
-             #%module-begin)
-
  (except-out (all-from-out racket/base) #%module-begin)
- (rename-out [module-begin #%module-begin]))
+ (rename-out [module-begin #%module-begin])
+ (all-from-out rash)
+ )
 
 (require (for-syntax racket/base
                      syntax/parse))
