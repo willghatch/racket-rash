@@ -70,13 +70,13 @@
 (define-syntax (rash stx)
   (syntax-parse stx
     [(rash arg ...+)
-     (with-syntax ([(parg ...) (parse-at-reader-output (syntax->list #'(arg ...)))])
+     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
        #'(rash-line-parse parg ...))]))
 
 (define-syntax (rash/out stx)
   (syntax-parse stx
     [(rash arg ...+)
-     (with-syntax ([(parg ...) (parse-at-reader-output (syntax->list #'(arg ...)))])
+     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -94,7 +94,7 @@
 (define-syntax (rash/values stx)
   (syntax-parse stx
     [(rash arg ...+)
-     (with-syntax ([(parg ...) (parse-at-reader-output (syntax->list #'(arg ...)))])
+     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])

@@ -3,31 +3,34 @@
 (provide
  rash-read-syntax
  rash-read
- parse-at-reader-output
+ rash-parse-at-reader-output
  )
 
 (require (prefix-in scribble: scribble/reader))
 
 (define (rash-read-syntax src in)
   (let ([at-output (scribble:read-syntax-inside src in)])
-    (parse-at-reader-output at-output #:src src)))
+    (rash-parse-at-reader-output at-output #:src src)))
 
 (define (rash-read in)
   (syntax->datum (rash-read-syntax #f in)))
 
-(define (parse-at-reader-output argl
+(define (rash-parse-at-reader-output argl
                                 #:src [src #f])
   (for/fold ([out-list '()])
             ([str-or-atout (if (syntax? argl)
                                (syntax->list argl)
                                argl)])
-    (if (string? (syntax->datum str-or-atout))
-        (append
-         out-list
-         (map mark-for-quoting
-              (rash-read-syntax-seq
-               src (open-input-string (syntax->datum str-or-atout)))))
-        (append out-list (list str-or-atout)))))
+    (let ([datum (if (syntax? str-or-atout)
+                     (syntax->datum str-or-atout)
+                     str-or-atout)])
+      (if (string? datum)
+          (append
+           out-list
+           (map mark-for-quoting
+                (rash-read-syntax-seq
+                 src (open-input-string datum))))
+          (append out-list (list str-or-atout))))))
 
 (define (mark-for-quoting stx)
   (syntax-property stx 'rash-mark-for-quoting #t #t))
