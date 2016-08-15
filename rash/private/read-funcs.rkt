@@ -18,7 +18,9 @@
 (define (parse-at-reader-output argl
                                 #:src [src #f])
   (for/fold ([out-list '()])
-            ([str-or-atout (syntax->list argl)])
+            ([str-or-atout (if (syntax? argl)
+                               (syntax->list argl)
+                               argl)])
     (if (string? (syntax->datum str-or-atout))
         (append
          out-list
