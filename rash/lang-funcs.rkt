@@ -100,10 +100,4 @@
              (let ([ret-val (rash-line-parse parg ...)])
                (values ret-val (get-output-string out) (get-output-string err))))))]))
 
-(begin-for-syntax
-
-
-  )
-
-
 
