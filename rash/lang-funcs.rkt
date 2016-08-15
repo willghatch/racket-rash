@@ -56,9 +56,12 @@
 
 (define-syntax (rash-line stx)
   (syntax-parse stx
-    [(shell-line) #'(void)]
+    #:datum-literals (&)
+    [(shell-line & form ...)
+     #'(begin form ...)]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
-     #'(rash-pipeline p1.argv pn.argv ...)]))
+     #'(rash-pipeline p1.argv pn.argv ...)]
+    ))
 
 (define-syntax (rash stx)
   (syntax-parse stx
