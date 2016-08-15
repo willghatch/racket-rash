@@ -4,30 +4,30 @@
 
 (require scribble/reader)
 
-(define read-newline-symbol '|%%read-newline-symbol|)
+(define rash-newline-symbol '|%%rash-newline-symbol|)
 
 (define read-newline
   (case-lambda
     [(ch port)
-     read-newline-symbol]
+     rash-newline-symbol]
     [(ch port src line col pos)
-     (datum->syntax #f read-newline-symbol)]))
+     (datum->syntax #f rash-newline-symbol)]))
 
 (define (ignore-to-newline port)
   (let ([out (read-char port)])
     (if (or (equal? out #\newline)
             (equal? out eof))
-        read-newline-symbol
+        rash-newline-symbol
         (ignore-to-newline port))))
 
 (define read-line-comment
   (case-lambda
     [(ch port)
      (ignore-to-newline port)
-     read-newline-symbol]
+     rash-newline-symbol]
     [(ch port src line col pos)
      (ignore-to-newline port)
-     (datum->syntax #f read-newline-symbol)]))
+     (datum->syntax #f rash-newline-symbol)]))
 
 (define bare-line-readtable
   (make-readtable #f

@@ -37,17 +37,17 @@
 
 (define-syntax (rash-line-parse stx)
   (define-syntax-class not-newline
-    (pattern (~not (~literal %%read-newline-symbol))))
+    (pattern (~not (~literal %%rash-newline-symbol))))
   (syntax-parse stx
-    #:datum-literals (%%read-newline-symbol)
+    #:datum-literals (%%rash-newline-symbol)
     ;; strip any newlines at the beginning
-    [(rash-line-parse %%read-newline-symbol post ...)
+    [(rash-line-parse %%rash-newline-symbol post ...)
      #'(rash-line-parse post ...)]
     ;; strip any newlines at the end
-    [(rash-line-parse pre ... %%read-newline-symbol)
+    [(rash-line-parse pre ... %%rash-newline-symbol)
      #'(rash-line-parse pre ...)]
     ;; not last line
-    [(rash-line-parse pre:not-newline ...+ %%read-newline-symbol post ...+)
+    [(rash-line-parse pre:not-newline ...+ %%rash-newline-symbol post ...+)
      #'(begin (rash-line pre ...) (rash-line-parse post ...))]
     ;; last line
     [(rash-line-parse ll:not-newline ...+)
