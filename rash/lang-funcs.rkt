@@ -16,7 +16,6 @@
 (require "shell-funcs.rkt")
 (require "read-funcs.rkt")
 (require (for-syntax "read-funcs.rkt"))
-(require "readtable.rkt")
 
 (begin-for-syntax
   (define-syntax-class not-pipe
