@@ -30,13 +30,16 @@
           [(symbol? a) (symbol->string a)]
           [(number? a) (number->string a)]
           [else (format "~a" a)]))
-  (define cmdpath (find-executable-path (convert-arg cmd)))
+  (define cmdpath (or (find-executable-path (convert-arg cmd))
+                      (and (equal? 'windows (system-type 'os))
+                           (find-executable-path
+                            (string-append (convert-arg cmd) ".exe")))))
   (when (not cmdpath) (error 'subprocess+ "Command `~a` not in path." cmd))
   (apply subprocess
          (append (list out
                        in
                        err
-                       (find-executable-path (convert-arg cmd)))
+                       cmdpath)
                  (map convert-arg args))))
 
 (struct pipeline-member
