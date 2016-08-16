@@ -5,6 +5,8 @@
 
 @title{RASH Guide}
 
+THIS IS ALL ALPHA AND UNSTABLE
+
 Rash is a language and library for writing shell scripts and including them in
 Racket programs.
 

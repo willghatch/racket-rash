@@ -2,6 +2,8 @@
 
 @title{RASH repl}
 
+THIS IS ALL ALPHA AND UNSTABLE
+
 To launch a rash repl, run @code{racket -l rash/repl}, or if you have
 your racket's @code{bin} dir on your path, you can run
 @code{rash-repl}.

@@ -8,8 +8,7 @@
 
 @defmodule[rash]
 
-
-Note that the API is not stable.
+THIS IS ALL ALPHA AND UNSTABLE
 
 
 @defproc[(shellify [f (-> string? string?)]) procedure?]{
