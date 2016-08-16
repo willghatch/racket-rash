@@ -1,0 +1,51 @@
+Main TODO items
+---------------
+
+* Solidify pipeline s-exp API
+** I want good and easy to use s-exp APIs to be possibly the main programming interface, as well as for complicated interactive commands.
+** shellify should curry just one argument, functions should receive args as well
+** function members of pipelines should be able to be a list of closure + args
+** kw-arg for stderr for all, as well as individually settable?
+** a custom exn type for pipeline failures would also be great.
+* Tests
+* Documentation
+* Contracts
+* Improve line-based syntax, maybe split into separate package.  The s-exp API should be easy to nail down and be stable while I want more time to experiment with the line-based syntax.
+* Publish package
+* More features
+
+What more features?
+-------------------
+
+* Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
+* process wrapper functions (aliases) -- take args and return a process argv
+* shell function/alias lookup with parameter
+* probably hardcoded few func/alias names skip lookup for "this is a program" and "this is a function" etc
+
+* path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
+* easy port opening functions for redirection to files (>, >>, <) and temp-file redirects ( <() )
+* bg pipeline disowning?
+
+
+
+thoughts
+--------
+
+<name> <arg> ...
+--- name should resolve in this order:
+1 alias/function (an alias is basically a curried function, and "shell function" is more general... have some sort of (current-shell-functions) parameter that will make a pipeline look for shell functions before using subprocess.
+  -- many shell functions (like aliases) are just subprocesses with part of the argv curried out.  I should somehow be able to catch them to still just use a subprocess call and not have more pipe wrangling, not determine that certain pipelines are ineligble for disowning, etc.  Maybe a "shell function" has to return a pipeline-member struct rather than just going.
+2 external program
+
+aliases and shell functions should be accessed by parameters -- probably hashes of name->alias, name->λ
+shell functions should return 0 on success like programs do -- but they can return other things if they want.  Maybe there should be some shell-success struct for output so the pipeline knows it is successful, and also has the output.
+shell functions should take any number of arguments, and they should be strings/symbols
+
+
+About interactive shells
+------------------------
+
+job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
+
+What about an rc file for the interactive shell?  Will it be a module?  Will it be a wrapper to the program like an xmonad config?  Will it be dynamically required?  Will it be top-level evaluated?
+
