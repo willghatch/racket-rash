@@ -22,11 +22,11 @@
          )
     (if (equal? read-input 'retry-line)
         (rash-repl input "line-not-finished")
-        (with-handlers ([(λ (e) #t) (λ (e) (rash-repl "" e))])
-          (let ([ret-val
+        (let ([ret-val
+               (with-handlers ([(λ (e) #t) (λ (e) e)])
                  (eval `(rash-line-parse
-                         ,@(rash-parse-at-reader-output read-input)) ns)])
-            (rash-repl "" ret-val))))))
+                         ,@(rash-parse-at-reader-output read-input)) ns))])
+          (rash-repl "" ret-val)))))
 
 (with-handlers ([(λ _ #t) (λ (ex)
                             (eprintf "Exception: ~a~n" ex)
