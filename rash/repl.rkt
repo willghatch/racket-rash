@@ -11,7 +11,7 @@
 (define ns (namespace-anchor->namespace ns-a))
 
 (define (rash-repl prev-lines-str last-ret-val)
-  (printf "~a ➤" last-ret-val)
+  (printf "~a > " last-ret-val)
   (let* ([next-line (read-line)]
          [exit? (if (equal? next-line eof) (exit) #f)]
          [input (string-append prev-lines-str next-line)]
@@ -22,10 +22,11 @@
          )
     (if (equal? read-input 'retry-line)
         (rash-repl input "line-not-finished")
-        (let ([ret-val
-               (eval `(rash-line-parse
-                       ,@(rash-parse-at-reader-output read-input)) ns)])
-          (rash-repl "" ret-val)))))
+        (with-handlers ([(λ (e) #t) (λ (e) (rash-repl "" e))])
+          (let ([ret-val
+                 (eval `(rash-line-parse
+                         ,@(rash-parse-at-reader-output read-input)) ns)])
+            (rash-repl "" ret-val))))))
 
 (with-handlers ([(λ _ #t) (λ (ex)
                             (eprintf "Exception: ~a~n" ex)
