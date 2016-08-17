@@ -16,7 +16,9 @@
  pipeline-wait
  pipeline-kill
  pipeline-status
+ pipeline-status/end
  pipeline-status/all
+ pipeline-status/list
  )
 
 
@@ -53,15 +55,19 @@
   (and (pipeline-member? pmember) (pipeline-member-thread pmember)))
 
 (struct pipeline
-  (port-to port-from port-err-list members spec? kill-when-end-exits? start-bg?)
+  (port-to port-from port-err-list members spec? end-exit-flag start-bg? status-all?)
   #:transparent)
 
 
 (define (pipeline-wait/all pline)
   (for ([m (pipeline-members pline)])
     (pipeline-member-wait m)))
-(define (pipeline-wait pline)
+(define (pipeline-wait/end pline)
   (pipeline-member-wait (car (reverse (pipeline-members pline)))))
+(define (pipeline-wait pline)
+  (if (pipeline-status-all? pline)
+      (pipeline-wait/all pline)
+      (pipeline-wait/end pline)))
 (define (pipeline-member-wait member)
   (if (pipeline-member-process? member)
       (subprocess-wait (pipeline-member-subprocess member))
@@ -75,10 +81,20 @@
       (subprocess-kill (pipeline-member-subprocess m) #t)
       (kill-thread (pipeline-member-thread m))))
 
-(define (pipeline-status/all pline)
+(define (pipeline-status/list pline)
   (map pipeline-member-status (pipeline-members pline)))
-(define (pipeline-status pline)
+(define (pipeline-status/all pline)
+  (define (rec sl)
+    (cond [(null? sl) 0]
+          [(equal? 0 (car sl)) (rec (cdr sl))]
+          [else (car sl)]))
+  (rec (pipeline-status/list pline)))
+(define (pipeline-status/end pline)
   (pipeline-member-status (car (reverse (pipeline-members pline)))))
+(define (pipeline-status pline)
+  (if (pipeline-status-all? pline)
+      (pipeline-status/all pline)
+      (pipeline-status/end pline)))
 (define (pipeline-member-status m)
   (if (pipeline-member-process? m)
       (subprocess-status (pipeline-member-subprocess m))
@@ -91,7 +107,8 @@
 
 (define (run-pipeline pipeline-spec)
   (let* ([members (pipeline-members pipeline-spec)]
-         [kill-at-end? (pipeline-kill-when-end-exits? pipeline-spec)]
+         [kill-flag (pipeline-end-exit-flag pipeline-spec)]
+         [status-all? (pipeline-status-all? pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-use (if (and (pipeline-member-process? (car members))
@@ -123,13 +140,15 @@
                      (begin
                        (thread (λ () (copy-port to-port to-out)))
                        #f))]
-         [pline (pipeline to-ret from-ret err-outs sanitized #f kill-at-end? bg?)]
-         [killer (if kill-at-end?
+         [pline (pipeline to-ret from-ret err-outs sanitized #f kill-flag bg? status-all?)]
+         [killer (if (or (equal? kill-flag 'always)
+                         (and kill-flag
+                              (not status-all?)))
                      (thread (λ () (pipeline-wait pline)
                                 (pipeline-kill pline)))
                      #f)]
          [pline-with-killer (struct-copy pipeline pline
-                                         [kill-when-end-exits? killer])])
+                                         [end-exit-flag killer])])
     pline-with-killer))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
@@ -229,12 +248,13 @@
       (pipeline-member #f #f err s-exp-or-thunk #f #f #f #t)))
 (define (make-pipeline-spec #:in [in #f]
                             #:out [out #f]
-                            #:kill-when-end-exits? [kill-at-end? #t]
+                            #:end-exit-flag [end-exit-flag #t]
+                            #:status-all? [status-all? #f]
                             #:background? [bg? #f]
                             members err-specs)
   (pipeline in out #f
             (map make-pipeline-member-spec members err-specs)
-            #t kill-at-end? bg?))
+            #t end-exit-flag bg? status-all?))
 
 
 (begin-for-syntax
@@ -273,7 +293,7 @@
                              (list pm.member ...)
                              (list pm.err ...)
                              #:out out
-                             #:kill-when-end-exits? kill
+                             #:end-exit-flag kill
                              #:background? bg))]))
 
 (define-syntax (rash-pipeline stx)
@@ -293,7 +313,7 @@
          (run-pipeline/funcify spec))]))
 
 (define (run-pipeline/funcify pspec)
-  (when (not (pipeline-kill-when-end-exits? pspec))
+  #;(when (not (pipeline-end-exit-flag pspec))
     (error 'run-pipeline/funcify
            "Only pipelines set to kill when the end member finishes are eligible to be funcified."))
   (when (pipeline-start-bg? pspec)
