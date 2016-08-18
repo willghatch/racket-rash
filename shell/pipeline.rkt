@@ -25,12 +25,12 @@
   [shell-echo (->* () #:rest (listof any/c) integer?)]
 
   [run-pipeline (->* ()
-                     (#:in (or/c port? false/c)
-                      #:out (or/c port? false/c)
+                     (#:in (or/c input-port? false/c)
+                      #:out (or/c output-port? false/c)
                       #:end-exit-flag any/c
                       #:status-and? any/c
                       #:background? any/c
-                      #:default-err (or/c port? false/c 'stdout)
+                      #:default-err (or/c output-port? false/c 'stdout)
                       )
                      #:rest (listof (or/c list? pipeline-member-spec?))
                      any/c)]
@@ -40,9 +40,11 @@
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
   [struct pipeline-member-spec ([argl (listof any/c)]
-                                [port-err (or/c port? false/c 'stdout)])]
+                                [port-err (or/c output-port? false/c 'stdout)])]
 
   [pipeline? (-> any/c boolean?)]
+  [pipeline-port-to (-> pipeline? (or/c false/c output-port?))]
+  [pipeline-port-from (-> pipeline? (or/c false/c input-port?))]
   [pipeline-err-ports (-> pipeline? (listof (or/c false/c input-port?)))]
   [pipeline-wait (-> pipeline? void?)]
   [pipeline-kill (-> pipeline? void?)]
