@@ -1,60 +1,17 @@
 Main TODO items
 ---------------
 
-* Split s-exp library from line-based library
-* Tests
-* Contracts
-* Documentation -- don't forget to document the magic "process" keyword
-* Publish s-exp lib package
-
 * Improve line-based syntax
+  Currently I can escape to racket syntax with @, and have a line be just racket code if it starts with &.  But I want it to be racket code if it starts with an open paren.  This means I can't have & some-identifier-i-want-the-value-of, but that's probably not a common top-level thing to do anyway.  And for that rare scenario, you can do (identity some-id).
+  But with the current @-reader, parsing thusly for a line that starts with just ( is basically impossible unless I also turn on paren reading in the line reader, which I would rather not do.
+
 ** I think I need to make a new fancy reader function like the @-exp reader, but that doesn't recursively process the string in {}.  It will have to have some awareness of balanced delimiters for nesting, but no more.
 ** I want to be able to parse the resulting string as well, and get proper source information.  Maybe I can put syntax properties of the location offsets and add them up afterward, or maybe I can prepend spaces when I turn the string into a port so it gives the correct location
 ** I think I need to use syntax-local-introduce or something on the resulting syntax objects.  At any rate, I need to check that the syntax that comes from reading the string in the {} part has the right scope sets.
+* add access to all the features of run-pipeline from the line-based syntax
 
-* More features
-
-What more features?
--------------------
-
-* kw-args for functions in shell pipelines
-* a custom exn type for pipeline failures
-* Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
-
-* path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
-* easy port opening functions for redirection to files (>, >>, <) and temp-file redirects ( <() )
-* wrapper struct for functions to return non-zero but have it still count as success
-* bg pipeline disowning?
-    Disowning will probably only work for pipelines
-    without any racket functions or filters in them.  But perhaps you should
-    be able to mark a pipeline as disownable, which would start a new racket
-    process which would run the pipeline?  It would have to be very restricted,
-    because a pipeline could be using closures, which could not really be copied.
-    It looks like bash and zsh can disown a backgrounded shell
-    function and have it survive the shell exiting if that function was started
-    in the background, which tells me that backgrounded bash/zsh functions are
-    run in a subshell.  Presumably this means the process is forked, so that
-    the subshell can still access all previously defined functions.  I feel
-    like this could have many cases of subtle weirdness, so I'm not sure I
-    want to follow that direction without something more explicit marking a
-    clear boundary.  Also, fork() only works on Unix, and it would be nice if
-    the shell worked on Windows too, so if I can reasonably avoid relying on
-    fork, I should.
-
-
-thoughts
---------
-
-<name> <arg> ...
---- name should resolve in this order:
-1 alias/function (an alias is basically a curried function, and "shell function" is more general... have some sort of (current-shell-functions) parameter that will make a pipeline look for shell functions before using subprocess.
-  -- many shell functions (like aliases) are just subprocesses with part of the argv curried out.  I should somehow be able to catch them to still just use a subprocess call and not have more pipe wrangling, not determine that certain pipelines are ineligble for disowning, etc.  Maybe a "shell function" has to return a pipeline-member struct rather than just going.
-2 external program
-
-aliases and shell functions should be accessed by parameters -- probably hashes of name->alias, name->λ
-shell functions should return 0 on success like programs do -- but they can return other things if they want.  Maybe there should be some shell-success struct for output so the pipeline knows it is successful, and also has the output.
-shell functions should take any number of arguments, and they should be strings/symbols
-
+* Base alias set to load from RC file
+** should include things like cd, echo/printf, ulimit?, umask, which... really only a handfull are really things I would want handy without having to reach for things like &@(current-directory "foo")
 
 About interactive shells
 ------------------------
