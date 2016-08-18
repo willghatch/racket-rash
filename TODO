@@ -1,16 +1,10 @@
 Main TODO items
 ---------------
 
-* Split s-exp library from line-based library
 * Tests
 * Contracts
 * Documentation -- don't forget to document the magic "process" keyword
-* Publish s-exp lib package
-
-* Improve line-based syntax
-** I think I need to make a new fancy reader function like the @-exp reader, but that doesn't recursively process the string in {}.  It will have to have some awareness of balanced delimiters for nesting, but no more.
-** I want to be able to parse the resulting string as well, and get proper source information.  Maybe I can put syntax properties of the location offsets and add them up afterward, or maybe I can prepend spaces when I turn the string into a port so it gives the correct location
-** I think I need to use syntax-local-introduce or something on the resulting syntax objects.  At any rate, I need to check that the syntax that comes from reading the string in the {} part has the right scope sets.
+* Publish
 
 * More features
 
@@ -40,26 +34,4 @@ What more features?
     clear boundary.  Also, fork() only works on Unix, and it would be nice if
     the shell worked on Windows too, so if I can reasonably avoid relying on
     fork, I should.
-
-
-thoughts
---------
-
-<name> <arg> ...
---- name should resolve in this order:
-1 alias/function (an alias is basically a curried function, and "shell function" is more general... have some sort of (current-shell-functions) parameter that will make a pipeline look for shell functions before using subprocess.
-  -- many shell functions (like aliases) are just subprocesses with part of the argv curried out.  I should somehow be able to catch them to still just use a subprocess call and not have more pipe wrangling, not determine that certain pipelines are ineligble for disowning, etc.  Maybe a "shell function" has to return a pipeline-member struct rather than just going.
-2 external program
-
-aliases and shell functions should be accessed by parameters -- probably hashes of name->alias, name->λ
-shell functions should return 0 on success like programs do -- but they can return other things if they want.  Maybe there should be some shell-success struct for output so the pipeline knows it is successful, and also has the output.
-shell functions should take any number of arguments, and they should be strings/symbols
-
-
-About interactive shells
-------------------------
-
-job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
-
-What about an rc file for the interactive shell?  Will it be a module?  Will it be a wrapper to the program like an xmonad config?  Will it be dynamically required?  Will it be top-level evaluated?
 
