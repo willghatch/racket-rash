@@ -10,6 +10,7 @@
  current-shell-functions
  add-shell-function
  (struct-out alias-func)
+ (struct-out pipeline-same-thread-func)
  shell-alias
 
  run-pipeline
@@ -107,7 +108,13 @@
   (func)
   #:property prop:procedure (struct-field-index func)
   #:transparent)
+(struct pipeline-same-thread-func
+  (func)
+  #:property prop:procedure (struct-field-index func)
+  #:transparent)
 
+(define (pm-spec-command m)
+  (car (pipeline-member-spec-argl m)))
 (define (pm-spec-lookup? pmember)
   (and (pipeline-member-spec? pmember)
        (let ([cmd (car (pipeline-member-spec-argl pmember))])
@@ -122,6 +129,9 @@
 (define (pm-spec-alias? pmember)
   (and (pipeline-member-spec? pmember)
        (alias-func? (car (pipeline-member-spec-argl pmember)))))
+(define (pm-spec-same-thread? m)
+  (and (pm-spec-func? m)
+       (pipeline-same-thread-func? (pm-spec-command m))))
 
 (define (pipeline-member-process? pmember)
   (and (pipeline-member? pmember)
@@ -358,28 +368,32 @@ pipelines where it is set to always kill when the end member exits
                (cons out-member m-outs))))])))
 
   (define r1-members (reverse r1-members-rev))
-  (define r2-members-rev
+
+  (define (run-func-members members same-thread-ones?)
     (for/fold ([m-outs '()])
-              ([m r1-members]
+              ([m members]
                [i (in-range pipeline-length)])
       (cond
-        [(pm-spec-func? m)
+        [(and (pm-spec-func? m)
+              (equal? same-thread-ones? (pm-spec-same-thread? m)))
          (let* ([prev (and (not (null? m-outs))
                            (car m-outs))]
                 [next (and (< i (sub1 pipeline-length))
                            (list-ref r1-members i))]
-                [next-is-process? (and next (pmi-process? next))]
+                [next-is-running? (and next (pmi? next))]
+                [prev-is-running? (and prev (pmi? prev))]
                 [err-spec (pipeline-member-spec-port-err m)]
                 [ret-box (box #f)]
                 [err-box (box #f)])
            (let-values ([(to-use to-ret)
                          (cond
+                           [prev-is-running? (values (pmi-port-from prev) #f)]
+                           [prev (make-pipe)]
                            [(and (not prev) (not to-line-port)) (make-pipe)]
-                           [prev (values (pmi-port-from prev) #f)]
                            [else (values (dup-input-port to-line-port) #f)])]
                         [(from-ret from-use)
                          (cond
-                           [next-is-process? (values #f (pmi-port-to next))]
+                           [next-is-running? (values #f (pmi-port-to next))]
                            [next (make-pipe)]
                            [(not from-line-port) (make-pipe)]
                            [else (values #f (dup-output-port from-line-port))])]
@@ -392,31 +406,44 @@ pipelines where it is set to always kill when the end member exits
                      (parameterize ([current-input-port to-use]
                                     [current-output-port from-use]
                                     [current-error-port err-use])
-                       (thread (λ ()
-                                 (with-handlers
-                                   ([(λ (exn) #t)
-                                     (λ (exn)
-                                       (set-box! err-box exn)
-                                       (eprintf "~a~n" (exn->string exn)))])
-                                   (let* ([argl (pipeline-member-spec-argl m)]
-                                          [thread-ret (apply (car argl) (cdr argl))])
-                                     (set-box! ret-box thread-ret)))
-                                 (close-input-port (current-input-port))
-                                 (close-output-port (current-output-port))
-                                 (close-output-port (current-error-port)))))]
-                    [ret-member (pmi to-ret from-ret err-ret ret-thread ret-box err-box)])
+                       (if same-thread-ones?
+                           (begin
+                             {(mk-run-thunk m err-box ret-box)}
+                             (thread (λ () #f)))
+                           (thread (mk-run-thunk m err-box ret-box))))]
+                    [ret-member (pmi to-ret from-ret err-ret
+                                     ret-thread ret-box err-box)])
                (cons ret-member m-outs))))]
         [else (cons m m-outs)])))
+
+  (define (mk-run-thunk m-spec err-box ret-box)
+    (λ ()
+      (with-handlers
+        ([(λ (exn) #t)
+          (λ (exn)
+            (set-box! err-box exn)
+            (eprintf "~a~n" (exn->string exn)))])
+        (let* ([argl (pipeline-member-spec-argl m-spec)]
+               [thread-ret (apply (car argl) (cdr argl))])
+          (set-box! ret-box thread-ret)))
+      (close-input-port (current-input-port))
+      (close-output-port (current-output-port))
+      (close-output-port (current-error-port))))
+
+  (define r2-members-rev (run-func-members r1-members #f))
   (define r2-members (reverse r2-members-rev))
-  (define from-port (pmi-port-from (car r2-members-rev)))
-  (define to-port (pmi-port-to (car r2-members)))
+  ;; same-thread function members
+  (define r3-members-rev (run-func-members r2-members #t))
+  (define r3-members (reverse r3-members-rev))
+  (define from-port (pmi-port-from (car r3-members-rev)))
+  (define to-port (pmi-port-to (car r3-members)))
   (define (finalize-member m)
     (pipeline-member
      (pmi-subproc-or-thread m)
      (pmi-port-err m)
      (pmi-thread-ret-box m)
      (pmi-thread-exn-box m)))
-  (define out-members (map finalize-member r2-members))
+  (define out-members (map finalize-member r3-members))
   (list out-members to-port from-port))
 
 
