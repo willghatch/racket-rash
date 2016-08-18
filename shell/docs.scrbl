@@ -11,7 +11,13 @@
 
 @section{Guide}
 
-TODO - put guide here
+This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return 0.  To get the output as a string, use @racket[run-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
+
+Symbols in pipelines are turned into strings before they are passed in as arguments to subprocesses.  Arguments to racket functions are not transformed in any way, but my intention is that they should usually treat symbols as strings when reasonable.
+
+Now go and write your shell scripts in Racket instead of the bourne shell, bash, zsh, ksh, csh, tcsh, ash, dash, fish, ...
+
+This library is also intended to support another forthcoming library with a line-based syntax with arbitrary embedding of s-expression based Racket.
 
 
 @section{Reference}
@@ -24,7 +30,7 @@ TODO - put guide here
                        [#:status-and? status-and? any/c #f]
                        [#:background? bg? any/c #f])
          any/c]{
-                Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If it is a string, it will look up in @racket[current-shell-functions] and use the resulting function in one is found, or if it doesn't find one it will search for an executable with the same name on the path.  If the command is a symbol it will be coerced into a string for use as described.  If the command (or the shell-function found by a lookup) is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.
+                Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If it is a string, it will look up in @racket[current-shell-functions] and use the resulting function in one is found, or if it doesn't find one it will search for an executable with the same name on the path.  If the command is a symbol it will be coerced into a string for use as described.  If the command (or the shell-function found by a lookup) is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.  If you want a process and are afraid of your command being translated by an alias, turn it into a path before passing it in.
 
                     A @racket[pipeline-member-spec], in addition to the command/argument list, has an error-port specification.  All lists given will be turned into @racket[pipeline-member-spec]s using the @racket[default-err] specification.
 
