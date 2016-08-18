@@ -8,10 +8,15 @@
  shellify
 
  current-shell-functions
+ base-shell-functions
  add-shell-function
+ shell-alias
  (struct-out alias-func)
  (struct-out pipeline-same-thread-func)
- shell-alias
+
+ shell-cd
+ shell-printf
+ shell-echo
 
  run-pipeline
  run-pipeline/out
@@ -28,9 +33,6 @@
 ;; TODO -- contracts
 
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define current-shell-functions
-  (make-parameter (hash)))
 
 (define (add-shell-function name function)
   (current-shell-functions (hash-set (current-shell-functions) name function)))
@@ -476,5 +478,53 @@ pipelines where it is set to always kill when the end member exits
                        err
                        cmdpath)
                  (map ->string args))))
+
+;;;; Base Shell Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define (change-current-directory dir)
+  (if (directory-exists? dir)
+      (current-directory dir)
+      (error 'change-current-directory "No such directory: ~a" dir)))
+
+(define (shell-func-catch-error e)
+  (eprintf "~a" (exn->string e))
+  1)
+
+(define shell-cd
+  (pipeline-same-thread-func
+   (λ dirs
+     (let ([dir (if (null? dirs) (getenv "HOME") (car dirs))]
+           [too-many (if (> (length dirs) 1)
+                         (error 'cd "too many arguments")
+                         #f)])
+       (change-current-directory
+        (cond [(string? dir) dir]
+              [(path? dir) dir]
+              [(symbol? dir) (symbol->string dir)]
+              [else (error 'cd "cd argument needs to be a string, path, or symbol")])))
+     0)))
+
+(define (shell-printf f-string . args)
+  (with-handlers ([(λ _ #t) shell-func-catch-error])
+    (apply printf f-string args))
+  0)
+
+(define (shell-echo . args)
+  (for ([a args]
+        [i (in-naturals)])
+    (when (not (equal? i 0))
+      (display " "))
+    (display a))
+  (display "\n")
+  0)
+
+(define base-shell-functions
+  (hash "cd" shell-cd
+        "printf" shell-printf
+        "echo" shell-echo
+        ))
+
+(define current-shell-functions
+  (make-parameter base-shell-functions))
 
 
