@@ -12,16 +12,19 @@
 
 (provide
  shellify
+ (struct-out alias-func)
+
  run-pipeline
  run-pipeline/funcify
+ (struct-out pipeline-member-spec)
+
+ pipeline-err-outs
  pipeline-wait
  pipeline-kill
  pipeline-status
  pipeline-status/end
  pipeline-status/all
  pipeline-status/list
- (struct-out alias-func)
- (struct-out pipeline-member-spec)
  )
 
 
@@ -78,9 +81,15 @@
        (thread? (pipeline-member-subproc-or-thread pmember))))
 
 (struct pipeline
-  (port-to port-from port-err-list members spec? end-exit-flag start-bg? status-all?)
+  (port-to port-from members end-exit-flag start-bg? status-all?)
   #:transparent)
 
+(define (pipeline-spec? pline)
+  (for/and ([m (pipeline-members pline)])
+    (pipeline-member-spec? m)))
+
+(define (pipeline-err-outs pline)
+  (map pipeline-member-port-err (pipeline-members pline)))
 
 (define (pipeline-wait/all pline)
   (for ([m (pipeline-members pline)])
@@ -161,7 +170,6 @@
                        from-port)]
          [run-members/ports (run-pipeline-members members to-use from-use)]
          [run-members (first run-members/ports)]
-         [err-outs (map pipeline-member-port-err run-members)]
          [to-out (second run-members/ports)]
          [from-out (third run-members/ports)]
          [from-ret (if (equal? from-port from-use)
@@ -174,7 +182,7 @@
                      (begin
                        (thread (λ () (copy-port to-port to-out)))
                        #f))]
-         [pline (pipeline to-ret from-ret err-outs run-members #f kill-flag bg? status-all?)]
+         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-all?)]
          [killer (if (or (equal? kill-flag 'always)
                          (and kill-flag
                               (not status-all?)))
@@ -300,13 +308,13 @@
                             #:background? [bg? #f]
                             #:default-err [default-err (current-error-port)]
                             members)
-  (pipeline in out #f
+  (pipeline in out
             (map (λ (m)
                    (if (pipeline-member-spec? m)
                        m
                        (pipeline-member-spec m default-err)))
                  members)
-            #t end-exit-flag bg? status-all?))
+            end-exit-flag bg? status-all?))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
