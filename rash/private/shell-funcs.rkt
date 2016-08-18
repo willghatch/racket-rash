@@ -2,13 +2,7 @@
 
 (require racket/port)
 (require racket/exn)
-(require racket/function)
 (require racket/list)
-(require racket/string)
-
-(require (for-syntax racket/base))
-(require (for-syntax syntax/parse))
-(require (for-syntax racket/syntax))
 
 (provide
  shellify
@@ -28,27 +22,7 @@
  )
 
 
-(define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
-  (when (null? argv)
-    (error 'subprocess+ "empty argv"))
-  (define cmd (car argv))
-  (define args (cdr argv))
-  (define (convert-arg a)
-    (cond [(string? a) a]
-          [(symbol? a) (symbol->string a)]
-          [(number? a) (number->string a)]
-          [else (format "~a" a)]))
-  (define cmdpath (or (find-executable-path (convert-arg cmd))
-                      (and (equal? 'windows (system-type 'os))
-                           (find-executable-path
-                            (string-append (convert-arg cmd) ".exe")))))
-  (when (not cmdpath) (error 'subprocess+ "Command `~a` not in path." cmd))
-  (apply subprocess
-         (append (list out
-                       in
-                       err
-                       cmdpath)
-                 (map convert-arg args))))
+;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline-member
   (subproc-or-thread port-err thread-ret-box thread-exn-box)
@@ -80,6 +54,28 @@
   (and (pipeline-member? pmember)
        (thread? (pipeline-member-subproc-or-thread pmember))))
 
+(define (pipeline-member-wait member)
+  (if (pipeline-member-process? member)
+      (subprocess-wait (pipeline-member-subproc-or-thread member))
+      (thread-wait (pipeline-member-subproc-or-thread member))))
+
+(define (pipeline-member-kill m)
+  (if (pipeline-member-process? m)
+      (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
+      (kill-thread (pipeline-member-subproc-or-thread m))))
+
+(define (pipeline-member-status m)
+  (if (pipeline-member-process? m)
+      (subprocess-status (pipeline-member-subproc-or-thread m))
+      (let* ([dead (thread-dead? (pipeline-member-subproc-or-thread m))]
+             [ret (unbox (pipeline-member-thread-ret-box m))]
+             [err (unbox (pipeline-member-thread-exn-box m))])
+        (if (not dead)
+            'running
+            (or ret err)))))
+
+;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (struct pipeline
   (port-to port-from members end-exit-flag start-bg? status-all?)
   #:transparent)
@@ -100,18 +96,10 @@
   (if (pipeline-status-all? pline)
       (pipeline-wait/all pline)
       (pipeline-wait/end pline)))
-(define (pipeline-member-wait member)
-  (if (pipeline-member-process? member)
-      (subprocess-wait (pipeline-member-subproc-or-thread member))
-      (thread-wait (pipeline-member-subproc-or-thread member))))
 
 (define (pipeline-kill pline)
   (for ([m (pipeline-members pline)])
     (pipeline-member-kill m)))
-(define (pipeline-member-kill m)
-  (if (pipeline-member-process? m)
-      (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
-      (kill-thread (pipeline-member-subproc-or-thread m))))
 
 (define (pipeline-status/list pline)
   (map pipeline-member-status (pipeline-members pline)))
@@ -127,27 +115,69 @@
   (if (pipeline-status-all? pline)
       (pipeline-status/all pline)
       (pipeline-status/end pline)))
-(define (pipeline-member-status m)
-  (if (pipeline-member-process? m)
-      (subprocess-status (pipeline-member-subproc-or-thread m))
-      (let* ([dead (thread-dead? (pipeline-member-subproc-or-thread m))]
-             [ret (unbox (pipeline-member-thread-ret-box m))]
-             [err (unbox (pipeline-member-thread-exn-box m))])
-        (if (not dead)
-            'running
-            (or ret err)))))
 
-(define (resolve-alias pm-spec)
-  ;(argl port-err port-to port-from subproc thread)
-  (if (pm-spec-alias? pm-spec)
-      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
-             [new-argl (apply (car old-argl) (cdr old-argl))]
-             [error? (if (or (not (list? new-argl)) (null? new-argl))
-                         (error 'resolve-alias "alias did not produce an argument list")
-                         #f)])
-        (struct-copy pipeline-member-spec pm-spec
-                     [argl new-argl]))
-      pm-spec))
+
+(define (make-pipeline-spec #:in [in (current-input-port)]
+                            #:out [out (current-output-port)]
+                            #:end-exit-flag [end-exit-flag #t]
+                            #:status-all? [status-all? #f]
+                            #:background? [bg? #f]
+                            #:default-err [default-err (current-error-port)]
+                            members)
+  (pipeline in out
+            (map (λ (m)
+                   (if (pipeline-member-spec? m)
+                       m
+                       (pipeline-member-spec m default-err)))
+                 members)
+            end-exit-flag bg? status-all?))
+
+(define (run-pipeline #:in [in (current-input-port)]
+                      #:out [out (current-output-port)]
+                      #:end-exit-flag [end-exit-flag #t]
+                      #:status-all? [status-all? #f]
+                      #:background? [bg? #f]
+                      #:default-err [default-err (current-error-port)]
+                      . members)
+  (let ([pline
+         (run-pipeline/spec
+          (make-pipeline-spec #:in in #:out out
+                              #:end-exit-flag end-exit-flag
+                              #:status-all? status-all?
+                              #:background? bg?
+                              #:default-err default-err
+                              members))])
+    (if bg?
+        pline
+        (begin (pipeline-wait pline)
+               (pipeline-status pline)))))
+
+(define (run-pipeline/funcify #:end-exit-flag [end-exit-flag #t]
+                              #:status-all? [status-all? #f]
+                              . members)
+  (let* ([out (open-output-string)]
+         [err (open-output-string)]
+         [in (open-input-string "")]
+         [pline-spec (make-pipeline-spec #:in in #:out out
+                                         #:end-exit-flag end-exit-flag
+                                         #:status-all? status-all?
+                                         #:background? #f
+                                         #:default-err err
+                                         members)]
+         [pline (parameterize ([current-output-port out]
+                               [current-error-port err]
+                               [current-input-port in])
+                  (run-pipeline/spec pline-spec))]
+         [wait (pipeline-wait pline)]
+         [kill (pipeline-kill pline)]
+         [status (pipeline-status pline)])
+    (if (not (equal? 0 status))
+        (error 'rash-pipeline/funcify
+               "nonzero pipeline exit (~a) with stderr: ~v"
+               status
+               (get-output-string err))
+        (get-output-string out))))
+
 
 (define (run-pipeline/spec pipeline-spec)
   (let* ([members-pre-alias (pipeline-members pipeline-spec)]
@@ -301,67 +331,8 @@
   (define out-members (map finalize-member r2-members))
   (list out-members to-port from-port))
 
-(define (make-pipeline-spec #:in [in (current-input-port)]
-                            #:out [out (current-output-port)]
-                            #:end-exit-flag [end-exit-flag #t]
-                            #:status-all? [status-all? #f]
-                            #:background? [bg? #f]
-                            #:default-err [default-err (current-error-port)]
-                            members)
-  (pipeline in out
-            (map (λ (m)
-                   (if (pipeline-member-spec? m)
-                       m
-                       (pipeline-member-spec m default-err)))
-                 members)
-            end-exit-flag bg? status-all?))
 
-(define (run-pipeline #:in [in (current-input-port)]
-                      #:out [out (current-output-port)]
-                      #:end-exit-flag [end-exit-flag #t]
-                      #:status-all? [status-all? #f]
-                      #:background? [bg? #f]
-                      #:default-err [default-err (current-error-port)]
-                      . members)
-  (let ([pline
-         (run-pipeline/spec
-          (make-pipeline-spec #:in in #:out out
-                              #:end-exit-flag end-exit-flag
-                              #:status-all? status-all?
-                              #:background? bg?
-                              #:default-err default-err
-                              members))])
-    (if bg?
-        pline
-        (begin (pipeline-wait pline)
-               (pipeline-status pline)))))
-
-(define (run-pipeline/funcify #:end-exit-flag [end-exit-flag #t]
-                              #:status-all? [status-all? #f]
-                              . members)
-  (let* ([out (open-output-string)]
-         [err (open-output-string)]
-         [in (open-input-string "")]
-         [pline-spec (make-pipeline-spec #:in in #:out out
-                                         #:end-exit-flag end-exit-flag
-                                         #:status-all? status-all?
-                                         #:background? #f
-                                         #:default-err err
-                                         members)]
-         [pline (parameterize ([current-output-port out]
-                               [current-error-port err]
-                               [current-input-port in])
-                  (run-pipeline/spec pline-spec))]
-         [wait (pipeline-wait pline)]
-         [kill (pipeline-kill pline)]
-         [status (pipeline-status pline)])
-    (if (not (equal? 0 status))
-        (error 'rash-pipeline/funcify
-               "nonzero pipeline exit (~a) with stderr: ~v"
-               status
-               (get-output-string err))
-        (get-output-string out))))
-
+;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (shellify f)
   (λ args
@@ -371,50 +342,38 @@
       (flush-output)
       0)))
 
+(define (resolve-alias pm-spec)
+  ;; TODO - recursively resolve
+  (if (pm-spec-alias? pm-spec)
+      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
+             [new-argl (apply (car old-argl) (cdr old-argl))]
+             [error? (if (or (not (list? new-argl)) (null? new-argl))
+                         (error 'resolve-alias "alias did not produce an argument list")
+                         #f)])
+        (struct-copy pipeline-member-spec pm-spec
+                     [argl new-argl]))
+      pm-spec))
 
-(module+ main
-
-  (define (grep-func str regex)
-    (string-append
-     (string-join (filter identity
-                          (for/list ([line (string-split str "\n")])
-                            (and (regexp-match regex line) line)))
-                  "\n")
-     "\n"))
-  (define my-grep (shellify grep-func))
-
-
-  ;(run-pipeline '(ls -l /dev) `(,my-grep "uucp"))
-  (run-pipeline '(ls -l /dev) `(grep "uucp"))
-  (define d (alias-func (λ args (list* 'ls '--color=always args))))
-  (run-pipeline `(,d -l /dev))
-
-  (run-pipeline/funcify '(ls) (pipeline-member-spec '(grep shell) 'stdout))
-
-  #|
-  TODO
-  - at some point job control should be possible, in which case it should be
-    possible to suspend/resume jobs, send them to the background/foreground,
-    stop them, and disown them.  Disowning will probably only work for pipelines
-    without any racket functions or filters in them.  But perhaps you should
-    be able to mark a pipeline as disownable, which would start a new racket
-    process which would run the pipeline.  That might be difficult -- perhaps
-    some closure is used in the pipeline -- how could it be copied to the new
-    racket process?  It looks like bash and zsh can disown a backgrounded shell
-    function and have it survive the shell exiting if that function was started
-    in the background, which tells me that backgrounded bash/zsh functions are
-    run in a subshell.  Presumably this means the process is forked, so that
-    the subshell can still access all previously defined functions.  I feel
-    like this could have many cases of subtle weirdness, so I'm not sure I
-    want to follow that direction without something more explicit marking a
-    clear boundary.  Also, fork() only works on Unix, and it would be nice if
-    the shell worked on Windows too, so if I can reasonably avoid relying on
-    fork, I should.
-
-
-  |#
-
-
-  )
+(define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
+  (when (null? argv)
+    (error 'subprocess+ "empty argv"))
+  (define cmd (car argv))
+  (define args (cdr argv))
+  (define (convert-arg a)
+    (cond [(string? a) a]
+          [(symbol? a) (symbol->string a)]
+          [(number? a) (number->string a)]
+          [else (format "~a" a)]))
+  (define cmdpath (or (find-executable-path (convert-arg cmd))
+                      (and (equal? 'windows (system-type 'os))
+                           (find-executable-path
+                            (string-append (convert-arg cmd) ".exe")))))
+  (when (not cmdpath) (error 'subprocess+ "Command `~a` not in path." cmd))
+  (apply subprocess
+         (append (list out
+                       in
+                       err
+                       cmdpath)
+                 (map convert-arg args))))
 
 

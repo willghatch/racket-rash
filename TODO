@@ -25,7 +25,21 @@ What more features?
 * path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
 * easy port opening functions for redirection to files (>, >>, <) and temp-file redirects ( <() )
 * bg pipeline disowning?
-
+    Disowning will probably only work for pipelines
+    without any racket functions or filters in them.  But perhaps you should
+    be able to mark a pipeline as disownable, which would start a new racket
+    process which would run the pipeline?  It would have to be very restricted,
+    because a pipeline could be using closures, which could not really be copied.
+    It looks like bash and zsh can disown a backgrounded shell
+    function and have it survive the shell exiting if that function was started
+    in the background, which tells me that backgrounded bash/zsh functions are
+    run in a subshell.  Presumably this means the process is forked, so that
+    the subshell can still access all previously defined functions.  I feel
+    like this could have many cases of subtle weirdness, so I'm not sure I
+    want to follow that direction without something more explicit marking a
+    clear boundary.  Also, fork() only works on Unix, and it would be nice if
+    the shell worked on Windows too, so if I can reasonably avoid relying on
+    fork, I should.
 
 
 thoughts
