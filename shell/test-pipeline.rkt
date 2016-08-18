@@ -22,11 +22,11 @@ into a test submodule.
 (define my-grep (shellify grep-func))
 
 
-;(run-pipeline '(ls -l /dev) `(,my-grep "uucp"))
+(run-pipeline '(ls -l /dev) `(,my-grep "uucp"))
 (run-pipeline '(ls -l /dev) `(grep "uucp"))
 (define d (alias-func (λ args (list* 'ls '--color=always args))))
 (current-shell-functions
- (hash "ls" (alias-func (λ args (list* 'process 'ls '--color=auto args)))))
+ (hash "ls" (alias-func (λ args (list* (string->path "ls") '--color=auto args)))))
 ;(run-pipeline `(,d -l /dev))
 (run-pipeline `(ls -l /dev))
 

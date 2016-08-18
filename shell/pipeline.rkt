@@ -376,17 +376,18 @@ pipelines where it is set to always kill when the end member exits
                          (cond
                            [(and (not prev) (not to-line-port)) (make-pipe)]
                            [prev (values (pmi-port-from prev) #f)]
-                           [else (values to-line-port #f)])]
+                           [else (values (dup-input-port to-line-port) #f)])]
                         [(from-ret from-use)
                          (cond
                            [next-is-process? (values #f (pmi-port-to next))]
                            [next (make-pipe)]
                            [(not from-line-port) (make-pipe)]
-                           [else (values #f from-line-port)])]
+                           [else (values #f (dup-output-port from-line-port))])]
                         [(err-ret err-use)
-                         (if err-spec
-                             (values #f err-spec)
-                             (make-pipe))])
+                         (cond [(output-port? err-spec)
+                                (values #f (dup-output-port err-spec))]
+                               [err-spec (values #f err-spec)]
+                               [else (make-pipe)])])
              (let* ([ret-thread
                      (parameterize ([current-input-port to-use]
                                     [current-output-port from-use]
