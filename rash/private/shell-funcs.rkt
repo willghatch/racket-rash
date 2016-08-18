@@ -7,12 +7,13 @@
 (provide
  shellify
  (struct-out alias-func)
+ current-shell-functions
 
  run-pipeline
  run-pipeline/funcify
  (struct-out pipeline-member-spec)
 
- pipeline-err-outs
+ pipeline-err-ports
  pipeline-wait
  pipeline-kill
  pipeline-status
@@ -21,6 +22,63 @@
  pipeline-status/list
  )
 
+;; TODO -- contracts
+
+(define current-shell-functions
+  (make-parameter (hash)))
+
+(define (lookup-shell-function key)
+  (let* ([skey (->string key)])
+    (hash-ref (current-shell-functions) skey #f)))
+
+(define (resolve-alias pm-spec)
+  (if (pm-spec-alias? pm-spec)
+      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
+             [new-argl (apply (car old-argl) (cdr old-argl))]
+             [error? (if (or (not (list? new-argl)) (null? new-argl))
+                         (error 'resolve-alias "alias did not produce an argument list")
+                         #f)])
+        (struct-copy pipeline-member-spec pm-spec
+                     [argl new-argl]))
+      pm-spec))
+
+(define (resolve-pipeline-member-spec-path pm-spec)
+  (let* ([argl (pipeline-member-spec-argl pm-spec)]
+         [cmd (car argl)]
+         [cmdpath (resolve-command-path cmd)])
+    (if cmdpath
+        (struct-copy pipeline-member-spec pm-spec
+                     [argl (cons cmdpath (cdr argl))])
+        (error 'resolve-pipeline-member-spec-path
+               "Command not found: ~a" cmd))))
+
+(define (resolve-command-path cmd)
+  (let ([pathstr (if (path? cmd) cmd (->string cmd))])
+    (or (find-executable-path pathstr)
+        (and (equal? 'windows (system-type 'os))
+             (string? pathstr)
+             (find-executable-path
+              (string-append (->string cmd) ".exe"))))))
+
+(define (symstr? x)
+  (or (symbol? x) (string? x)))
+
+(define (resolve-spec pm-spec)
+  (let* ([argl (pipeline-member-spec-argl pm-spec)]
+         [cmd (first argl)]
+         [cmdstr (and (symstr? cmd) (->string cmd))])
+    (cond
+      [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
+      [(equal? cmdstr "process") (resolve-pipeline-member-spec-path
+                                  (struct-copy pipeline-member-spec pm-spec
+                                               [argl (cdr argl)]))]
+      [cmdstr
+       (let ([looked (lookup-shell-function cmdstr)])
+         (if looked
+             (resolve-spec (struct-copy pipeline-member-spec pm-spec
+                                        [argl (cons looked (cdr argl))]))
+             (resolve-pipeline-member-spec-path pm-spec)))]
+      [else pm-spec])))
 
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -36,10 +94,14 @@
   #:property prop:procedure (struct-field-index func)
   #:transparent)
 
-(define (pm-spec-sym? pmember)
+(define (pm-spec-lookup? pmember)
   (and (pipeline-member-spec? pmember)
-       (symbol? (car (pipeline-member-spec-argl pmember)))))
-(define (pm-spec-thread? pmember)
+       (let ([cmd (car (pipeline-member-spec-argl pmember))])
+         (or (symbol? cmd) (string? cmd)))))
+(define (pm-spec-path? pmember)
+  (and (pipeline-member-spec? pmember)
+       (path? (car (pipeline-member-spec-argl pmember)))))
+(define (pm-spec-func? pmember)
   (and (pipeline-member-spec? pmember)
        (not (pm-spec-alias? pmember))
        (procedure? (car (pipeline-member-spec-argl pmember)))))
@@ -84,7 +146,7 @@
   (for/and ([m (pipeline-members pline)])
     (pipeline-member-spec? m)))
 
-(define (pipeline-err-outs pline)
+(define (pipeline-err-ports pline)
   (map pipeline-member-port-err (pipeline-members pline)))
 
 (define (pipeline-wait/all pline)
@@ -180,20 +242,19 @@
 
 
 (define (run-pipeline/spec pipeline-spec)
-  (let* ([members-pre-alias (pipeline-members pipeline-spec)]
-         [members (map resolve-alias members-pre-alias)]
+  (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
+         [members (map resolve-spec members-pre-resolve)]
          [kill-flag (pipeline-end-exit-flag pipeline-spec)]
          [status-all? (pipeline-status-all? pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
-         ;; TODO - fix the file stream port logic once I have shell-func mapping
-         [to-use (if (and (pm-spec-sym? (car members))
+         [to-use (if (and (pm-spec-path? (car members))
                           (port? to-port)
                           (not (file-stream-port? to-port)))
                      #f
                      to-port)]
          [from-port (pipeline-port-from pipeline-spec)]
-         [from-use (if (and (pm-spec-sym? (car (reverse members)))
+         [from-use (if (and (pm-spec-path? (car (reverse members)))
                             (port? from-port)
                             (not (file-stream-port? from-port)))
                        #f
@@ -224,7 +285,6 @@
     pline-with-killer))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
-  ;; This should only be called by run-pipeline
   ;; Start a the pipeline, return started members.
   ;; To-line-port and from-line-port should be file-stream-ports if they connect
   ;; to processes.
@@ -237,14 +297,13 @@
     (and (pmi? pmember) (thread? (pmi-subproc-or-thread pmember))))
 
   (define pipeline-length (length pipeline-member-specs))
-  (define r0-members (map resolve-alias pipeline-member-specs))
   (define r1-members-rev
     (for/fold ([m-outs '()])
-              ([m r0-members]
+              ([m pipeline-member-specs]
                [i (in-range pipeline-length)])
       (cond
         ;; leave thread starting to round 2
-        [(pm-spec-thread? m) (cons m m-outs)]
+        [(pm-spec-func? m) (cons m m-outs)]
         [else
          (let* ([to-spec (cond [(null? m-outs)
                                 to-line-port]
@@ -276,7 +335,7 @@
               ([m r1-members]
                [i (in-range pipeline-length)])
       (cond
-        [(pm-spec-thread? m)
+        [(pm-spec-func? m)
          (let* ([prev (and (not (null? m-outs))
                            (car m-outs))]
                 [next (and (< i (sub1 pipeline-length))
@@ -342,38 +401,24 @@
       (flush-output)
       0)))
 
-(define (resolve-alias pm-spec)
-  ;; TODO - recursively resolve
-  (if (pm-spec-alias? pm-spec)
-      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
-             [new-argl (apply (car old-argl) (cdr old-argl))]
-             [error? (if (or (not (list? new-argl)) (null? new-argl))
-                         (error 'resolve-alias "alias did not produce an argument list")
-                         #f)])
-        (struct-copy pipeline-member-spec pm-spec
-                     [argl new-argl]))
-      pm-spec))
+(define (->string a)
+  (cond [(string? a) a]
+        [(symbol? a) (symbol->string a)]
+        [(number? a) (number->string a)]
+        [else (format "~a" a)]))
 
 (define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
   (when (null? argv)
     (error 'subprocess+ "empty argv"))
   (define cmd (car argv))
   (define args (cdr argv))
-  (define (convert-arg a)
-    (cond [(string? a) a]
-          [(symbol? a) (symbol->string a)]
-          [(number? a) (number->string a)]
-          [else (format "~a" a)]))
-  (define cmdpath (or (find-executable-path (convert-arg cmd))
-                      (and (equal? 'windows (system-type 'os))
-                           (find-executable-path
-                            (string-append (convert-arg cmd) ".exe")))))
+  (define cmdpath (resolve-command-path cmd))
   (when (not cmdpath) (error 'subprocess+ "Command `~a` not in path." cmd))
   (apply subprocess
          (append (list out
                        in
                        err
                        cmdpath)
-                 (map convert-arg args))))
+                 (map ->string args))))
 
 
