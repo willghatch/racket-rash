@@ -381,7 +381,7 @@ pipelines where it is set to always kill when the end member exits
          (let* ([prev (and (not (null? m-outs))
                            (car m-outs))]
                 [next (and (< i (sub1 pipeline-length))
-                           (list-ref r1-members i))]
+                           (list-ref r1-members (add1 i)))]
                 [next-is-running? (and next (pmi? next))]
                 [prev-is-running? (and prev (pmi? prev))]
                 [err-spec (pipeline-member-spec-port-err m)]
