@@ -6,8 +6,11 @@
 
 (provide
  shellify
- (struct-out alias-func)
+
  current-shell-functions
+ add-shell-function
+ (struct-out alias-func)
+ shell-alias
 
  run-pipeline
  run-pipeline/out
@@ -27,6 +30,13 @@
 
 (define current-shell-functions
   (make-parameter (hash)))
+
+(define (add-shell-function name function)
+  (current-shell-functions (hash-set (current-shell-functions) name function)))
+(define (shell-alias name argl-start)
+  (let ([namestr (->string name)]
+        [func (alias-func (λ args (append argl-start args)))])
+    (add-shell-function namestr func)))
 
 (define (lookup-shell-function key)
   (let* ([skey (->string key)])
