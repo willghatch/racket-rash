@@ -3,6 +3,7 @@
 (require rash)
 (require (prefix-in scribble: scribble/reader))
 (require rash/private/read-funcs)
+(require basedir)
 (require
  (for-syntax syntax/parse
              racket/base))
@@ -25,10 +26,23 @@
         (let ([ret-val
                (with-handlers ([(λ (e) #t) (λ (e) e)])
                  (eval `(rash-line-parse
-                         ,@(rash-parse-at-reader-output read-input)) ns))])
+                         ,@(rash-parse-at-reader-output read-input))
+                       ns))])
           (rash-repl "" ret-val)))))
+
+(define (eval-rashrc rcfile)
+  (eval `(rash-line-parse ,@(rash-parse-at-reader-output
+                             (scribble:read-inside (open-input-file rcfile))))
+        ns))
+
+(for ([rcfile (list-config-files #:program "rash" "rashrc")])
+  (with-handlers ([(λ _ #t) (λ (ex)
+                              (eprintf "error in rc file ~a: ~a" rcfile ex))])
+    (eval-rashrc rcfile)))
 
 (with-handlers ([(λ _ #t) (λ (ex)
                             (eprintf "Exception: ~a~n" ex)
                             (rash-repl "" #f))])
   (rash-repl "" #f))
+
+(printf "and now exiting for some reason~n")
