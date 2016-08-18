@@ -12,8 +12,8 @@
 
 (provide
  shellify
- rash-pipeline
- rash-pipeline/funcify
+ run-pipeline
+ run-pipeline/funcify
  pipeline-wait
  pipeline-kill
  pipeline-status
@@ -21,6 +21,7 @@
  pipeline-status/all
  pipeline-status/list
  (struct-out alias-func)
+ (struct-out pipeline-member-spec)
  )
 
 
@@ -50,7 +51,8 @@
   (subproc-or-thread port-err thread-ret-box thread-exn-box)
   #:transparent)
 (struct pipeline-member-spec
-  (argl port-err port-to port-from subproc thread)
+  (argl port-err)
+  ;; TODO - add contracts
   #:transparent)
 (struct alias-func
   (func)
@@ -126,19 +128,33 @@
             'running
             (or ret err)))))
 
-(define (run-pipeline pipeline-spec)
-  (let* ([members (pipeline-members pipeline-spec)]
+(define (resolve-alias pm-spec)
+  ;(argl port-err port-to port-from subproc thread)
+  (if (pm-spec-alias? pm-spec)
+      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
+             [new-argl (apply (car old-argl) (cdr old-argl))]
+             [error? (if (or (not (list? new-argl)) (null? new-argl))
+                         (error 'resolve-alias "alias did not produce an argument list")
+                         #f)])
+        (struct-copy pipeline-member-spec pm-spec
+                     [argl new-argl]))
+      pm-spec))
+
+(define (run-pipeline/spec pipeline-spec)
+  (let* ([members-pre-alias (pipeline-members pipeline-spec)]
+         [members (map resolve-alias members-pre-alias)]
          [kill-flag (pipeline-end-exit-flag pipeline-spec)]
          [status-all? (pipeline-status-all? pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
-         [to-use (if (and (pipeline-member-process? (car members))
+         ;; TODO - fix the file stream port logic once I have shell-func mapping
+         [to-use (if (and (pm-spec-sym? (car members))
                           (port? to-port)
                           (not (file-stream-port? to-port)))
                      #f
                      to-port)]
          [from-port (pipeline-port-from pipeline-spec)]
-         [from-use (if (and (pipeline-member-process? (car (reverse members)))
+         [from-use (if (and (pm-spec-sym? (car (reverse members)))
                             (port? from-port)
                             (not (file-stream-port? from-port)))
                        #f
@@ -168,18 +184,6 @@
          [pline-with-killer (struct-copy pipeline pline
                                          [end-exit-flag killer])])
     pline-with-killer))
-
-(define (resolve-alias pm-spec)
-  ;(argl port-err port-to port-from subproc thread)
-  (if (pm-spec-alias? pm-spec)
-      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
-             [new-argl (apply (car old-argl) (cdr old-argl))]
-             [error? (if (or (not (list? new-argl)) (null? new-argl))
-                         (error 'resolve-alias "alias did not produce an argument list")
-                         #f)])
-        (struct-copy pipeline-member-spec pm-spec
-                     [argl new-argl]))
-      pm-spec))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   ;; This should only be called by run-pipeline
@@ -289,100 +293,67 @@
   (define out-members (map finalize-member r2-members))
   (list out-members to-port from-port))
 
-(define (make-pipeline-member-spec argl err)
-  (cond
-    [(alias-func? (car argl)) (pipeline-member-spec argl err #f #f #f #f)]
-    [(procedure? (car argl)) (pipeline-member-spec argl err #f #f #f #f)]
-    [else (pipeline-member-spec argl err #f #f #f #f)]))
-(define (make-pipeline-spec #:in [in #f]
-                            #:out [out #f]
+(define (make-pipeline-spec #:in [in (current-input-port)]
+                            #:out [out (current-output-port)]
                             #:end-exit-flag [end-exit-flag #t]
                             #:status-all? [status-all? #f]
                             #:background? [bg? #f]
-                            members err-specs)
+                            #:default-err [default-err (current-error-port)]
+                            members)
   (pipeline in out #f
-            (map make-pipeline-member-spec members err-specs)
+            (map (λ (m)
+                   (if (pipeline-member-spec? m)
+                       m
+                       (pipeline-member-spec m default-err)))
+                 members)
             #t end-exit-flag bg? status-all?))
 
+(define (run-pipeline #:in [in (current-input-port)]
+                      #:out [out (current-output-port)]
+                      #:end-exit-flag [end-exit-flag #t]
+                      #:status-all? [status-all? #f]
+                      #:background? [bg? #f]
+                      #:default-err [default-err (current-error-port)]
+                      . members)
+  (let ([pline
+         (run-pipeline/spec
+          (make-pipeline-spec #:in in #:out out
+                              #:end-exit-flag end-exit-flag
+                              #:status-all? status-all?
+                              #:background? bg?
+                              #:default-err default-err
+                              members))])
+    (if bg?
+        pline
+        (begin (pipeline-wait pline)
+               (pipeline-status pline)))))
 
-(begin-for-syntax
-  (define-splicing-syntax-class pipeline-member
-    (pattern (~seq (~datum #:with-err) (member:expr err:expr)))
-    (pattern member:expr #:attr err #'(current-error-port)))
-  (define-splicing-syntax-class in-term
-    (pattern (~seq (~datum #:in) term:expr))
-    (pattern (~seq) #:attr term #'(current-input-port)))
-  (define-splicing-syntax-class out-term
-    (pattern (~seq (~datum #:out) term:expr))
-    (pattern (~seq) #:attr term #'#f))
-  (define-splicing-syntax-class kill-term
-    (pattern (~seq (~datum #:kill-at-end) term:expr))
-    (pattern (~seq) #:attr term #'#t))
-  (define-splicing-syntax-class background-term
-    (pattern (~seq (~datum #:background) term:expr))
-    (pattern (~seq) #:attr term #'#f))
-  (define-splicing-syntax-class end-attrs
-    (pattern (~seq (~or (~optional (~seq (~datum #:out) out:expr))
-                        (~optional (~seq (~datum #:kill-at-end) kill:expr))
-                        (~optional (~seq (~datum #:background) bg:expr)))
-                   ...)))
-  )
-
-(define-syntax (rash-pipeline-spec stx)
-  (syntax-parse stx
-    [(rash-pipeline-spec
-      in:in-term
-      pm:pipeline-member ...+
-      ea:end-attrs)
-     (with-syntax* ([out (or (attribute ea.out) #'(current-output-port))]
-                    [kill (or (attribute ea.kill) #'#t)]
-                    [bg (or (attribute ea.bg) #'#f)])
-       #'(make-pipeline-spec #:in in.term
-                             (list pm.member ...)
-                             (list pm.err ...)
-                             #:out out
-                             #:end-exit-flag kill
-                             #:background? bg))]))
-
-(define-syntax (rash-pipeline stx)
-  (syntax-parse stx
-    [(rash-pipeline arg ...+)
-     #'(let ([pline (run-pipeline (rash-pipeline-spec arg ...))])
-         (if (pipeline-start-bg? pline)
-             pline
-             (begin
-               (pipeline-wait pline)
-               (pipeline-status pline))))]))
-
-(define-syntax (rash-pipeline/funcify stx)
-  (syntax-parse stx
-    [(r-p/f arg ...+)
-     #'(let ([spec (rash-pipeline-spec arg ...)])
-         (run-pipeline/funcify spec))]))
-
-(define (run-pipeline/funcify pspec)
-  #;(when (not (pipeline-end-exit-flag pspec))
-    (error 'run-pipeline/funcify
-           "Only pipelines set to kill when the end member finishes are eligible to be funcified."))
-  (when (pipeline-start-bg? pspec)
-    (error 'run-pipeline/funcify
-           "Background pipelines are not eligible to be funcified."))
+(define (run-pipeline/funcify #:end-exit-flag [end-exit-flag #t]
+                              #:status-all? [status-all? #f]
+                              . members)
   (let* ([out (open-output-string)]
          [err (open-output-string)]
          [in (open-input-string "")]
+         [pline-spec (make-pipeline-spec #:in in #:out out
+                                         #:end-exit-flag end-exit-flag
+                                         #:status-all? status-all?
+                                         #:background? #f
+                                         #:default-err err
+                                         members)]
          [pline (parameterize ([current-output-port out]
                                [current-error-port err]
                                [current-input-port in])
-                  (run-pipeline pspec))]
+                  (run-pipeline/spec pline-spec))]
          [wait (pipeline-wait pline)]
          [kill (pipeline-kill pline)]
          [status (pipeline-status pline)])
     (if (not (equal? 0 status))
-        (error 'make-run-pipeline->output
+        (error 'rash-pipeline/funcify
                "nonzero pipeline exit (~a) with stderr: ~v"
                status
                (get-output-string err))
         (get-output-string out))))
+
 
 (define (shellify f)
   (λ args
@@ -405,13 +376,12 @@
   (define my-grep (shellify grep-func))
 
 
-  ;(rash-pipeline '(ls -l /dev) `(,my-grep "uucp"))
+  ;(run-pipeline '(ls -l /dev) `(,my-grep "uucp"))
+  (run-pipeline '(ls -l /dev) `(grep "uucp"))
   (define d (alias-func (λ args (list* 'ls '--color=always args))))
-  (rash-pipeline `(,d -l /dev))
+  (run-pipeline `(,d -l /dev))
 
-  #;(rash-pipeline #:in #f '(ls) #:with-err ('(grep something) 'stdout)
-                 #:background #f #:out #f)
-  (rash-pipeline/funcify '(ls) #:with-err ('(grep shell) 'stdout))
+  (run-pipeline/funcify '(ls) (pipeline-member-spec '(grep shell) 'stdout))
 
   #|
   TODO
