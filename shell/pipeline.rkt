@@ -3,34 +3,54 @@
 (require racket/port)
 (require racket/exn)
 (require racket/list)
+(require racket/contract)
 
 (provide
- shellify
+ (contract-out
 
- current-shell-functions
- base-shell-functions
- add-shell-function
- shell-alias
- (struct-out alias-func)
- (struct-out pipeline-same-thread-func)
+  [shellify (-> procedure?
+                procedure?)]
 
- shell-cd
- shell-printf
- shell-echo
+  [current-shell-functions (->* ()
+                                ((hash/c string? procedure?))
+                                (or/c (hash/c string? procedure?) void?))]
+  [base-shell-functions (hash/c string? procedure?)]
+  [add-shell-function (-> (or/c string? symbol?) procedure? void?)]
+  [shell-alias (-> (or/c string? symbol?) (listof any/c) void?)]
+  [struct alias-func ([func procedure?])]
+  [struct pipeline-same-thread-func ([func procedure?])]
 
- run-pipeline
- run-pipeline/out
- (struct-out pipeline-member-spec)
+  [shell-cd (->* () #:rest (listof (or/c string? path? symbol?)) integer?)]
+  [shell-printf (->* (string?) #:rest (listof any/c) integer?)]
+  [shell-echo (->* () #:rest (listof any/c) integer?)]
 
- pipeline-err-ports
- pipeline-wait
- pipeline-kill
- pipeline-running?
- pipeline-status
- pipeline-status/list
- )
+  [run-pipeline (->* ()
+                     (#:in (or/c port? false/c)
+                      #:out (or/c port? false/c)
+                      #:end-exit-flag any/c
+                      #:status-and? any/c
+                      #:background? any/c
+                      #:default-err (or/c port? false/c 'stdout)
+                      )
+                     #:rest (listof (or/c list? pipeline-member-spec?))
+                     any/c)]
+  [run-pipeline/out (->* ()
+                         (#:end-exit-flag any/c
+                          #:status-and? any/c)
+                         #:rest (listof (or/c list? pipeline-member-spec?))
+                         any/c)]
+  [struct pipeline-member-spec ([argl (listof any/c)]
+                                [port-err (or/c port? false/c 'stdout)])]
 
-;; TODO -- contracts
+  [pipeline? (-> any/c boolean?)]
+  [pipeline-err-ports (-> pipeline? (listof (or/c false/c input-port?)))]
+  [pipeline-wait (-> pipeline? void?)]
+  [pipeline-kill (-> pipeline? void?)]
+  [pipeline-running? (-> pipeline? boolean?)]
+  [pipeline-status (-> pipeline? any/c)]
+  [pipeline-status/list (-> pipeline? (listof any/c))]
+  ))
+
 
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -104,7 +124,6 @@
   #:transparent)
 (struct pipeline-member-spec
   (argl port-err)
-  ;; TODO - add contracts
   #:transparent)
 (struct alias-func
   (func)
