@@ -1,0 +1,45 @@
+;; It assumes #lang rash
+
+;; This is evaluated at the top level, so you can contaminate your
+;; interactive repl's namespace with definitions that you require, etc.
+
+;; This file should live at $XDG_CONFIG_HOME/rash/rashrc, 
+(~/.config/rash/rashrc), or any of $XDG_CONFIG_DIRS/rash/rashrc
+
+;; add basic shell functions (eg. cd) to function hash
+&@(require rash/base-shell-functions)
+&@(use-base-shell-functions)
+
+;; make some aliases
+;; if you want to make an alias with the same name as a program,
+;; be sure to turn the program name into a path on the right hand
+;; side, or it will cause an error when it detects a loop.
+&@(shell-alias 'ls `(,(string->path "ls") --color=auto))
+;; If an alias goes to another symbol or string it will try to
+;; resolve it as a shell function/alias as well before trying
+;; to find a program for it.  So if grep is an alias, cgrep will
+;; be resolved at least twice before reaching a program or function to run
+&@(shell-alias 'cgrep `(grep --color))
+
+;; I like these aliases
+&@(shell-alias 'd '(ls --color=auto))
+&@(shell-alias 'di '(ls -l --color=auto))
+
+;; I use these, but some of them shadow programs.
+;; I never use those programs, though, and nobody should be giving programs
+;; 1-3 letter names anyway
+;&@(shell-alias 'gc '(git commit))
+;&@(shell-alias 'gs '(git status))
+;&@(shell-alias 'gd '(git diff))
+;&@(shell-alias 'gka '(gitk --all))
+;&@(shell-alias 'gta '(tig --all))
+;&@(shell-alias 'greb '(git rebase))
+;&@(shell-alias 'gru '(git remote update))
+;&@(shell-alias 'gunadd '(git reset HEAD))
+;&@(shell-alias 'gco '(git checkout))
+;&@(shell-alias 'gcob '(git checkout -b))
+;&@(shell-alias 'gclone '(git clone --recursive))
+;&@(shell-alias 'gp '(git push))
+;&@(shell-alias 'ga '(git add))
+
+
