@@ -16,9 +16,8 @@
  pipeline-err-ports
  pipeline-wait
  pipeline-kill
+ pipeline-running?
  pipeline-status
- pipeline-status/end
- pipeline-status/and
  pipeline-status/list
  )
 
@@ -128,6 +127,11 @@
       (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
       (kill-thread (pipeline-member-subproc-or-thread m))))
 
+(define (pipeline-member-running? m)
+  (if (pipeline-member-process? m)
+      (equal? 'running (subprocess-status (pipeline-member-subproc-or-thread m) #t))
+      (thread-running? (pipeline-member-subproc-or-thread m))))
+
 (define (pipeline-member-status m)
   (if (pipeline-member-process? m)
       (subprocess-status (pipeline-member-subproc-or-thread m))
@@ -164,6 +168,10 @@
 (define (pipeline-kill pline)
   (for ([m (pipeline-members pline)])
     (pipeline-member-kill m)))
+
+(define (pipeline-running? pline)
+  (for/or ([m (pipeline-members pline)])
+    (pipeline-member-running? m)))
 
 #|
 TODO - pipeline status should have a special value for pipeline
