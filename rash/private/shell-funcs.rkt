@@ -10,7 +10,7 @@
  current-shell-functions
 
  run-pipeline
- run-pipeline/funcify
+ run-pipeline/out
  (struct-out pipeline-member-spec)
 
  pipeline-err-ports
@@ -18,11 +18,13 @@
  pipeline-kill
  pipeline-status
  pipeline-status/end
- pipeline-status/all
+ pipeline-status/and
  pipeline-status/list
  )
 
 ;; TODO -- contracts
+
+;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define current-shell-functions
   (make-parameter (hash)))
@@ -139,7 +141,7 @@
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline
-  (port-to port-from members end-exit-flag start-bg? status-all?)
+  (port-to port-from members end-exit-flag start-bg? status-and?)
   #:transparent)
 
 (define (pipeline-spec? pline)
@@ -155,7 +157,7 @@
 (define (pipeline-wait/end pline)
   (pipeline-member-wait (car (reverse (pipeline-members pline)))))
 (define (pipeline-wait pline)
-  (if (pipeline-status-all? pline)
+  (if (pipeline-status-and? pline)
       (pipeline-wait/all pline)
       (pipeline-wait/end pline)))
 
@@ -170,7 +172,7 @@ pipelines where it is set to always kill when the end member exits
 |#
 (define (pipeline-status/list pline)
   (map pipeline-member-status (pipeline-members pline)))
-(define (pipeline-status/all pline)
+(define (pipeline-status/and pline)
   (define (rec sl)
     (cond [(null? sl) 0]
           [(equal? 0 (car sl)) (rec (cdr sl))]
@@ -179,15 +181,15 @@ pipelines where it is set to always kill when the end member exits
 (define (pipeline-status/end pline)
   (pipeline-member-status (car (reverse (pipeline-members pline)))))
 (define (pipeline-status pline)
-  (if (pipeline-status-all? pline)
-      (pipeline-status/all pline)
+  (if (pipeline-status-and? pline)
+      (pipeline-status/and pline)
       (pipeline-status/end pline)))
 
 
 (define (make-pipeline-spec #:in [in (current-input-port)]
                             #:out [out (current-output-port)]
                             #:end-exit-flag [end-exit-flag #t]
-                            #:status-all? [status-all? #f]
+                            #:status-and? [status-and? #f]
                             #:background? [bg? #f]
                             #:default-err [default-err (current-error-port)]
                             members)
@@ -197,12 +199,12 @@ pipelines where it is set to always kill when the end member exits
                        m
                        (pipeline-member-spec m default-err)))
                  members)
-            end-exit-flag bg? status-all?))
+            end-exit-flag bg? status-and?))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
                       #:end-exit-flag [end-exit-flag #t]
-                      #:status-all? [status-all? #f]
+                      #:status-and? [status-and? #f]
                       #:background? [bg? #f]
                       #:default-err [default-err (current-error-port)]
                       . members)
@@ -210,7 +212,7 @@ pipelines where it is set to always kill when the end member exits
          (run-pipeline/spec
           (make-pipeline-spec #:in in #:out out
                               #:end-exit-flag end-exit-flag
-                              #:status-all? status-all?
+                              #:status-and? status-and?
                               #:background? bg?
                               #:default-err default-err
                               members))])
@@ -219,15 +221,15 @@ pipelines where it is set to always kill when the end member exits
         (begin (pipeline-wait pline)
                (pipeline-status pline)))))
 
-(define (run-pipeline/funcify #:end-exit-flag [end-exit-flag #t]
-                              #:status-all? [status-all? #f]
-                              . members)
+(define (run-pipeline/out #:end-exit-flag [end-exit-flag #t]
+                          #:status-and? [status-and? #f]
+                          . members)
   (let* ([out (open-output-string)]
          [err (open-output-string)]
          [in (open-input-string "")]
          [pline-spec (make-pipeline-spec #:in in #:out out
                                          #:end-exit-flag end-exit-flag
-                                         #:status-all? status-all?
+                                         #:status-and? status-and?
                                          #:background? #f
                                          #:default-err err
                                          members)]
@@ -239,7 +241,7 @@ pipelines where it is set to always kill when the end member exits
          [kill (pipeline-kill pline)]
          [status (pipeline-status pline)])
     (if (not (equal? 0 status))
-        (error 'rash-pipeline/funcify
+        (error 'run-pipeline/out
                "nonzero pipeline exit (~a) with stderr: ~v"
                status
                (get-output-string err))
@@ -250,7 +252,7 @@ pipelines where it is set to always kill when the end member exits
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [members (map resolve-spec members-pre-resolve)]
          [kill-flag (pipeline-end-exit-flag pipeline-spec)]
-         [status-all? (pipeline-status-all? pipeline-spec)]
+         [status-and? (pipeline-status-and? pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-use (if (and (pm-spec-path? (car members))
@@ -278,10 +280,10 @@ pipelines where it is set to always kill when the end member exits
                      (begin
                        (thread (λ () (copy-port to-port to-out)))
                        #f))]
-         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-all?)]
+         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?)]
          [killer (if (or (equal? kill-flag 'always)
                          (and kill-flag
-                              (not status-all?)))
+                              (not status-and?)))
                      (thread (λ () (pipeline-wait pline)
                                 (pipeline-kill pline)))
                      #f)]
@@ -385,7 +387,7 @@ pipelines where it is set to always kill when the end member exits
         [else (cons m m-outs)])))
   (define r2-members (reverse r2-members-rev))
   (define from-port (pmi-port-from (car r2-members-rev)))
-  (define to-port (pmi-port-from (car r2-members)))
+  (define to-port (pmi-port-to (car r2-members)))
   (define (finalize-member m)
     (pipeline-member
      (pmi-subproc-or-thread m)

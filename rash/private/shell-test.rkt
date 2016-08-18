@@ -30,5 +30,5 @@ into a test submodule.
 ;(run-pipeline `(,d -l /dev))
 (run-pipeline `(ls -l /dev))
 
-(run-pipeline/funcify `(ls) (pipeline-member-spec '(grep shell) 'stdout))
+(run-pipeline/out `(ls) (pipeline-member-spec '(grep shell) 'stdout))
 
