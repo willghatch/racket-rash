@@ -163,6 +163,11 @@
   (for ([m (pipeline-members pline)])
     (pipeline-member-kill m)))
 
+#|
+TODO - pipeline status should have a special value for pipeline
+members that have been killed.  Also, it should count as success for
+pipelines where it is set to always kill when the end member exits
+|#
 (define (pipeline-status/list pline)
   (map pipeline-member-status (pipeline-members pline)))
 (define (pipeline-status/all pline)

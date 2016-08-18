@@ -1,29 +1,29 @@
 Main TODO items
 ---------------
 
-* Solidify pipeline s-exp API
-** I want good and easy to use s-exp APIs to be possibly the main programming interface, as well as for complicated interactive commands.
-** shellify should curry just one argument, functions should receive args as well
-** function members of pipelines should be able to be a list of closure + args
-** kw-arg for stderr for all, as well as individually settable?
-** a custom exn type for pipeline failures would also be great.
+* Split s-exp library from line-based library
 * Tests
-* Documentation
 * Contracts
-* Improve line-based syntax, maybe split into separate package.  The s-exp API should be easy to nail down and be stable while I want more time to experiment with the line-based syntax.
-* Publish package
+* Documentation -- don't forget to document the magic "process" keyword
+* Publish s-exp lib package
+
+* Improve line-based syntax
+** I think I need to make a new fancy reader function like the @-exp reader, but that doesn't recursively process the string in {}.  It will have to have some awareness of balanced delimiters for nesting, but no more.
+** I want to be able to parse the resulting string as well, and get proper source information.  Maybe I can put syntax properties of the location offsets and add them up afterward, or maybe I can prepend spaces when I turn the string into a port so it gives the correct location
+** I think I need to use syntax-local-introduce or something on the resulting syntax objects.  At any rate, I need to check that the syntax that comes from reading the string in the {} part has the right scope sets.
+
 * More features
 
 What more features?
 -------------------
 
+* kw-args for functions in shell pipelines
+* a custom exn type for pipeline failures
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
-* process wrapper functions (aliases) -- take args and return a process argv
-* shell function/alias lookup with parameter
-* probably hardcoded few func/alias names skip lookup for "this is a program" and "this is a function" etc
 
 * path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
 * easy port opening functions for redirection to files (>, >>, <) and temp-file redirects ( <() )
+* wrapper struct for functions to return non-zero but have it still count as success
 * bg pipeline disowning?
     Disowning will probably only work for pipelines
     without any racket functions or filters in them.  But perhaps you should
