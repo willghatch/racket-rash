@@ -45,10 +45,17 @@
 (define (resolve-alias pm-spec)
   (if (pm-spec-alias? pm-spec)
       (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
-             [new-argl (apply (car old-argl) (cdr old-argl))]
+             [old-cmd (car old-argl)]
+             [new-argl (apply old-cmd (cdr old-argl))]
              [error? (if (or (not (list? new-argl)) (null? new-argl))
                          (error 'resolve-alias "alias did not produce an argument list")
-                         #f)])
+                         #f)]
+             [new-cmd (car new-argl)]
+             [self-alias? (if (or (equal? old-cmd new-cmd)
+                                  (and (or (string? new-cmd) (symbol? new-cmd))
+                                       (equal? (lookup-shell-function new-cmd) old-cmd)))
+                              (error 'resolve-alias "alias ~a resolves to itself." new-cmd)
+                              #f)])
         (struct-copy pipeline-member-spec pm-spec
                      [argl new-argl]))
       pm-spec))
@@ -71,24 +78,20 @@
              (find-executable-path
               (string-append (->string cmd) ".exe"))))))
 
-(define (symstr? x)
-  (or (symbol? x) (string? x)))
-
 (define (resolve-spec pm-spec)
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
          [cmd (first argl)]
-         [cmdstr (and (symstr? cmd) (->string cmd))])
+         [cmdstr (and (or (symbol? cmd) (string? cmd)) (->string cmd))])
     (cond
       [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
-      [(equal? cmdstr "process") (resolve-pipeline-member-spec-path
-                                  (struct-copy pipeline-member-spec pm-spec
-                                               [argl (cdr argl)]))]
       [cmdstr
        (let ([looked (lookup-shell-function cmdstr)])
          (if looked
              (resolve-spec (struct-copy pipeline-member-spec pm-spec
                                         [argl (cons looked (cdr argl))]))
              (resolve-pipeline-member-spec-path pm-spec)))]
+      ;; Note that paths are safe from further resolution -- an alias
+      ;; chain should always end with a path.
       [else pm-spec])))
 
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
