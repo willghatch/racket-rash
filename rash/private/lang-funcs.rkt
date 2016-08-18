@@ -6,14 +6,14 @@
  rash
  rash/out
  rash/values
- (all-from-out "shell-funcs.rkt")
+ (all-from-out shell/pipeline)
  )
 
 (require (for-syntax racket/base
                      syntax/parse
                      ))
 (require racket/port)
-(require "shell-funcs.rkt")
+(require shell/pipeline)
 (require "read-funcs.rkt")
 (require (for-syntax "read-funcs.rkt"))
 
