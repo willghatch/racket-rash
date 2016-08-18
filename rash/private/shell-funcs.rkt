@@ -3,6 +3,7 @@
 (require racket/port)
 (require racket/exn)
 (require racket/function)
+(require racket/list)
 (require racket/string)
 
 (require (for-syntax racket/base))
@@ -19,6 +20,7 @@
  pipeline-status/end
  pipeline-status/all
  pipeline-status/list
+ (struct-out alias-func)
  )
 
 
@@ -45,14 +47,33 @@
                  (map convert-arg args))))
 
 (struct pipeline-member
-  (port-to port-from port-err
-           subprocess thread thread-ret-box thread-exn-box
-           spec?)
+  (subproc-or-thread port-err thread-ret-box thread-exn-box)
   #:transparent)
+(struct pipeline-member-spec
+  (argl port-err port-to port-from subproc thread)
+  #:transparent)
+(struct alias-func
+  (func)
+  #:property prop:procedure (struct-field-index func)
+  #:transparent)
+
+(define (pm-spec-sym? pmember)
+  (and (pipeline-member-spec? pmember)
+       (symbol? (car (pipeline-member-spec-argl pmember)))))
+(define (pm-spec-thread? pmember)
+  (and (pipeline-member-spec? pmember)
+       (not (pm-spec-alias? pmember))
+       (procedure? (car (pipeline-member-spec-argl pmember)))))
+(define (pm-spec-alias? pmember)
+  (and (pipeline-member-spec? pmember)
+       (alias-func? (car (pipeline-member-spec-argl pmember)))))
+
 (define (pipeline-member-process? pmember)
-  (and (pipeline-member? pmember) (pipeline-member-subprocess pmember)))
+  (and (pipeline-member? pmember)
+       (subprocess? (pipeline-member-subproc-or-thread pmember))))
 (define (pipeline-member-thread? pmember)
-  (and (pipeline-member? pmember) (pipeline-member-thread pmember)))
+  (and (pipeline-member? pmember)
+       (thread? (pipeline-member-subproc-or-thread pmember))))
 
 (struct pipeline
   (port-to port-from port-err-list members spec? end-exit-flag start-bg? status-all?)
@@ -70,16 +91,16 @@
       (pipeline-wait/end pline)))
 (define (pipeline-member-wait member)
   (if (pipeline-member-process? member)
-      (subprocess-wait (pipeline-member-subprocess member))
-      (thread-wait (pipeline-member-thread member))))
+      (subprocess-wait (pipeline-member-subproc-or-thread member))
+      (thread-wait (pipeline-member-subproc-or-thread member))))
 
 (define (pipeline-kill pline)
   (for ([m (pipeline-members pline)])
     (pipeline-member-kill m)))
 (define (pipeline-member-kill m)
   (if (pipeline-member-process? m)
-      (subprocess-kill (pipeline-member-subprocess m) #t)
-      (kill-thread (pipeline-member-thread m))))
+      (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
+      (kill-thread (pipeline-member-subproc-or-thread m))))
 
 (define (pipeline-status/list pline)
   (map pipeline-member-status (pipeline-members pline)))
@@ -97,8 +118,8 @@
       (pipeline-status/end pline)))
 (define (pipeline-member-status m)
   (if (pipeline-member-process? m)
-      (subprocess-status (pipeline-member-subprocess m))
-      (let* ([dead (thread-dead? (pipeline-member-thread m))]
+      (subprocess-status (pipeline-member-subproc-or-thread m))
+      (let* ([dead (thread-dead? (pipeline-member-subproc-or-thread m))]
              [ret (unbox (pipeline-member-thread-ret-box m))]
              [err (unbox (pipeline-member-thread-exn-box m))])
         (if (not dead)
@@ -122,14 +143,11 @@
                             (not (file-stream-port? from-port)))
                        #f
                        from-port)]
-         [run-members (run-pipeline-members members to-use from-use)]
+         [run-members/ports (run-pipeline-members members to-use from-use)]
+         [run-members (first run-members/ports)]
          [err-outs (map pipeline-member-port-err run-members)]
-         [to-out (pipeline-member-port-to (car run-members))]
-         [from-out (pipeline-member-port-from (car (reverse run-members)))]
-         [sanitized (map (λ (m) (struct-copy pipeline-member m
-                                             [port-to #f]
-                                             [port-from #f]))
-                         run-members)]
+         [to-out (second run-members/ports)]
+         [from-out (third run-members/ports)]
          [from-ret (if (equal? from-port from-use)
                        from-out
                        (begin
@@ -140,7 +158,7 @@
                      (begin
                        (thread (λ () (copy-port to-port to-out)))
                        #f))]
-         [pline (pipeline to-ret from-ret err-outs sanitized #f kill-flag bg? status-all?)]
+         [pline (pipeline to-ret from-ret err-outs run-members #f kill-flag bg? status-all?)]
          [killer (if (or (equal? kill-flag 'always)
                          (and kill-flag
                               (not status-all?)))
@@ -151,39 +169,60 @@
                                          [end-exit-flag killer])])
     pline-with-killer))
 
+(define (resolve-alias pm-spec)
+  ;(argl port-err port-to port-from subproc thread)
+  (if (pm-spec-alias? pm-spec)
+      (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
+             [new-argl (apply (car old-argl) (cdr old-argl))]
+             [error? (if (or (not (list? new-argl)) (null? new-argl))
+                         (error 'resolve-alias "alias did not produce an argument list")
+                         #f)])
+        (struct-copy pipeline-member-spec pm-spec
+                     [argl new-argl]))
+      pm-spec))
+
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   ;; This should only be called by run-pipeline
   ;; Start a the pipeline, return started members.
   ;; To-line-port and from-line-port should be file-stream-ports if they connect
   ;; to processes.
+  (struct pmi
+    (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box)
+    #:transparent)
+  (define (pmi-process? pmember)
+    (and (pmi? pmember) (subprocess? (pmi-subproc-or-thread pmember))))
+  (define (pmi-thread? pmember)
+    (and (pmi? pmember) (thread? (pmi-subproc-or-thread pmember))))
+
   (define pipeline-length (length pipeline-member-specs))
+  (define r0-members (map resolve-alias pipeline-member-specs))
   (define r1-members-rev
     (for/fold ([m-outs '()])
-              ([m pipeline-member-specs]
+              ([m r0-members]
                [i (in-range pipeline-length)])
       (cond
         ;; leave thread starting to round 2
-        [(pipeline-member-thread? m) (cons m m-outs)]
+        [(pm-spec-thread? m) (cons m m-outs)]
         [else
          (let* ([to-spec (cond [(null? m-outs)
                                 to-line-port]
-                               [(pipeline-member-process? (car m-outs))
-                                (pipeline-member-port-from (car m-outs))]
+                               [(pmi-process? (car m-outs))
+                                (pmi-port-from (car m-outs))]
                                [else #f])]
                 [from-spec (if (equal? i (sub1 pipeline-length))
                                from-line-port
                                #f)]
-                [err-spec (pipeline-member-port-err m)]
+                [err-spec (pipeline-member-spec-port-err m)]
                 [err-to-send (if (and (port? err-spec)
                                       (not (file-stream-port? err-spec)))
                                  #f
                                  err-spec)])
            (let-values ([(sproc from to err-from)
-                         (subprocess+ (pipeline-member-subprocess m)
+                         (subprocess+ (pipeline-member-spec-argl m)
                                       #:err err-to-send
                                       #:in to-spec
                                       #:out from-spec)])
-             (let ([out-member (pipeline-member to from err-from sproc #f #f #f #f)])
+             (let ([out-member (pmi to from err-from sproc #f #f)])
                (when (and err-spec err-from)
                  ;; I need to wire up the file-stream-port output into the original port
                  (thread (λ () (copy-port err-from err-spec))))
@@ -195,24 +234,23 @@
               ([m r1-members]
                [i (in-range pipeline-length)])
       (cond
-        [(pipeline-member-process? m) (cons m m-outs)]
-        [else
+        [(pm-spec-thread? m)
          (let* ([prev (and (not (null? m-outs))
                            (car m-outs))]
                 [next (and (< i (sub1 pipeline-length))
                            (list-ref r1-members i))]
-                [next-is-process? (and next (pipeline-member-process? next))]
-                [err-spec (pipeline-member-port-err m)]
+                [next-is-process? (and next (pmi-process? next))]
+                [err-spec (pipeline-member-spec-port-err m)]
                 [ret-box (box #f)]
                 [err-box (box #f)])
            (let-values ([(to-use to-ret)
                          (cond
                            [(and (not prev) (not to-line-port)) (make-pipe)]
-                           [prev (values (pipeline-member-port-from prev) #f)]
+                           [prev (values (pmi-port-from prev) #f)]
                            [else (values to-line-port #f)])]
                         [(from-ret from-use)
                          (cond
-                           [next-is-process? (values #f (pipeline-member-port-to next))]
+                           [next-is-process? (values #f (pmi-port-to next))]
                            [next (make-pipe)]
                            [(not from-line-port) (make-pipe)]
                            [else (values #f from-line-port)])]
@@ -230,22 +268,32 @@
                                      (λ (exn)
                                        (set-box! err-box exn)
                                        (eprintf "~a~n" (exn->string exn)))])
-                                   (let ([thread-ret {(pipeline-member-thread m)}])
+                                   (let* ([argl (pipeline-member-spec-argl m)]
+                                          [thread-ret (apply (car argl) (cdr argl))])
                                      (set-box! ret-box thread-ret)))
                                  (close-input-port (current-input-port))
                                  (close-output-port (current-output-port))
                                  (close-output-port (current-error-port)))))]
-                    [ret-member (pipeline-member to-ret from-ret err-ret
-                                                 #f ret-thread ret-box err-box
-                                                 #f)])
-               (cons ret-member m-outs))))])))
+                    [ret-member (pmi to-ret from-ret err-ret ret-thread ret-box err-box)])
+               (cons ret-member m-outs))))]
+        [else (cons m m-outs)])))
   (define r2-members (reverse r2-members-rev))
-  r2-members)
+  (define from-port (pmi-port-from (car r2-members-rev)))
+  (define to-port (pmi-port-from (car r2-members)))
+  (define (finalize-member m)
+    (pipeline-member
+     (pmi-subproc-or-thread m)
+     (pmi-port-err m)
+     (pmi-thread-ret-box m)
+     (pmi-thread-exn-box m)))
+  (define out-members (map finalize-member r2-members))
+  (list out-members to-port from-port))
 
-(define (make-pipeline-member-spec s-exp-or-thunk err)
-  (if (procedure? s-exp-or-thunk)
-      (pipeline-member #f #f err #f s-exp-or-thunk #f #f #t)
-      (pipeline-member #f #f err s-exp-or-thunk #f #f #f #t)))
+(define (make-pipeline-member-spec argl err)
+  (cond
+    [(alias-func? (car argl)) (pipeline-member-spec argl err #f #f #f #f)]
+    [(procedure? (car argl)) (pipeline-member-spec argl err #f #f #f #f)]
+    [else (pipeline-member-spec argl err #f #f #f #f)]))
 (define (make-pipeline-spec #:in [in #f]
                             #:out [out #f]
                             #:end-exit-flag [end-exit-flag #t]
@@ -347,22 +395,24 @@
 
 (module+ main
 
-  (define (grep-func regex str)
+  (define (grep-func str regex)
     (string-append
      (string-join (filter identity
                           (for/list ([line (string-split str "\n")])
                             (and (regexp-match regex line) line)))
                   "\n")
      "\n"))
-  (define (my-grep regex)
-    (shellify (λ (str) (grep-func regex str))))
+  (define my-grep (shellify grep-func))
 
 
-  (rash-pipeline '(ls -l /dev) (my-grep "uucp"))
+  ;(rash-pipeline '(ls -l /dev) `(,my-grep "uucp"))
+  (define d (alias-func (λ args (list* 'ls '--color=always args))))
+  (rash-pipeline `(,d -l /dev))
 
   #;(rash-pipeline #:in #f '(ls) #:with-err ('(grep something) 'stdout)
                  #:background #f #:out #f)
   (rash-pipeline/funcify '(ls) #:with-err ('(grep shell) 'stdout))
+
   #|
   TODO
   - at some point job control should be possible, in which case it should be
@@ -383,18 +433,6 @@
     the shell worked on Windows too, so if I can reasonably avoid relying on
     fork, I should.
 
-  - I ought to wrap subprocess calls and function calls into some
-    wrapper struct that I can have the pipeline function inspect to determine
-    how to launch each one.  These should probably be called "jobs".  Should
-    everything run from the top level of a script/interaction should be a job?
-    There could be pipelines and whatnot started below the top level, maybe in
-    a top-level function call wrapped in @().  But unless it is wrappen in a form
-    that marks it as a job, I don't think it should be.  The function will
-    return even if it has eg. a thread or something in it.  But maybe if a top-level
-    function returns a thread it should be counted as a job?  But at the same time,
-    it may start a thread, but not return it.  I don't think there is really
-    anything to be done about this -- a user could, if desired, wrap calls that
-    might start weird threads or something in a sandbox.
 
   |#
 
