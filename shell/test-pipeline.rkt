@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "shell-funcs.rkt")
+(require "pipeline.rkt")
 (require racket/string)
 (require racket/function)
 
