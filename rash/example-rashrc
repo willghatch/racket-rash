@@ -4,11 +4,8 @@
 ;; interactive repl's namespace with definitions that you require, etc.
 
 ;; This file should live at $XDG_CONFIG_HOME/rash/rashrc, 
-(~/.config/rash/rashrc), or any of $XDG_CONFIG_DIRS/rash/rashrc
+;; (~/.config/rash/rashrc), or any of $XDG_CONFIG_DIRS/rash/rashrc
 
-;; add basic shell functions (eg. cd) to function hash
-&@(require rash/base-shell-functions)
-&@(use-base-shell-functions)
 
 ;; make some aliases
 ;; if you want to make an alias with the same name as a program,
