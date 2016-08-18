@@ -55,11 +55,11 @@
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define (add-shell-function name function)
-  (current-shell-functions (hash-set (current-shell-functions) name function)))
+  (current-shell-functions (hash-set (current-shell-functions)
+                                     (if (symbol? name) (symbol->string name) name)
+                                     function)))
 (define (shell-alias name argl-start)
-  (let ([namestr (->string name)]
-        [func (alias-func (λ args (append argl-start args)))])
-    (add-shell-function namestr func)))
+  (add-shell-function name (alias-func (λ args (append argl-start args)))))
 
 (define (lookup-shell-function key)
   (let* ([skey (->string key)])
