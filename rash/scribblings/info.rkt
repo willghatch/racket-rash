@@ -1,3 +1,3 @@
 #lang info
 
-(define scribblings '(("rash.scrbl" (multi-page) (language))))
+(define scribblings '(("rash.scrbl" () (language))))
