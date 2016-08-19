@@ -17,6 +17,8 @@ Symbols in pipelines are turned into strings before they are passed in as argume
 
 Now go and write your shell scripts in Racket instead of the bourne shell, bash, zsh, ksh, csh, tcsh, ash, dash, fish, ...
 
+This library DOES work on MS Windows, and if it can't find a program it retries the name with a .exe at the end.  But Microsoft doesn't seem to believe in having useful shell utilities, or in putting program executables on the PATH, or adding program locations to the PATH.  So it will probably still be more useful on Unix than on Windows.
+
 This library is also intended to support another forthcoming library with a line-based syntax with arbitrary embedding of s-expression based Racket.
 
 
