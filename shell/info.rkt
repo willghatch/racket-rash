@@ -1,2 +1,2 @@
 #lang info
-(define scribblings '(("docs.scrbl" () (library))))
+(define scribblings '(("shell-pipeline.scrbl" () (library))))
