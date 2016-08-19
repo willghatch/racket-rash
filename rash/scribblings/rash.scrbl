@@ -1,9 +1,9 @@
 #lang scribble/manual
 
-@title{RASH: RAcket SHell Library}
+@title[#:tag "rash"]{RASH: RAcket SHell Library}
+@author+email["William Hatch" "william@hatch.uno"]
 
-@table-of-contents[]
-
+@defmodule[rash]
 @(require scribble-code-examples)
 @(require rash)
 
@@ -22,7 +22,7 @@ if it just starts with an open paren, and not need this @literal|{&@}| stuff.
 
 Rash is a language and library for writing shell scripts and including them in
 Racket programs.  It is basically a syntax wrapper for the
-@other-doc['(lib "shell/docs.scrbl") #:indirect "shell/pipeline"] library.
+@other-doc['(lib "shell/shell-pipeline.scrbl") #:indirect "shell/pipeline"] library.
 This library exposes a subset of its functionality in a line-based syntax.
 So if you look at the docs for the pipeline library, you should see how
 this just wraps it.
