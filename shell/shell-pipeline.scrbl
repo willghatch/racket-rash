@@ -25,45 +25,45 @@ This library is also intended to support another forthcoming library with a line
 @section{Reference}
 
 @defproc[(run-pipeline [member (or/c list? pipeline-member-spec?)] ...
-                       [#:in in (or/c input-port? false/c) (current-input-port)]
-                       [#:out out (or/c output-port? false/c) (current-output-port)]
-                       [#:default-err default-err (or/c output-port? false/c 'stdout) (current-error-port)]
-                       [#:end-exit-flag end-exit-flag any/c #t]
-                       [#:status-and? status-and? any/c #f]
-                       [#:background? bg? any/c #f])
-         any/c]{
-                Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If it is a string, it will look up in @racket[current-shell-functions] and use the resulting function in one is found, or if it doesn't find one it will search for an executable with the same name on the path.  If the command is a symbol it will be coerced into a string for use as described.  If the command (or the shell-function found by a lookup) is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.  If you want a process and are afraid of your command being translated by an alias, turn it into a path before passing it in.
+[#:in in (or/c input-port? false/c) (current-input-port)]
+[#:out out (or/c output-port? false/c) (current-output-port)]
+[#:default-err default-err (or/c output-port? false/c 'stdout) (current-error-port)]
+[#:end-exit-flag end-exit-flag any/c #t]
+[#:status-and? status-and? any/c #f]
+[#:background? bg? any/c #f])
+any/c]{
+Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If it is a string, it will look up in @racket[current-shell-functions] and use the resulting function in one is found, or if it doesn't find one it will search for an executable with the same name on the path.  If the command is a symbol it will be coerced into a string for use as described.  If the command (or the shell-function found by a lookup) is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.  If you want a process and are afraid of your command being translated by an alias, turn it into a path before passing it in.
 
-                    A @racket[pipeline-member-spec], in addition to the command/argument list, has an error-port specification.  All lists given will be turned into @racket[pipeline-member-spec]s using the @racket[default-err] specification.
+A @racket[pipeline-member-spec], in addition to the command/argument list, has an error-port specification.  All lists given will be turned into @racket[pipeline-member-spec]s using the @racket[default-err] specification.
 
-                    Each member of the pipeline will have its @racket[current-output-port] connected to the @racket[current-input-port] of the next member.  The first and last members use @racket[in] and @racket[out], respectively, to communicate with the outside world.
+Each member of the pipeline will have its @racket[current-output-port] connected to the @racket[current-input-port] of the next member.  The first and last members use @racket[in] and @racket[out], respectively, to communicate with the outside world.
 
-                    All ports specified (@racket[in], @racket[out], @racket[default-err]) may be either a port or #f.  The error port may be @code{'stdout}, in which case the output port will be used.  If #f is given, then a port will be returned in the pipeline struct returned.
+All ports specified (@racket[in], @racket[out], @racket[default-err]) may be either a port or #f.  The error port may be @code{'stdout}, in which case the output port will be used.  If #f is given, then a port will be returned in the pipeline struct returned.
 
-                    If @racket[status-and?] is true, then the return status (or status given by @racket[pipeline-status]) will be the first unsuccessful status (nonzero) in the pipeline, or 0 if they are all successful.  Otherwise the status returned only reflects the last member of the pipeline (mirroring the behavior of most shell languages).
+If @racket[status-and?] is true, then the return status (or status given by @racket[pipeline-status]) will be the first unsuccessful status (nonzero) in the pipeline, or 0 if they are all successful.  Otherwise the status returned only reflects the last member of the pipeline (mirroring the behavior of most shell languages).
 
-                    If @racket[end-exit-flag] is true and @racket[status-and?] is not, then when the last member of the pipeline finishes, all previous members will be killed.  This matches the behavior of pipelines in most shell languages (eg. try "find / | head -n 1").
+If @racket[end-exit-flag] is true and @racket[status-and?] is not, then when the last member of the pipeline finishes, all previous members will be killed.  This matches the behavior of pipelines in most shell languages (eg. try "find / | head -n 1").
 
-                    If @racket[background?] is false, then @racket[run-pipeline] uses @racket[pipeline-wait] to wait until it finishes, then returns the status with @racket[pipeline-status].  If @racket[background?] is not false, then @racket[run-pipeline] returns a @racket[pipeline] object.
-                }
+If @racket[background?] is false, then @racket[run-pipeline] uses @racket[pipeline-wait] to wait until it finishes, then returns the status with @racket[pipeline-status].  If @racket[background?] is not false, then @racket[run-pipeline] returns a @racket[pipeline] object.
+}
 
 @defproc[(run-pipeline/out [member (or/c list? pipeline-member-spec?)] ...
-                           [#:end-exit-flag end-exit-flag any/c #t]
-                           [#:status-and? status-and? any/c #f])
-         any/c]{
-                Like @racket[run-pipeline], but string-ports are used as the input, output, and error ports.  It does not return until the pipeline finishes, and returns the output string.  If the pipeline has an unsuccessful status, an exception is raised (with the contents of the error port).
-                }
+[#:end-exit-flag end-exit-flag any/c #t]
+[#:status-and? status-and? any/c #f])
+any/c]{
+Like @racket[run-pipeline], but string-ports are used as the input, output, and error ports.  It does not return until the pipeline finishes, and returns the output string.  If the pipeline has an unsuccessful status, an exception is raised (with the contents of the error port).
+}
 
 @defstruct[pipeline-member-spec
-           ([argl (listof any/c)]
-            [port-err (or/c port? false/c 'stdout)])]{
-                                                      @racket[argl] is the command/argument list for a member of a pipeline.  @racket[port-err] is a specification for the error port to use -- just like in @racket[subprocess].
-                                                      }
+([argl (listof any/c)]
+[port-err (or/c port? false/c 'stdout)])]{
+@racket[argl] is the command/argument list for a member of a pipeline.  @racket[port-err] is a specification for the error port to use -- just like in @racket[subprocess].
+}
 
 
 @defproc[(pipeline? [p any/c]) boolean?]{
-                                         Is it a pipeline object?
-                                         }
+Is it a pipeline object?
+}
 
 @defproc[(pipeline-port-to [p pipeline?]) (or/c false/c output-port?)]{Get initial input port (if one was provided initially, this will be false)}
 @defproc[(pipeline-port-from [p pipeline?]) (or/c false/c input-port?)]{Get final output port (if one was provided initially, this will be false)}
@@ -75,55 +75,53 @@ This library is also intended to support another forthcoming library with a line
 @defproc[(pipeline-status/list [p pipeline?]) (listof any/c)]{A list of the exit statuses of all the pipeline members.}
 
 
-@defproc[(shellify [func procedure?]) procedure?
-         ]{
-           Convenience function for putting Racket functions into pipelines.
+@defproc[(shellify [func procedure?]) procedure?]{
+Convenience function for putting Racket functions into pipelines.
 
-           Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port] and returns 0.  If an exception is raised by the original function, its text will be output to its @racket[current-error-port], and it will return something other than 0.
-                      }
+Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port] and returns 0.  If an exception is raised by the original function, its text will be output to its @racket[current-error-port], and it will return something other than 0.
+}
 
-@defparam[current-shell-functions table (hash/c string? procedure?)
-                                  ] {
-                                     Parameter that holds the current mapping for strings and symbols to look up shell functions (including aliases) before looking for an executable program.
-                                             }
+@defparam[current-shell-functions table (hash/c string? procedure?)]{
+Parameter that holds the current mapping for strings and symbols to look up shell functions (including aliases) before looking for an executable program.
+}
 
 @defthing[base-shell-functions
-          ]{
-            Base table for @racket[current-shell-functions].  Includes a binding from @code{"cd"} to @racket[shell-cd], @code{"printf"} to @racket[shell-printf], and @code{"echo"} to @racket[shell-echo].
-            }
+]{
+Base table for @racket[current-shell-functions].  Includes a binding from @code{"cd"} to @racket[shell-cd], @code{"printf"} to @racket[shell-printf], and @code{"echo"} to @racket[shell-echo].
+}
 
 @defproc[(add-shell-function
-          [name (or/c string? symbol?)]
-          [shell-func procedure?])
-         void?]{
-                Adds @racket[shell-func] to current-shell-functions under @racket[name].  @racket[shell-func] should follow the rules for function members of pipelines.
-                }
+[name (or/c string? symbol?)]
+[shell-func procedure?])
+void?]{
+Adds @racket[shell-func] to current-shell-functions under @racket[name].  @racket[shell-func] should follow the rules for function members of pipelines.
+}
 
 @defproc[(shell-alias
-          [name (or/c string? symbol?)]
-          [alias-list (listof any/c)])
-         void?]{
-                Makes an @racket[alias-func] and adds it to the current-shell-functions under @racket[name].  The alias func that is created appends any use-site arguments to the argument list in @racket[alias-list].  Basically like what @code{alias} does in @code{bash}.
-                }
+[name (or/c string? symbol?)]
+[alias-list (listof any/c)])
+void?]{
+Makes an @racket[alias-func] and adds it to the current-shell-functions under @racket[name].  The alias func that is created appends any use-site arguments to the argument list in @racket[alias-list].  Basically like what @code{alias} does in @code{bash}.
+}
 
 @defstruct[alias-func ([func procedure?])]{
-                                           Wrapper struct with @racket[prop:procedure] for alias functions.  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
-                                           }
+Wrapper struct with @racket[prop:procedure] for alias functions.  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
+}
 
 @defstruct[pipeline-same-thread-func ([func procedure?])
-                                     ]{
-                                       Wrapper struct with @racket[prop:procedure].  If a @racket[pipeline-member-spec] has one of these as its command, it will be executed without spawning a new thread.  This is basically a hack to make @racket[shell-cd] work while being called in a pipeline.  Don't use this.
-                                               }
+]{
+Wrapper struct with @racket[prop:procedure].  If a @racket[pipeline-member-spec] has one of these as its command, it will be executed without spawning a new thread.  This is basically a hack to make @racket[shell-cd] work while being called in a pipeline.  Don't use this.
+}
 
 @defproc[(shell-cd [dir (or/c string? path? symbol?)] ...) void?]{
-                                                                  Changes @racket[current-directory].  It's a @racket[pipeline-same-thread-func], so it changes the @racket[current-directory] for the current thread rather than a throwaway thread.  If no directory is given, it changes to the user's home directory.  If more than one directory is given it errors.
-                                                                  }
+Changes @racket[current-directory].  It's a @racket[pipeline-same-thread-func], so it changes the @racket[current-directory] for the current thread rather than a throwaway thread.  If no directory is given, it changes to the user's home directory.  If more than one directory is given it errors.
+}
 @defproc[(shell-printf [format-string string?] [arg ang/c] ...) void?]{
-                                                                       Like normal printf, except it returns 0.
-                                                                       }
+Like normal printf, except it returns 0.
+}
 @defproc[(shell-echo [arg ang/c] ...) void?]{
-                                             Each argument is displayed to the @racket[current-output-port] with a space in between.  A newline is displayed after all arguments.  Returns 0.
-                                                  }
+Each argument is displayed to the @racket[current-output-port] with a space in between.  A newline is displayed after all arguments.  Returns 0.
+}
 
 
 @section{Code and License}
