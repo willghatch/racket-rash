@@ -423,12 +423,14 @@ pipelines where it is set to always kill when the end member exits
                         [(err-ret err-use)
                          (cond [(output-port? err-spec)
                                 (values #f (dup-output-port err-spec))]
-                               [err-spec (values #f err-spec)]
+                               [(equal? err-spec 'stdout) (values #f err-spec)]
                                [else (make-pipe)])])
              (let* ([ret-thread
                      (parameterize ([current-input-port to-use]
                                     [current-output-port from-use]
-                                    [current-error-port err-use])
+                                    [current-error-port (if (equal? err-use 'stdout)
+                                                            from-use
+                                                            err-use)])
                        (if same-thread-ones?
                            (begin
                              {(mk-run-thunk m err-box ret-box)}

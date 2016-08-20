@@ -5,6 +5,7 @@
 (require racket/function)
 (require racket/format)
 (require racket/runtime-path)
+(require racket/port)
 
 (define-runtime-path pipeline.rkt "pipeline.rkt")
 
@@ -30,18 +31,51 @@
   (check-equal? (run-pipeline/out '(echo hello "\n" how are you? "\n" I am fine)
                                   `(,my-grep hello))
                 "hello \n")
+
+  ;; check that aliases work
   (shell-alias 'aoeu '(echo aoeu))
   (check-equal? (run-pipeline/out '(aoeu hello))
                 "aoeu hello\n" )
 
+  ;; run-pipeline/out should raise an exception if it has a nonzero exit for the last member
+  (check-exn exn?
+             (λ () (run-pipeline/out (list (λ () (error 'test-case "exceptional!"))))))
+
+  ;; No error if the last pipeline member is fine
+  (check-equal? "hello\n"
+                (run-pipeline/out (list (λ () (error 'test-case "exceptional!")))
+                                  '(echo hello)))
+  (check-exn exn?
+             (λ () (run-pipeline/out #:status-and? #t
+                                     (list (λ () (error 'test-case "exceptional!")))
+                                     '(echo hello))))
+
+  ;; check stdout flag for functions
+  (check-regexp-match "^my-test-func: exceptional!"
+                      (run-pipeline/out (pipeline-member-spec
+                                         (list (λ () (error 'my-test-func "exceptional!")))
+                                         'stdout)
+                                        (list (λ ()
+                                                (display (port->string (current-input-port)))
+                                                0))))
+  (check-equal? "hello\n"
+                (run-pipeline/out (list (λ () (error 'test-case "exceptional!")))
+                                  '(echo hello)))
+
+  (check-pred pipeline?
+              (run-pipeline #:background? #t
+                            #:in #f
+                            #:out #f
+                            #:default-err #f
+                            '(echo hello)))
   )
+
 
 (module+ main
   ;; Here can go tests that rely on external programs,
   ;; but these tests must be run manually.
 
   (require rackunit)
-
 
   ;; TODO - how to I wrap this so I get a nice summary as with raco test and the test module?
   (printf "If this exits without saying things passed, then things failed.~n")
