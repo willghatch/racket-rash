@@ -346,10 +346,31 @@ pipelines where it is set to always kill when the end member exits
     pline-with-killer))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
-  ;; Start a the pipeline, return started members.
-  ;; To-line-port and from-line-port should be file-stream-ports if they connect
-  ;; to processes.
+  #| This has to be careful about the it starts things in for proper wiring.
+  The important bit is that subprocesses have to be passed a file-stream-port
+  for each of its in/out/err ports (or #f to create one).
+  To facilitate this, we start the subprocess pipeline members first, using
+  the previous output as the input if it's a file-stream, and getting an output
+  for each (except maybe at the end).  If a process gets its input from a thread
+  pipeline member, then the process needs to give us a file-stream port, which we
+  then use in the next pass for threads.
+
+  The second pass starts the function/thread pipeline members.
+
+  In the end there is a third pass to start any pipeline members marked to run
+  in the same thread, which is basically a hack, but I deemed it worth it to
+  let `cd` be run in a pipeline (for syntactic easiness in Rash).
+
+  TODO - I think the intermediate ports between subprocesses still need to
+  be closed on the Racket side.  Maybe for simplicity I should just collect
+  every file-stream port created while starting ports and make a watcher thread
+  that closes them all once the pipeline finishes (except for the external facing
+  ones -- if I return a new port for whole-pipeline input/output or an error port,
+  those should be closed outside).
+  |#
   (struct pmi
+    ;; pmi for pipeline-member-intermediate -- has info important for running
+    ;; things that I don't want to expose in the final output.
     (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box)
     #:transparent)
   (define (pmi-process? pmember)
