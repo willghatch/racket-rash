@@ -20,3 +20,12 @@ job control -- for an interactive shell, how should the shell capture references
 
 What about an rc file for the interactive shell?  Will it be a module?  Will it be a wrapper to the program like an xmonad config?  Will it be dynamically required?  Will it be top-level evaluated?
 
+
+Syntax ideas
+------------
+
+I don't want to have globs auto-expand always, or automatically interpolate variables in paths, etc.  But I want it to be syntactically very easy to say "yes, expand this stuff".  Maybe I should make it so a delimiter (eg {} or something more exotic «»｢｣ is read to be something like ,@(shell-expand args ...) which will interpolate variables (all-caps variables will expand to environment-var lookups), expand globs (* globs and {foo,bar} globs)...
+
+eg.
+
+cat {$HOME/foo/{bar,baz}/*.rkt}
