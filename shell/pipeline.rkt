@@ -530,10 +530,6 @@ pipelines where it is set to always kill when the end member exits
       (current-directory dir)
       (error 'change-current-directory "No such directory: ~a" dir)))
 
-(define (shell-func-catch-error e)
-  (eprintf "~a" (exn->string e))
-  1)
-
 (define shell-cd
   (pipeline-same-thread-func
    (λ dirs
@@ -549,8 +545,7 @@ pipelines where it is set to always kill when the end member exits
      0)))
 
 (define (shell-printf f-string . args)
-  (with-handlers ([(λ _ #t) shell-func-catch-error])
-    (apply printf f-string args))
+  (apply printf f-string args)
   0)
 
 (define (shell-echo . args)
