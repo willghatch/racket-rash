@@ -19,11 +19,15 @@
 (define (basic-prompt last-ret)
   (let* ([cdate (current-date)]
          [chour (date-hour cdate)]
-         [cmin (date-minute cdate)])
+         [cmin (date-minute cdate)]
+         [padded-min (if (< cmin 10)
+                         (string-append "0" (number->string cmin))
+                         cmin)]
+         [ret-show (if (exn? last-ret) "exn!" last-ret)])
     (printf "~a:~a ~a~n｢~a｣ ~a "
-            chour cmin
+            chour padded-min
             (path->string (current-directory))
-            last-ret
+            ret-show
             (if (equal? (system-type 'os) 'windows) ">" "➤"))))
 (define current-prompt-function (make-parameter basic-prompt))
 
@@ -44,6 +48,9 @@
                  (eval `(rash-line-parse
                          ,@(rash-parse-at-reader-output read-input))
                        ns))])
+          ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
+          ;; to be able to output before the next prompt.
+          (sleep 0.01)
           (rash-repl ret-val)))))
 
 (define (eval-rashrc rcfile)
