@@ -26,8 +26,12 @@ This library is also intended to support another forthcoming library with a line
 
 @defproc[(run-pipeline [member (or/c list? pipeline-member-spec?)] ...
 [#:in in (or/c input-port? false/c) (current-input-port)]
-[#:out out (or/c output-port? false/c) (current-output-port)]
-[#:default-err default-err (or/c output-port? false/c 'stdout) (current-error-port)]
+[#:out out (or/c port? false/c path-string-symbol?
+                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
+                (current-output-port)]
+[#:default-err default-err (or/c port? false/c path-string-symbol?
+                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
+                (current-error-port)]
 [#:end-exit-flag end-exit-flag any/c #t]
 [#:status-and? status-and? any/c #f]
 [#:background? bg? any/c #f])
@@ -38,7 +42,9 @@ A @racket[pipeline-member-spec], in addition to the command/argument list, has a
 
 Each member of the pipeline will have its @racket[current-output-port] connected to the @racket[current-input-port] of the next member.  The first and last members use @racket[in] and @racket[out], respectively, to communicate with the outside world.
 
-All ports specified (@racket[in], @racket[out], @racket[default-err]) may be either a port or #f.  The error port may be @code{'stdout}, in which case the output port will be used.  If #f is given, then a port will be returned in the pipeline struct returned.
+All ports specified (@racket[in], @racket[out], @racket[default-err]) may be either a port, the symbol @code{'null}, #f, or a path/string/symbol.  The error port may be @code{'stdout}, in which case the output port will be used.  If #f is given, then a port will be returned in the pipeline struct returned (similar to @racket[subprocess]).  If @code{'null} is given a null output port or empty string port is used.  If a path/string/symbol is given, then a file at that path is opened.
+
+Output and error ports may be a list of a path/string/symbol and any of @code{'error}, @code{'append}, or @code{'truncate} to specify what should happen if the file already exists.
 
 If @racket[status-and?] is true, then the return status (or status given by @racket[pipeline-status]) will be the first unsuccessful status (nonzero) in the pipeline, or 0 if they are all successful.  Otherwise the status returned only reflects the last member of the pipeline (mirroring the behavior of most shell languages).
 
@@ -56,8 +62,9 @@ Like @racket[run-pipeline], but string-ports are used as the input, output, and 
 
 @defstruct[pipeline-member-spec
 ([argl (listof any/c)]
-[port-err (or/c port? false/c 'stdout)])]{
-@racket[argl] is the command/argument list for a member of a pipeline.  @racket[port-err] is a specification for the error port to use -- just like in @racket[subprocess].
+[port-err (or/c port? false/c path-string-symbol?
+                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))])]{
+@racket[argl] is the command/argument list for a member of a pipeline.  @racket[port-err] is a specification for the error port to use -- just like in the default-err argument of @racket[run-pipeline].
 }
 
 
@@ -111,6 +118,12 @@ Wrapper struct with @racket[prop:procedure] for alias functions.  An alias funct
 @defstruct[pipeline-same-thread-func ([func procedure?])
 ]{
 Wrapper struct with @racket[prop:procedure].  If a @racket[pipeline-member-spec] has one of these as its command, it will be executed without spawning a new thread.  This is basically a hack to make @racket[shell-cd] work while being called in a pipeline.  Don't use this.
+}
+
+@defproc[(path-string-symbol?
+[p any/c])
+boolean?]{
+Like @racket[path-string?], except it also includes symbols that would be valid paths.
 }
 
 @defproc[(shell-cd [dir (or/c string? path? symbol?)] ...) void?]{

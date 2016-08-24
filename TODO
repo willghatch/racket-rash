@@ -1,5 +1,3 @@
-* how to specify 'append 'truncate 'error for output files?  Maybe #:out etc could take a list that includes a path and 'truncate or 'append?
-
 * kw-args for functions in shell pipelines
 * a custom exn type for pipeline failures
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
