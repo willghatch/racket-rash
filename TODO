@@ -1,13 +1,11 @@
-* pipeline in/out/err -- accept paths, open them as files, use the resulting file-ports for pipeline, then close the ports after the pipeline completes.  Should the files be appended or truncated?  Maybe append is a safer default option, and if you want truncate you use open-output-file explicitly.  However, a nice feature of having it wrappen in the pipeline library itself is automatic file-port closing -- you don't have to hang on to a reference of the port to close manually.  Maybe #:out etc could take a list that includes a path and 'truncate or 'append?
-* probably strings given for in/out/err should be converted to paths -- a string for input could be used with open-input-string... maybe an #:in-string would be an alternate option.
-* probably a 'null flag (or similar) could be passed for in/out/err to create a null pipe for output or an empty input pipe.
+* how to specify 'append 'truncate 'error for output files?  Maybe #:out etc could take a list that includes a path and 'truncate or 'append?
 
 * kw-args for functions in shell pipelines
 * a custom exn type for pipeline failures
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
 
 * path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
-* easy port opening functions for redirection to files (>, >>, <) and temp-file redirects ( <() )
+* easy port opening functions for redirection to files (>, >|, >>, <) and temp-file redirects ( <() >() )
 * wrapper struct for functions to return non-zero but have it still count as success
 * bg pipeline disowning?
     Disowning will probably only work for pipelines

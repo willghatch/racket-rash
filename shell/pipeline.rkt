@@ -3,6 +3,7 @@
 (require racket/port)
 (require racket/exn)
 (require racket/list)
+(require racket/vector)
 (require racket/contract)
 
 (provide
@@ -25,12 +26,12 @@
   [shell-echo (->* () #:rest (listof any/c) integer?)]
 
   [run-pipeline (->* ()
-                     (#:in (or/c input-port? false/c)
-                      #:out (or/c output-port? false/c)
+                     (#:in (or/c input-port? false/c path-string-symbol?)
+                      #:out (or/c output-port? false/c path-string-symbol?)
                       #:end-exit-flag any/c
                       #:status-and? any/c
                       #:background? any/c
-                      #:default-err (or/c output-port? false/c 'stdout)
+                      #:default-err (or/c output-port? false/c path-string-symbol?)
                       )
                      #:rest (listof (or/c list? pipeline-member-spec?))
                      any/c)]
@@ -40,7 +41,8 @@
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
   [struct pipeline-member-spec ([argl (listof any/c)]
-                                [port-err (or/c output-port? false/c 'stdout)])]
+                                [port-err (or/c output-port? false/c
+                                                path-string-symbol?)])]
 
   [pipeline? (-> any/c boolean?)]
   [pipeline-port-to (-> pipeline? (or/c false/c output-port?))]
@@ -51,6 +53,8 @@
   [pipeline-running? (-> pipeline? boolean?)]
   [pipeline-status (-> pipeline? any/c)]
   [pipeline-status/list (-> pipeline? (listof any/c))]
+
+  [path-string-symbol? (-> any/c boolean?)]
   ))
 
 
@@ -310,36 +314,99 @@ pipelines where it is set to always kill when the end member exits
          [status-and? (pipeline-status-and? pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
-         [to-use (if (and (pm-spec-path? (car members))
-                          (port? to-port)
-                          (not (file-stream-port? to-port)))
-                     #f
-                     to-port)]
+         [to-file-port (cond [(equal? to-port 'null) (open-input-string "")]
+                             [(path-string-symbol? to-port)
+                              (open-input-file (path-string-sym->path to-port))]
+                             [else #f])]
+         [to-use (cond [(and (pm-spec-path? (car members))
+                             (port? to-port)
+                             (not (file-stream-port? to-port)))
+                        #f]
+                       [to-file-port to-file-port]
+                       [else to-port])]
          [from-port (pipeline-port-from pipeline-spec)]
-         [from-use (if (and (pm-spec-path? (car (reverse members)))
-                            (port? from-port)
-                            (not (file-stream-port? from-port)))
-                       #f
-                       from-port)]
-         [run-members/ports (run-pipeline-members members to-use from-use)]
+         [from-file-port (with-handlers ([(λ _ #t) (λ (e)
+                                                     (when (port? to-file-port)
+                                                       (close-input-port to-file-port))
+                                                     (raise e))])
+                           (cond [(equal? from-port 'null) (open-output-nowhere)]
+                                 [(path-string-symbol? from-port)
+                                  (open-output-file
+                                   (path-string-sym->path from-port)
+                                   #:exists 'error)]
+                                 [else #f]))]
+         [from-use (cond [(and (pm-spec-path? (car (reverse members)))
+                               (port? from-port)
+                               (not (file-stream-port? from-port)))
+                          #f]
+                         [from-file-port from-file-port]
+                         [else from-port])]
+         [err-ports (map pipeline-member-spec-port-err members)]
+         [err-ports-with-paths (map (λ (p) (if (path-string-symbol? p)
+                                               (path-string-sym->path p)
+                                               #f))
+                                    err-ports)]
+         [paths-vec (apply vector err-ports-with-paths)]
+         [err-ports-mapped-with-dup-numbers
+          (for/list ([p err-ports]
+                     [i (in-naturals)])
+            (with-handlers ([(λ _ #t)(λ (e) e)])
+              ;; if an exception is thrown, catch it and save it for later
+              (cond
+                [(equal? p 'stdout) p]
+                [(equal? p 'null) (open-output-nowhere)]
+                ;; If this is the second instance of the file, note the number
+                ;; so they can share ports rather than trying to open
+                ;; a file twice.
+                [(and (path? p) (member p (take err-ports-with-paths i)))
+                 (vector-member p paths-vec)]
+                [(path-string-symbol? p)
+                 (open-output-file (path-string-sym->path p)
+                                   #:exists 'error)]
+                [else p])))]
+         [err-ports-mapped (map (λ (p) (if (number? p)
+                                           (list-ref err-ports-mapped-with-dup-numbers p)
+                                           p))
+                                err-ports-mapped-with-dup-numbers)]
+         [err-ports-to-close (filter (λ (x) x)
+                                     (map (λ (p pstr?) (if (and (port? p) pstr?) p #f))
+                                          err-ports-mapped err-ports-with-paths))]
+         [err-ports-err-close-for-exn
+          ;; ok, now that we have a reference to any opened error ports, we can
+          ;; close them before throwing out our error.
+          (map (λ (p) (if (exn? p)
+                          (begin (for ([p err-ports-to-close])
+                                   (close-output-port p))
+                                 (when from-file-port (close-output-port from-file-port))
+                                 (when to-file-port (close-input-port to-file-port))
+                                 (raise p))
+                          #f))
+               err-ports-mapped)]
+         [members-with-m-err
+          (map (λ (m p) (struct-copy pipeline-member-spec m
+                                     [port-err p]))
+               members
+               err-ports-mapped)]
+         [run-members/ports (run-pipeline-members members-with-m-err to-use from-use)]
          [run-members (first run-members/ports)]
          [to-out (second run-members/ports)]
          [from-out (third run-members/ports)]
-         [ports-to-close (fourth run-members/ports)]
-         [from-ret (if (equal? from-port from-use)
-                       from-out
+         [ports-to-close (append (filter port? (list to-file-port from-file-port))
+                                 err-ports-to-close)]
+         [from-ret (if (and from-port from-out)
                        (begin
                          (thread (λ ()
                                    (copy-port from-out from-port)
                                    (close-input-port from-out)))
-                         #f))]
-         [to-ret (if (equal? to-port to-use)
-                     to-out
+                         #f)
+                       from-out)]
+         [to-ret (if (and to-port to-out)
                      (begin
                        (thread (λ ()
                                  (copy-port to-port to-out)
                                  (close-output-port to-out)))
-                       #f))]
+                       #f)
+                     to-out)]
          [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?)]
          [killer (if (or (equal? kill-flag 'always)
                          (and kill-flag
@@ -411,6 +478,7 @@ pipelines where it is set to always kill when the end member exits
                                       #:err err-to-send
                                       #:in to-spec
                                       #:out from-spec)])
+             (when (and to-spec (> i 0)) (close-input-port to-spec))
              (let ([out-member (pmi to from err-from sproc #f #f)])
                (when (and err-spec err-from)
                  ;; I need to wire up the file-stream-port output into the original port
@@ -496,15 +564,8 @@ pipelines where it is set to always kill when the end member exits
      (pmi-thread-ret-box m)
      (pmi-thread-exn-box m)))
 
-  ;; collect non-outbound ports so I can be sure to close them
-  ;; (because I need to close any file-stream-ports)
-  (define ports-to-close
-    (filter (λ (p) (and (port? p) (file-stream-port? p)))
-            (append (map pmi-port-to (cdr r3-members))
-                    (map pmi-port-from (cdr r3-members-rev)))))
-
   (define out-members (map finalize-member r3-members))
-  (list out-members to-port from-port ports-to-close))
+  (list out-members to-port from-port))
 
 
 ;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -522,6 +583,14 @@ pipelines where it is set to always kill when the end member exits
         [(symbol? a) (symbol->string a)]
         [(number? a) (number->string a)]
         [else (format "~a" a)]))
+
+(define (path-string-symbol? pss)
+  (or (path-string? pss)
+      (and (symbol? pss) (path-string? (symbol->string pss)))))
+(define (path-string-sym->path pss)
+  (cond [(symbol? pss) (string->path (symbol->string pss))]
+        [(string? pss) (string->path pss)]
+        [else pss]))
 
 (define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
   (when (null? argv)
