@@ -324,15 +324,20 @@ pipelines where it is set to always kill when the end member exits
          [run-members (first run-members/ports)]
          [to-out (second run-members/ports)]
          [from-out (third run-members/ports)]
+         [ports-to-close (fourth run-members/ports)]
          [from-ret (if (equal? from-port from-use)
                        from-out
                        (begin
-                         (thread (λ () (copy-port from-out from-port)))
+                         (thread (λ ()
+                                   (copy-port from-out from-port)
+                                   (close-input-port from-out)))
                          #f))]
          [to-ret (if (equal? to-port to-use)
                      to-out
                      (begin
-                       (thread (λ () (copy-port to-port to-out)))
+                       (thread (λ ()
+                                 (copy-port to-port to-out)
+                                 (close-output-port to-out)))
                        #f))]
          [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?)]
          [killer (if (or (equal? kill-flag 'always)
@@ -340,6 +345,13 @@ pipelines where it is set to always kill when the end member exits
                               (not status-and?)))
                      (thread (λ () (pipeline-wait pline)
                                 (pipeline-kill pline)))
+                     #f)]
+         [closer (if (not (empty? ports-to-close))
+                     (thread (λ ()
+                               (pipeline-wait pline)
+                               (for ([p ports-to-close])
+                                 (when (output-port? p) (close-output-port p))
+                                 (when (input-port? p) (close-input-port p)))))
                      #f)]
          [pline-with-killer (struct-copy pipeline pline
                                          [end-exit-flag killer])])
@@ -360,13 +372,6 @@ pipelines where it is set to always kill when the end member exits
   In the end there is a third pass to start any pipeline members marked to run
   in the same thread, which is basically a hack, but I deemed it worth it to
   let `cd` be run in a pipeline (for syntactic easiness in Rash).
-
-  TODO - I think the intermediate ports between subprocesses still need to
-  be closed on the Racket side.  Maybe for simplicity I should just collect
-  every file-stream port created while starting ports and make a watcher thread
-  that closes them all once the pipeline finishes (except for the external facing
-  ones -- if I return a new port for whole-pipeline input/output or an error port,
-  those should be closed outside).
   |#
   (struct pmi
     ;; pmi for pipeline-member-intermediate -- has info important for running
@@ -489,8 +494,16 @@ pipelines where it is set to always kill when the end member exits
      (pmi-port-err m)
      (pmi-thread-ret-box m)
      (pmi-thread-exn-box m)))
+
+  ;; collect non-outbound ports so I can be sure to close them
+  ;; (because I need to close any file-stream-ports)
+  (define ports-to-close
+    (filter (λ (p) (and (port? p) (file-stream-port? p)))
+            (append (map pmi-port-to (cdr r3-members))
+                    (map pmi-port-from (cdr r3-members-rev)))))
+
   (define out-members (map finalize-member r3-members))
-  (list out-members to-port from-port))
+  (list out-members to-port from-port ports-to-close))
 
 
 ;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
