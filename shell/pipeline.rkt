@@ -101,7 +101,8 @@
         (and (equal? 'windows (system-type 'os))
              (string? pathstr)
              (find-executable-path
-              (string-append (->string cmd) ".exe"))))))
+              (string-append (->string cmd) ".exe")))
+        pathstr)))
 
 (define (resolve-spec pm-spec)
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
