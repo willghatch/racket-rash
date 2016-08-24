@@ -3,7 +3,6 @@
 (require racket/port)
 (require racket/exn)
 (require racket/list)
-(require racket/vector)
 (require racket/contract)
 
 (provide
@@ -27,11 +26,15 @@
 
   [run-pipeline (->* ()
                      (#:in (or/c input-port? false/c path-string-symbol?)
-                      #:out (or/c output-port? false/c path-string-symbol?)
+                      #:out (or/c output-port? false/c path-string-symbol?
+                                  (list/c path-string-symbol?
+                                          (or/c 'error 'append 'truncate)))
                       #:end-exit-flag any/c
                       #:status-and? any/c
                       #:background? any/c
-                      #:default-err (or/c output-port? false/c path-string-symbol?)
+                      #:default-err (or/c output-port? false/c path-string-symbol?
+                                          (list/c path-string-symbol?
+                                                  (or/c 'error 'append 'truncate)))
                       )
                      #:rest (listof (or/c list? pipeline-member-spec?))
                      any/c)]
@@ -41,8 +44,11 @@
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
   [struct pipeline-member-spec ([argl (listof any/c)]
-                                [port-err (or/c output-port? false/c
-                                                path-string-symbol?)])]
+                                [port-err
+                                 (or/c output-port? false/c
+                                       path-string-symbol?
+                                       (list/c path-string-symbol?
+                                               (or/c 'error 'append 'truncate)))])]
 
   [pipeline? (-> any/c boolean?)]
   [pipeline-port-to (-> pipeline? (or/c false/c output-port?))]
@@ -334,6 +340,10 @@ pipelines where it is set to always kill when the end member exits
                                   (open-output-file
                                    (path-string-sym->path from-port)
                                    #:exists 'error)]
+                                 [(list? from-port)
+                                  (open-output-file
+                                   (path-string-sym->path (first from-port))
+                                   #:exists (second from-port))]
                                  [else #f]))]
          [from-use (cond [(and (pm-spec-path? (car (reverse members)))
                                (port? from-port)
@@ -342,13 +352,15 @@ pipelines where it is set to always kill when the end member exits
                          [from-file-port from-file-port]
                          [else from-port])]
          [err-ports (map pipeline-member-spec-port-err members)]
-         [err-ports-with-paths (map (λ (p) (if (path-string-symbol? p)
-                                               (path-string-sym->path p)
-                                               #f))
+         [err-ports-with-paths (map (λ (p) (cond [(path-string-symbol? p)
+                                                  (path-string-sym->path p)]
+                                                 [(list? p)
+                                                  (path-string-sym->path (car p))]
+                                                 [else #f]))
                                     err-ports)]
-         [paths-vec (apply vector err-ports-with-paths)]
          [err-ports-mapped-with-dup-numbers
           (for/list ([p err-ports]
+                     [epp err-ports-with-paths]
                      [i (in-naturals)])
             (with-handlers ([(λ _ #t)(λ (e) e)])
               ;; if an exception is thrown, catch it and save it for later
@@ -358,8 +370,10 @@ pipelines where it is set to always kill when the end member exits
                 ;; If this is the second instance of the file, note the number
                 ;; so they can share ports rather than trying to open
                 ;; a file twice.
-                [(and (path? p) (member p (take err-ports-with-paths i)))
-                 (vector-member p paths-vec)]
+                [(and (path? epp) (member epp (take err-ports-with-paths i)))
+                 (- (length err-ports-with-paths)
+                    (length (member epp err-ports-with-paths)))]
+                [(list? p) (open-output-file epp #:exists (second p))]
                 [(path-string-symbol? p)
                  (open-output-file (path-string-sym->path p)
                                    #:exists 'error)]
