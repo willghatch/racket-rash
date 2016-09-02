@@ -202,7 +202,7 @@
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline
-  (port-to port-from members end-exit-flag start-bg? status-and?)
+  (port-to port-from members end-exit-flag start-bg? status-and? from-port-copier err-port-copiers)
   #:transparent)
 
 (define (pipeline-spec? pline)
@@ -214,9 +214,22 @@
 
 (define (pipeline-wait/all pline)
   (for ([m (pipeline-members pline)])
-    (pipeline-member-wait m)))
+    (pipeline-member-wait m))
+  (pipeline-wait-port-copy/all pline))
 (define (pipeline-wait/end pline)
-  (pipeline-member-wait (car (reverse (pipeline-members pline)))))
+  (pipeline-member-wait (car (reverse (pipeline-members pline))))
+  (pipeline-wait-port-copy/end pline))
+(define (pipeline-wait-port-copy/end pline)
+  (define ts (filter thread? (list (pipeline-from-port-copier pline)
+                                   (first (reverse (pipeline-err-port-copiers pline))))))
+  (for ([t ts])
+    (thread-wait t)))
+(define (pipeline-wait-port-copy/all pline)
+  (define ts (filter thread? (cons (pipeline-from-port-copier pline)
+                                   (pipeline-err-port-copiers pline))))
+  (for ([t ts])
+    (thread-wait t)))
+
 (define (pipeline-wait pline)
   (if (pipeline-status-and? pline)
       (pipeline-wait/all pline)
@@ -264,7 +277,8 @@ pipelines where it is set to always kill when the end member exits
                        m
                        (pipeline-member-spec m default-err)))
                  members)
-            end-exit-flag bg? status-and?))
+            end-exit-flag bg? status-and?
+            #f #f))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
@@ -405,15 +419,18 @@ pipelines where it is set to always kill when the end member exits
          [run-members (first run-members/ports)]
          [to-out (second run-members/ports)]
          [from-out (third run-members/ports)]
+         [err-port-copiers (fourth run-members/ports)]
          [ports-to-close (append (filter port? (list to-file-port from-file-port))
                                  err-ports-to-close)]
-         [from-ret (if (and from-port from-out)
-                       (begin
-                         (thread (λ ()
-                                   (copy-port from-out from-port)
-                                   (close-input-port from-out)))
-                         #f)
-                       from-out)]
+         [from-ret-almost (if (and from-port from-out)
+                              (thread (λ ()
+                                        (copy-port from-out from-port)
+                                        (close-input-port from-out)))
+                              from-out)]
+         [from-port-copier (if (thread? from-ret-almost)
+                              from-ret-almost
+                              #f)]
+         [from-ret (if (thread? from-ret-almost) #f from-ret-almost)]
          [to-ret (if (and to-port to-out)
                      (begin
                        (thread (λ ()
@@ -421,7 +438,8 @@ pipelines where it is set to always kill when the end member exits
                                  (close-output-port to-out)))
                        #f)
                      to-out)]
-         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?)]
+         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?
+                          from-port-copier err-port-copiers)]
          [killer (if (or (equal? kill-flag 'always)
                          (and kill-flag
                               (not status-and?)))
@@ -435,9 +453,9 @@ pipelines where it is set to always kill when the end member exits
                                  (when (output-port? p) (close-output-port p))
                                  (when (input-port? p) (close-input-port p)))))
                      #f)]
-         [pline-with-killer (struct-copy pipeline pline
-                                         [end-exit-flag killer])])
-    pline-with-killer))
+         [pline-final (struct-copy pipeline pline
+                                   [end-exit-flag killer])])
+    pline-final))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   #| This has to be careful about the it starts things in for proper wiring.
@@ -466,13 +484,14 @@ pipelines where it is set to always kill when the end member exits
     (and (pmi? pmember) (thread? (pmi-subproc-or-thread pmember))))
 
   (define pipeline-length (length pipeline-member-specs))
-  (define r1-members-rev
-    (for/fold ([m-outs '()])
+  (define-values (r1-members-rev err-port-copy-threads-rev)
+    (for/fold ([m-outs '()]
+               [err-port-copy-threads '()])
               ([m pipeline-member-specs]
                [i (in-range pipeline-length)])
       (cond
         ;; leave thread starting to round 2
-        [(pm-spec-func? m) (cons m m-outs)]
+        [(pm-spec-func? m) (values (cons m m-outs) (cons #f err-port-copy-threads))]
         [else
          (let* ([to-spec (cond [(null? m-outs)
                                 to-line-port]
@@ -494,14 +513,17 @@ pipelines where it is set to always kill when the end member exits
                                       #:out from-spec)])
              (when (and to-spec (> i 0)) (close-input-port to-spec))
              (let ([out-member (pmi to from err-from sproc #f #f)])
-               (when (and err-spec err-from)
-                 ;; I need to wire up the file-stream-port output into the original port
-                 (thread (λ ()
-                           (copy-port err-from err-spec)
-                           (close-input-port err-from))))
-               (cons out-member m-outs))))])))
+               (values
+                (cons out-member m-outs)
+                (cons (if (and err-spec err-from)
+                          (thread (λ ()
+                                    (copy-port err-from err-spec)
+                                    (close-input-port err-from)))
+                          #f)
+                      err-port-copy-threads)))))])))
 
   (define r1-members (reverse r1-members-rev))
+  (define err-port-copy-threads (reverse err-port-copy-threads-rev))
 
   (define (run-func-members members same-thread-ones?)
     (for/fold ([m-outs '()])
@@ -581,7 +603,7 @@ pipelines where it is set to always kill when the end member exits
      (pmi-thread-exn-box m)))
 
   (define out-members (map finalize-member r3-members))
-  (list out-members to-port from-port))
+  (list out-members to-port from-port err-port-copy-threads))
 
 
 ;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
