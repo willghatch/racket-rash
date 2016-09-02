@@ -496,7 +496,9 @@ pipelines where it is set to always kill when the end member exits
              (let ([out-member (pmi to from err-from sproc #f #f)])
                (when (and err-spec err-from)
                  ;; I need to wire up the file-stream-port output into the original port
-                 (thread (λ () (copy-port err-from err-spec))))
+                 (thread (λ ()
+                           (copy-port err-from err-spec)
+                           (close-input-port err-from))))
                (cons out-member m-outs))))])))
 
   (define r1-members (reverse r1-members-rev))
