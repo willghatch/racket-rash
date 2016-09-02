@@ -12,15 +12,15 @@
                 procedure?)]
 
   [current-shell-functions (->* ()
-                                ((hash/c string? procedure?))
-                                (or/c (hash/c string? procedure?) void?))]
-  [base-shell-functions (hash/c string? procedure?)]
-  [add-shell-function (-> (or/c string? symbol?) procedure? void?)]
-  [shell-alias (-> (or/c string? symbol?) (listof any/c) void?)]
+                                ((hash/c symbol? procedure?))
+                                (or/c (hash/c symbol? procedure?) void?))]
+  [base-shell-functions (hash/c symbol? procedure?)]
+  [add-shell-function (-> symbol? procedure? void?)]
+  [shell-alias (-> symbol? (listof any/c) void?)]
   [struct alias-func ([func procedure?])]
   [struct pipeline-same-thread-func ([func procedure?])]
 
-  [shell-cd (->* () #:rest (listof (or/c string? path? symbol?)) integer?)]
+  [shell-cd (->* () ((or/c string? path? symbol?)) integer?)]
   [shell-printf (->* (string?) #:rest (listof any/c) integer?)]
   [shell-echo (->* () #:rest (listof any/c) integer?)]
 
@@ -68,14 +68,13 @@
 
 (define (add-shell-function name function)
   (current-shell-functions (hash-set (current-shell-functions)
-                                     (if (symbol? name) (symbol->string name) name)
+                                     name
                                      function)))
 (define (shell-alias name argl-start)
   (add-shell-function name (alias-func (λ args (append argl-start args)))))
 
 (define (lookup-shell-function key)
-  (let* ([skey (->string key)])
-    (hash-ref (current-shell-functions) skey #f)))
+  (hash-ref (current-shell-functions) key #f))
 
 (define (resolve-alias pm-spec)
   (if (pm-spec-alias? pm-spec)
@@ -116,12 +115,11 @@
 
 (define (resolve-spec pm-spec)
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
-         [cmd (first argl)]
-         [cmdstr (and (or (symbol? cmd) (string? cmd)) (->string cmd))])
+         [cmd (first argl)])
     (cond
       [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
-      [cmdstr
-       (let ([looked (lookup-shell-function cmdstr)])
+      [(symbol? cmd)
+       (let ([looked (lookup-shell-function cmd)])
          (if looked
              (resolve-spec (struct-copy pipeline-member-spec pm-spec
                                         [argl (cons looked (cdr argl))]))
@@ -653,11 +651,8 @@ pipelines where it is set to always kill when the end member exits
 
 (define shell-cd
   (pipeline-same-thread-func
-   (λ dirs
-     (let ([dir (if (null? dirs) (getenv "HOME") (car dirs))]
-           [too-many (if (> (length dirs) 1)
-                         (error 'cd "too many arguments")
-                         #f)])
+   (λ ([dir ""])
+     (let ([dir (if (equal? dir "") (getenv "HOME") dir)])
        (change-current-directory
         (cond [(string? dir) dir]
               [(path? dir) dir]
@@ -679,9 +674,9 @@ pipelines where it is set to always kill when the end member exits
   0)
 
 (define base-shell-functions
-  (hash "cd" shell-cd
-        "printf" shell-printf
-        "echo" shell-echo
+  (hash 'cd shell-cd
+        'printf shell-printf
+        'echo shell-echo
         ))
 
 (define current-shell-functions
