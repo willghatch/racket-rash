@@ -13,9 +13,4 @@
 (define-syntax (module-begin stx)
   (syntax-parse stx
     [(m-b arg ...)
-     #'(#%module-begin (let ([ret {(λ () (rash-line-parse arg ...))}])
-                         (cond [(exact-nonnegative-integer? ret) (exit ret)]
-                               [(void? ret) (exit 0)]
-                               [else (begin
-                                       (eprintf "improper exit value: ~s~n" ret)
-                                       (exit 126))])))]))
+     #'(#%plain-module-begin (rash-line-parse arg ...))]))
