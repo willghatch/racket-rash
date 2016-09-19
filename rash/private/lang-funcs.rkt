@@ -31,9 +31,9 @@
   (define (quote-maybe stx)
     (syntax-parse stx
       [x:id
-       (if (syntax-property stx 'rash-mark-for-quoting)
-           #'(quote x)
-           #'x)]
+       (if (syntax-property stx 'rash-mark-dispatched)
+           #'x
+           #'(quote x))]
       [else stx]))
 
   )
@@ -69,14 +69,14 @@
 
 (define-syntax (rash stx)
   (syntax-parse stx
-    [(rash arg ...+)
-     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
+    [(rash arg)
+     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
        #'(rash-line-parse parg ...))]))
 
 (define-syntax (rash/out stx)
   (syntax-parse stx
-    [(rash arg ...+)
-     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
+    [(rash arg)
+     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -93,8 +93,8 @@
 
 (define-syntax (rash/values stx)
   (syntax-parse stx
-    [(rash arg ...+)
-     (with-syntax ([(parg ...) (rash-parse-at-reader-output (syntax->list #'(arg ...)))])
+    [(rash arg)
+     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])

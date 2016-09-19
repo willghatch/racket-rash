@@ -1,39 +1,29 @@
 #lang racket/base
 
 (provide
+ rash-read-syntax*
+ rash-read*
  rash-read-syntax
  rash-read
- rash-parse-at-reader-output
  )
 
-(require (prefix-in scribble: scribble/reader))
+(require udelim)
 
 (define (rash-read-syntax src in)
-  (let ([at-output (scribble:read-syntax-inside src in)])
-    (rash-parse-at-reader-output at-output #:src src)))
+  (parameterize ([current-readtable line-readtable])
+    (read-syntax src in)))
+(define (rash-read-syntax* src in)
+  (define (rec rlist)
+    (let ([part (rash-read-syntax src in)])
+      (if (eof-object? part)
+          (datum->syntax #f (reverse rlist))
+          (rec (cons part rlist)))))
+  (rec '()))
 
 (define (rash-read in)
   (syntax->datum (rash-read-syntax #f in)))
-
-(define (rash-parse-at-reader-output argl
-                                #:src [src #f])
-  (for/fold ([out-list '()])
-            ([str-or-atout (if (syntax? argl)
-                               (syntax->list argl)
-                               argl)])
-    (let ([datum (if (syntax? str-or-atout)
-                     (syntax->datum str-or-atout)
-                     str-or-atout)])
-      (if (string? datum)
-          (append
-           out-list
-           (map mark-for-quoting
-                (rash-read-syntax-seq
-                 src (open-input-string datum))))
-          (append out-list (list str-or-atout))))))
-
-(define (mark-for-quoting stx)
-  (syntax-property stx 'rash-mark-for-quoting #t #t))
+(define (rash-read* in)
+  (syntax->datum (rash-read-syntax* #f in)))
 
 
 (define (rash-read-syntax-seq src in)
@@ -67,6 +57,17 @@
      (ignore-to-newline port)
      (datum->syntax #f '%%rash-newline-symbol)]))
 
+(define (mark-dispatched stx)
+  (syntax-property stx 'rash-mark-dispatched #t #t))
+
+(define dispatch-read
+  (case-lambda
+    [(ch port)
+     (syntax->datum (dispatch-read ch port #f #f #f #f))]
+    [(ch port src line col pos)
+     (parameterize ([current-readtable rash-s-exp-readtable])
+       (mark-dispatched (read-syntax src port)))]))
+
 (define bare-line-readtable
   (make-readtable #f
                   #\newline 'terminating-macro read-newline
@@ -80,7 +81,11 @@
                   #\} #\a #f
                   #\[ #\a #f
                   #\] #\a #f
+                  #\$ 'terminating-macro dispatch-read
                   ))
 
+(define rash-s-exp-readtable
+  (make-string-delim-readtable #\« #\»))
+
 (define line-readtable
-  (scribble:make-at-readtable #:readtable bare-line-readtable))
+  (make-string-delim-readtable #\« #\» #:base-readtable bare-line-readtable))
