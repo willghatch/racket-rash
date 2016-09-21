@@ -22,7 +22,12 @@
          [padded-min (if (< cmin 10)
                          (string-append "0" (number->string cmin))
                          cmin)]
-         [ret-show (if (exn? last-ret) "exn!" last-ret)])
+         [ret-show (if (exn? last-ret)
+                       (begin (eprintf "~a~n" last-ret)
+                              ;; let any filtering output finish
+                              (sleep 0)
+                              "exn!")
+                       last-ret)])
     (printf "~a:~a ~a~n｢~a｣ ~a "
             chour padded-min
             (path->string (current-directory))
@@ -54,7 +59,8 @@
           (rash-repl ret-val)))))
 
 (define (eval-rashrc rcfile)
-  (eval `(rash-line-parse ,@(rash-read-syntax* "rcfile" (open-input-file rcfile)))
+  (eval `(rash-line-parse ,@(rash-read-syntax* (object-name rcfile)
+                                               (open-input-file rcfile)))
         ns))
 
 (for ([rcfile (list-config-files #:program "rash" "rashrc")])
