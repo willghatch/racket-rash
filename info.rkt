@@ -5,6 +5,7 @@
                "at-exp-lib"
                "basedir"
                "shell-pipeline"
+               "udelim"
                "scribble-lib"
                "scribble-doc"
                "racket-doc"
