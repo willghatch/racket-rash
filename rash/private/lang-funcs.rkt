@@ -6,12 +6,16 @@
  rash
  rash/out
  rash/values
+ rash/trim
+ rash/number
  (all-from-out shell/pipeline)
  )
 
 (require (for-syntax racket/base
                      syntax/parse
+                     udelim
                      ))
+(require racket/string)
 (require racket/port)
 (require shell/pipeline)
 (require "read-funcs.rkt")
@@ -70,13 +74,15 @@
 (define-syntax (rash stx)
   (syntax-parse stx
     [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
+     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
+                                                  (stx-string->port #'arg))])
        #'(rash-line-parse parg ...))]))
 
 (define-syntax (rash/out stx)
   (syntax-parse stx
     [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
+     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
+                                                  (stx-string->port #'arg))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -94,7 +100,8 @@
 (define-syntax (rash/values stx)
   (syntax-parse stx
     [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax (open-input-string (syntax->datum #'arg)))])
+     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
+                                                  (stx-string->port #'arg))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -103,5 +110,14 @@
                           [current-input-port in])
              (let ([ret-val (rash-line-parse parg ...)])
                (values ret-val (get-output-string out) (get-output-string err))))))]))
+
+(define-syntax (rash/trim stx)
+  (syntax-parse stx
+    [(r/t arg)
+     #'(string-trim (rash/out arg))]))
+(define-syntax (rash/number stx)
+  (syntax-parse stx
+    [(r/t arg)
+     #'(string->number (string-trim (rash/out arg)))]))
 
 
