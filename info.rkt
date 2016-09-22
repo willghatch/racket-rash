@@ -8,6 +8,5 @@
                "scribble-lib"
                "scribble-doc"
                "racket-doc"
-               "scribble-code-examples"
                ))
 
