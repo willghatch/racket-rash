@@ -74,6 +74,16 @@
 
 (define-syntax (rash-line stx)
   (syntax-parse stx
+    #:datum-literals (> >! >>)
+    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... > filename)
+     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'error)
+                     p1.argv pn.argv ...)]
+    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >! filename)
+     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'truncate)
+                     p1.argv pn.argv ...)]
+    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >> filename)
+     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'append)
+                     p1.argv pn.argv ...)]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
      #'(run-pipeline p1.argv pn.argv ...)]
     ))
