@@ -1,31 +1,21 @@
 Main TODO items
 ---------------
 
-* Improve line-based syntax
-  Currently I can escape to racket syntax with @, and have a line be just racket code if it starts with &.  But I want it to be racket code if it starts with an open paren.  This means I can't have & some-identifier-i-want-the-value-of, but that's probably not a common top-level thing to do anyway.  And for that rare scenario, you can do (identity some-id).
-  But with the current @-reader, parsing thusly for a line that starts with just ( is basically impossible unless I also turn on paren reading in the line reader, which I would rather not do.
-
-** I think I need to make a new fancy reader function like the @-exp reader, but that doesn't recursively process the string in {}.  It will have to have some awareness of balanced delimiters for nesting, but no more.
-** I want to be able to parse the resulting string as well, and get proper source information.  Maybe I can put syntax properties of the location offsets and add them up afterward, or maybe I can prepend spaces when I turn the string into a port so it gives the correct location
-** I think I need to use syntax-local-introduce or something on the resulting syntax objects.  At any rate, I need to check that the syntax that comes from reading the string in the {} part has the right scope sets.
 * add access to all the features of run-pipeline from the line-based syntax
-
-* Base alias set to load from RC file
-** should include things like cd, echo/printf, ulimit?, umask, which... really only a handfull are really things I would want handy without having to reach for things like &@(current-directory "foo")
+** redirections < > >! >>
+* make $ read into some sort of transformer macro that can do different things
+** $var should be variable reference, as it is
+** $ALL_CAPS should be an environment variable reference
+** $"string" (and better still, $«nestable «string»») should do glob expansion
+*** {foo,bar}, *, expand environment vars, ... what other sorts of globs would be useful?
+*** zsh has lots of really cool glob patterns that are impossible to remember.  What would be a good way to use them, but not have magic syntax and 1 character name nonsense?
+*** globs produce lists of arguments, not just one, so I'll have to manage splicing them in somehow.
+** $(normal racket here) should of course be normal racket
+** are there other expansions that would be useful?
+* it would be good to have racket lines on the first line, but the way they are parsed is bound up in how newline characters are parsed...
 
 About interactive shells
 ------------------------
 
 job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
 
-What about an rc file for the interactive shell?  Will it be a module?  Will it be a wrapper to the program like an xmonad config?  Will it be dynamically required?  Will it be top-level evaluated?
-
-
-Syntax ideas
-------------
-
-I don't want to have globs auto-expand always, or automatically interpolate variables in paths, etc.  But I want it to be syntactically very easy to say "yes, expand this stuff".  Maybe I should make it so a delimiter (eg {} or something more exotic «»｢｣ is read to be something like ,@(shell-expand args ...) which will interpolate variables (all-caps variables will expand to environment-var lookups), expand globs (* globs and {foo,bar} globs)...
-
-eg.
-
-cat {$HOME/foo/{bar,baz}/*.rkt}
