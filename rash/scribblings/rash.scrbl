@@ -12,12 +12,9 @@ THIS IS ALL ALPHA AND UNSTABLE
 
 tl;dr -- in the string argument of a rash macro and @literal{#lang rash} each line is
 wrapped in a pipeline s-expression, and you can escape to racket with
-@literal|{$}|.  A line that starts with & is not wrapped to be a
-pipeline.  IE. use @literal|{&$(define ...)}|, etc to have racket
-definitions and expressions at the top level.
-The & thing is a stopgap until I write a better parser.  My plan is to
-have lines that start with an open paren be normal racket, otherwise be
-shell-ish.
+@literal{$}.  A line that starts with an open paren is not wrapped to be a
+pipeline.  IE to escape a whole line to be racket, wrap the whole thing in ().
+To escape part of a line into racket, use $.
 
 Rash is a language and library for writing shell scripts and including them in
 Racket programs.  It is basically a syntax wrapper for the
@@ -42,9 +39,11 @@ ls -l /dev | grep tty | wc
 ;; escape to racket
 ls $(if (even? (random 10)) '-a '-l)
 
-;; use the &$() to make a line just be normal racket without
-;; being wrapped into a pipeline
-&$(define my-favorite-flag "-l")
+;; if the first character on the line is an open paren, it is read as
+;; normal racket until the matching close paren and not wrapped in a pipeline
+(require racket/list)
+(begin 'foo 'bar)
+(define my-favorite-flag "-l")
 ls $my-favorite-flag
 
 ;; after escaping into racket syntax, you can escape back with rash macro and friends
@@ -77,6 +76,7 @@ An example snippet of just using rash macros in #lang racket/base
 ;; Newlines separate commands.
 ;; The output for all of them is treated normally.
 ;; Only the exit status of the last line is returned.
+;; (IE it is like a begin)
 (rash #<<EOS
 ls
 whoami
@@ -89,6 +89,15 @@ EOS
 ;; The return values of the racket segments should be strings or symbols
 (define my-favorite-flag '-l)
 (rash "ls $my-favorite-flag $(if 'some-test '/dev \"/etc\")")
+
+;; You can also have a line be just racket if it starts with an open paren,
+;; UNLESS it is the first line of a rash block.
+;; This shouldn't be a huge deal, since there is no reason to use a rash macro
+;; just to escape right back to normal racket...  And in #lang rash you should
+;; have a newline after the #lang line at least.
+;(rash "(this is bad)") ;; doesn't work right!
+(rash "
+(+ 5 7)")
 
 ;; Racket functions can be included in a pipeline.
 ;; They should read/write using current-<input/output>-port, and return 0 on success
