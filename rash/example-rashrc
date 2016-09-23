@@ -40,3 +40,18 @@
 ;(shell-alias 'ga '(git add))
 
 
+;; highlight stderr in red
+(define (highlighting-output-port outer-oport)
+    (define-values (from-pipe to-pipe) (make-pipe))
+    (thread (λ ()
+              (define (loop)
+                (let ([oline (read-line from-pipe)])
+                  (if (equal? eof oline)
+                      (void)
+                      (begin
+                        (fprintf outer-oport "\033[31m~a\033[0m~n" oline)
+                        (loop)))))
+              (loop)))
+    to-pipe)
+(define real-stderr (current-error-port))
+(current-error-port (highlighting-output-port (current-output-port)))
