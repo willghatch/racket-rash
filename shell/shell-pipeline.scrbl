@@ -9,6 +9,10 @@
 
 @defmodule[shell/pipeline]
 
+@section{Stability}
+
+This library is currently @emph{mostly} stable.  The part that is likely to still change is the @racket[current-shell-functions] parameter and the functions supporting it, because I think a parameter is probably not actually the best way to do that.  Additionally, I plan to add support for redirections similar to <() and >() in bash, and functions to support them (IE OS pipe functions, temporary file handling...).
+
 @section{Guide}
 
 This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return 0.  To get the output as a string, use @racket[run-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
@@ -19,7 +23,7 @@ Now go and write your shell scripts in Racket instead of the bourne shell, bash,
 
 This library DOES work on MS Windows, and if it can't find a program it retries the name with a .exe at the end.  But Microsoft doesn't seem to believe in having useful shell utilities, or in putting program executables on the PATH, or adding program locations to the PATH.  So it will probably still be more useful on Unix than on Windows.
 
-This library is also intended to support another forthcoming library with a line-based syntax with arbitrary embedding of s-expression based Racket.
+This library is also intended to support other libraries providing different surface syntax for running pipelines, such as #lang rash, or scsh like frontend macros.
 
 
 @section{Reference}
