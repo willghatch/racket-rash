@@ -4,6 +4,7 @@
 (require racket/exn)
 (require racket/list)
 (require racket/contract)
+(require syntax/parse/define)
 
 (provide
  (contract-out
@@ -61,7 +62,11 @@
   [pipeline-status/list (-> pipeline? (listof any/c))]
 
   [path-string-symbol? (-> any/c boolean?)]
-  ))
+  )
+
+ and0
+ or0
+ )
 
 
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -641,6 +646,12 @@ pipelines where it is set to always kill when the end member exits
                        err
                        cmdpath)
                  (map ->string args))))
+
+;;;; and/or macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(define-simple-macro (and0 e ...)
+  (and (equal? e 0) ...))
+(define-simple-macro (or0 e ...)
+  (or (equal? e 0) ...))
 
 ;;;; Base Shell Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 

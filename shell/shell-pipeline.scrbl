@@ -142,6 +142,13 @@ Like normal printf, except it returns 0.
 Each argument is displayed to the @racket[current-output-port] with a space in between.  A newline is displayed after all arguments.  Returns 0.
 }
 
+@defform[(and0 e ...)]{
+Like @racket[and], but treats 0 as true and anything else (including #t) as false.
+}
+@defform[(or0 e ...)]{
+Like @racket[or], but treats 0 as true and anything else (including #t) as false.
+}
+
 
 @section{Code and License}
 
