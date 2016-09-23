@@ -34,10 +34,9 @@
              ))
   (define (quote-maybe stx)
     (syntax-parse stx
-      [x:id
-       (if (syntax-property stx 'rash-mark-dispatched)
-           #'x
-           #'(quote x))]
+      #:datum-literals (%%rash-dispatch-marker)
+      [(%%rash-dispatch-marker s) #'s]
+      [x:id #'(quote x)]
       [else stx]))
 
   )
@@ -45,18 +44,29 @@
 
 (define-syntax (rash-line-parse stx)
   (define-syntax-class not-newline
-    (pattern (~not (~literal %%rash-newline-symbol))))
+    (pattern (~and (~not (~literal %%rash-newline-symbol))
+                   (~not ((~literal %%rash-racket-line) e ...)))))
+  (define-syntax-class rash-newline
+    (pattern (~or (~literal %%rash-newline-symbol)
+                  ((~literal %%rash-racket-line) e ...))))
   (syntax-parse stx
-    #:datum-literals (%%rash-newline-symbol)
+    #:datum-literals (%%rash-newline-symbol %%rash-racket-line)
     ;; strip any newlines at the beginning
     [(rash-line-parse %%rash-newline-symbol post ...)
      #'(rash-line-parse post ...)]
     ;; strip any newlines at the end
     [(rash-line-parse pre ... %%rash-newline-symbol)
      #'(rash-line-parse pre ...)]
+    ;; if all I have is a rash-racket-line, then just do that...
+    [(rash-line-parse (%%rash-racket-line e ...)) #'(begin e ...)]
+    ;; take care of embedded racket lines
+    [(rash-line-parse (%%rash-racket-line e ...) post ...+)
+     #'(begin e ... (rash-line-parse post ...))]
+    [(rash-line-parse pre ...+ (%%rash-racket-line e ...))
+     #'(begin (rash-line-parse pre ...) e ...)]
     ;; not last line
-    [(rash-line-parse pre:not-newline ...+ %%rash-newline-symbol post ...+)
-     #'(begin (rash-line pre ...) (rash-line-parse post ...))]
+    [(rash-line-parse pre:not-newline ...+ sep:rash-newline post ...+)
+     #'(begin (rash-line pre ...) (rash-line-parse sep post ...))]
     ;; last line
     [(rash-line-parse ll:not-newline ...+)
      #'(rash-line ll ...)]
@@ -64,9 +74,6 @@
 
 (define-syntax (rash-line stx)
   (syntax-parse stx
-    #:datum-literals (&)
-    [(shell-line & form ...)
-     #'(begin form ...)]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
      #'(run-pipeline p1.argv pn.argv ...)]
     ))

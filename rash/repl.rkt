@@ -40,11 +40,11 @@
   (let* ([next-line (read-line)]
          [exit? (if (equal? next-line eof) (exit) #f)]
          [read-input (with-handlers ([(λ (ex) #t)
-                                      (λ (ex) (eprintf "~a~n" ex))
-                                      #;(λ (ex) 'cantparse)])
-                       ;; TODO - I really only want to keep adding lines if
-                       ;; the exeption is that it needs a ) to close a (...
-                       (rash-read* (open-input-string next-line)))]
+                                      (λ (ex) (eprintf "~a~n" ex))])
+                       (rash-read*
+                        ;; prepend a newline so that it properly parses lines
+                        ;; that start with an open paren (IE treat them as racket)
+                        (open-input-string (string-append "\n" next-line))))]
          )
     (if (equal? read-input 'cantparse)
         (rash-repl "Couldn't parse input.")
