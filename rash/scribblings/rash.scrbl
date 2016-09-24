@@ -65,10 +65,10 @@ ls $(if (even? (random 10)) '-a '-l)
 ls $my-favorite-flag
 
 ;; after escaping into racket syntax, you can escape back with rash macro and friends
-ls $(rash/trim "basedir $(rash/trim \"pwd\")")
+ls $(rash/trim "dirname $(rash/trim \"pwd\")")
 
 ;; guillemets are enabled for nestable string delimiters
-ls $(rash/trim «basedir $(rash/trim «pwd»)»)
+ls $(rash/trim «dirname $(rash/trim «pwd»)»)
 
 }|
 
