@@ -28,6 +28,24 @@ You can then use @code|{(rash "string of rash code")}|.
 Or use @code{#lang rash}, and your whole language is as if wrapped in the
 @racket[rash] macro.
 
+These two are basically equivalent:
+
+@codeblock|{
+#lang racket/base
+(require rash)
+(rash #<<ENDOFFILE
+<program text here>
+ENDOFFILE
+)
+}|
+
+and
+
+@codeblock|{
+#lang rash
+<program text here>
+}|
+
 Here is some quick example code:
 
 @codeblock|{
