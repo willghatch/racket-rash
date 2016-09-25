@@ -13,6 +13,7 @@
 
 (require (for-syntax racket/base
                      syntax/parse
+                     syntax/strip-context
                      udelim
                      ))
 (require racket/string)
@@ -90,16 +91,20 @@
 
 (define-syntax (rash stx)
   (syntax-parse stx
-    [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
-                                                  (stx-string->port #'arg))])
+    [(rash arg:str)
+     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
+                                    (syntax->list
+                                     (rash-read-syntax* (syntax-source #'arg)
+                                                        (stx-string->port #'arg))))])
        #'(rash-line-parse parg ...))]))
 
 (define-syntax (rash/out stx)
   (syntax-parse stx
-    [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
-                                                  (stx-string->port #'arg))])
+    [(rash arg:str)
+     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
+                                    (syntax->list
+                                     (rash-read-syntax* (syntax-source #'arg)
+                                                        (stx-string->port #'arg))))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -116,9 +121,11 @@
 
 (define-syntax (rash/values stx)
   (syntax-parse stx
-    [(rash arg)
-     (with-syntax ([(parg ...) (rash-read-syntax* (syntax-source #'arg)
-                                                  (stx-string->port #'arg))])
+    [(rash arg:str)
+     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
+                                    (syntax->list
+                                     (rash-read-syntax* (syntax-source #'arg)
+                                                        (stx-string->port #'arg))))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])
@@ -130,11 +137,11 @@
 
 (define-syntax (rash/trim stx)
   (syntax-parse stx
-    [(r/t arg)
+    [(r/t arg:str)
      #'(string-trim (rash/out arg))]))
 (define-syntax (rash/number stx)
   (syntax-parse stx
-    [(r/t arg)
+    [(r/t arg:str)
      #'(string->number (string-trim (rash/out arg)))]))
 
 
