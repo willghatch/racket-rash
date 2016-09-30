@@ -1,10 +1,11 @@
-* kw-args for functions in shell pipelines
+* kw-args for functions in shell pipelines?  For functions you can always wrap with a lambda, so I don't think this is a big deal.
 * a custom exn type for pipeline failures
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
 
 * path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
 * easy port opening functions for redirection to files (>, >|, >>, <) and temp-file redirects ( <() >() )
 * wrapper struct for functions to return non-zero but have it still count as success
+** really, I think I just want functions to be able to return whatever, and only count as unsuccessful if they throw.  Maybe pipelines should return a pipeline-success or pipeline-failure object that has the final result.  People rarely care what the result is in case of external programs, and for functions I might really want to use the return value of the last function in the pipeline rather than its stdout.  Of course, this would be similar to wrapping the pipeline up to that last function with a call to said last function using run/out.  But it might be more convenient to just get the output.  Maybe run-pipeline should just always return the pipeline object, upon which you can query success/failure/status.  and0/or0 can be replace with and/success or/success.  Add pipeline-success?, pipeline-success?/and, export pipeline-status/end maybe.
 * bg pipeline disowning?
     Disowning will probably only work for pipelines
     without any racket functions or filters in them.  But perhaps you should
