@@ -12,6 +12,7 @@
  )
 
 (require (for-syntax racket/base
+                     racket/syntax
                      syntax/parse
                      syntax/strip-context
                      udelim
@@ -30,8 +31,9 @@
              #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(arg ...))))
              ))
   (define-splicing-syntax-class pipeline-part/not-first
-    (pattern (~seq (~literal \|) part:pipeline-part)
+    (pattern (~seq (~and (~var pipe) (~literal \|)) part:pipeline-part)
              #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(part.arg ...))))
+             #:attr pipe-char #`pipe
              ))
   (define (quote-maybe stx)
     (syntax-parse stx
@@ -77,8 +79,10 @@
   (syntax-parse stx
     #:datum-literals (> >! >>)
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... > filename)
-     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'error)
-                     p1.argv pn.argv ...)]
+     (with-disappeared-uses
+       (record-disappeared-uses #'(pn.pipe-char ...))
+       #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'error)
+                       p1.argv pn.argv ...))]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >! filename)
      #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'truncate)
                      p1.argv pn.argv ...)]
