@@ -96,7 +96,10 @@
                                     (syntax->list
                                      (rash-read-syntax* (syntax-source #'arg)
                                                         (stx-string->port #'arg))))])
-       #'(rash-line-parse parg ...))]))
+       #'(rash-line-parse parg ...))]
+    [(rash arg:str ...+)
+     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
+       #'(rash one-str))]))
 
 (define-syntax (rash/out stx)
   (syntax-parse stx
@@ -117,7 +120,10 @@
                    (error 'rash/out
                           "non-zero exit (~a) with stderr: ~a"
                           ret-val
-                          (get-output-string err)))))))]))
+                          (get-output-string err)))))))]
+    [(rash arg:str ...+)
+     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
+       #'(rash one-str))]))
 
 (define-syntax (rash/values stx)
   (syntax-parse stx
@@ -133,15 +139,18 @@
                           [current-error-port err]
                           [current-input-port in])
              (let ([ret-val (rash-line-parse parg ...)])
-               (values ret-val (get-output-string out) (get-output-string err))))))]))
+               (values ret-val (get-output-string out) (get-output-string err))))))]
+    [(rash arg:str ...+)
+     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
+       #'(rash one-str))]))
 
 (define-syntax (rash/trim stx)
   (syntax-parse stx
-    [(r/t arg:str)
-     #'(string-trim (rash/out arg))]))
+    [(r/t arg:str ...+)
+     #'(string-trim (rash/out arg ...))]))
 (define-syntax (rash/number stx)
   (syntax-parse stx
-    [(r/t arg:str)
-     #'(string->number (string-trim (rash/out arg)))]))
+    [(r/t arg:str ...+)
+     #'(string->number (string-trim (rash/out arg ...)))]))
 
 
