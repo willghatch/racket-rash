@@ -110,7 +110,7 @@
                   ))
 
 (define rash-dispatch-read-table
-  (make-string-delim-readtable #\« #\»))
+  (udelimify #f))
 
 (define line-readtable
   (make-string-delim-readtable #\« #\» #:base-readtable bare-line-readtable))
