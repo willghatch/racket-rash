@@ -95,6 +95,11 @@
                   ;; take away the special meanings of characters
                   #\| #\a #f
                   #\. #\a #f
+                  #\, #\a #f
+                  #\` #\a #f
+                  #\' #\a #f
+                  #\@ #\a #f
+                  #\# #\a #f
                   #\( #\a #f
                   #\) #\a #f
                   #\{ #\a #f
