@@ -84,7 +84,7 @@ Is it a pipeline object?
 @defproc[(pipeline-err-ports [p pipeline?]) (listof (or/c false/c input-port?))]{Get list of error ports for the pipeline (each one that was provided will be false)}
 @defproc[(pipeline-wait [p pipeline?]) void?]{Wait for the pipeline to finish.}
 @defproc[(pipeline-kill [p pipeline?]) void?]{Kill a running pipeline.}
-@defproc[(pipeline-running [p pipeline?]) boolean?]{Is the pipeline currently running?}
+@defproc[(pipeline-running? [p pipeline?]) boolean?]{Is the pipeline currently running?}
 @defproc[(pipeline-status [p pipeline?]) any/c]{Returns the status of the pipeline.  If the pipeline was make with a true status-and argument, then it is the first nonzero exit status of the pipeline, otherwise it is the status of the last member of the pipeline.}
 @defproc[(pipeline-status/list [p pipeline?]) (listof any/c)]{A list of the exit statuses of all the pipeline members.}
 
