@@ -60,6 +60,7 @@ If @racket[background?] is false, then @racket[run-pipeline] uses @racket[pipeli
 }
 
 @defproc[(run-pipeline/out [member (or/c list? pipeline-member-spec?)] ...
+[#:in in (or/c input-port? false/c path-string-symbol?) (open-input-string "")]
 [#:end-exit-flag end-exit-flag any/c #t]
 [#:status-and? status-and? any/c #f])
 any/c]{

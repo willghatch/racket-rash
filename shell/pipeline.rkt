@@ -40,7 +40,8 @@
                      #:rest (listof (or/c list? pipeline-member-spec?))
                      any/c)]
   [run-pipeline/out (->* ()
-                         (#:end-exit-flag any/c
+                         (#:in (or/c input-port? false/c path-string-symbol?)
+                          #:end-exit-flag any/c
                           #:status-and? any/c)
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
@@ -305,10 +306,10 @@ pipelines where it is set to always kill when the end member exits
 
 (define (run-pipeline/out #:end-exit-flag [end-exit-flag #t]
                           #:status-and? [status-and? #f]
+                          #:in [in (open-input-string "")]
                           . members)
   (let* ([out (open-output-string)]
          [err (open-output-string)]
-         [in (open-input-string "")]
          [pline-spec (make-pipeline-spec #:in in #:out out
                                          #:end-exit-flag end-exit-flag
                                          #:status-and? status-and?
