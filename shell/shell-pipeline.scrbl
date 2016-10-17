@@ -82,17 +82,18 @@ Is it a pipeline object?
 @defproc[(pipeline-port-to [p pipeline?]) (or/c false/c output-port?)]{Get initial input port (if one was provided initially, this will be false)}
 @defproc[(pipeline-port-from [p pipeline?]) (or/c false/c input-port?)]{Get final output port (if one was provided initially, this will be false)}
 @defproc[(pipeline-err-ports [p pipeline?]) (listof (or/c false/c input-port?))]{Get list of error ports for the pipeline (each one that was provided will be false)}
-@defproc[(pipeline-wait [p pipeline?]) void?]{Wait for the pipeline to finish.}
+@defproc[(pipeline-wait [p pipeline?]) void?]{Wait for the pipeline to finish.  If the pipeline status-and is true, then it only waits for the ending member of the pipeline to finish.}
 @defproc[(pipeline-kill [p pipeline?]) void?]{Kill a running pipeline.}
 @defproc[(pipeline-running? [p pipeline?]) boolean?]{Is the pipeline currently running?}
-@defproc[(pipeline-status [p pipeline?]) any/c]{Returns the status of the pipeline.  If the pipeline was make with a true status-and argument, then it is the first nonzero exit status of the pipeline, otherwise it is the status of the last member of the pipeline.}
+@defproc[(pipeline-success? [p pipeline?]) any/c]{Waits for the pipeline to terminate (according to @racket[pipeline-wait]).  Returns #t if the pipeline was considered successful, else #f.  If the status-and argument is true, then all members must succeed, otherwise only the last one must succeed.  A pipeline member is considered successful if it was a subprocess and returned 0, or if it was a thread and raised no uncaught exceptions.}
+@defproc[(pipeline-status [p pipeline?]) any/c]{Waits for the pipeline to terminate (according to @racket[pipeline-wait]).  Returns the status of the pipeline.  If the pipeline was make with a true status-and argument and any member was unsuccessful, then it is the exit status or exception of the first unsuccessful member of the pipeline (if there is one).  Otherwise it is the return value or exception of the last member of the pipeline.}
 @defproc[(pipeline-status/list [p pipeline?]) (listof any/c)]{A list of the exit statuses of all the pipeline members.}
 
 
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.
 
-Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port] and returns 0.  If an exception is raised by the original function, its text will be output to its @racket[current-error-port], and it will return something other than 0.
+Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port].
 }
 
 @defparam[current-shell-functions table (hash/c symbol? procedure?)]{
@@ -143,11 +144,11 @@ Like normal printf, except it returns 0.
 Each argument is displayed to the @racket[current-output-port] with a space in between.  A newline is displayed after all arguments.  Returns 0.
 }
 
-@defform[(and0 e ...)]{
-Like @racket[and], but treats 0 as true and anything else (including #t) as false.
+@defform[(and/success e ...)]{
+Like @racket[and], but only treats pipeline objects as truthy if they pass @racket[pipeline-success?].
 }
-@defform[(or0 e ...)]{
-Like @racket[or], but treats 0 as true and anything else (including #t) as false.
+@defform[(or/success e ...)]{
+Like @racket[or], but only treats pipeline objects as truthy if they pass @racket[pipeline-success?].
 }
 
 

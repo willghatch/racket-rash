@@ -68,6 +68,28 @@
                             #:out #f
                             #:default-err #f
                             '(echo hello)))
+  (check-equal?
+   (with-output-to-string
+     (λ () (and/success (run-pipeline '(echo hello))
+                        (run-pipeline '(echo hello)))))
+   "hello\nhello\n")
+  (check-equal?
+   (with-output-to-string
+     (λ () (or/success (run-pipeline '(echo hello))
+                       (run-pipeline '(echo hello)))))
+   "hello\n")
+  (parameterize ([current-error-port (open-output-nowhere)])
+    (check-equal?
+     (with-output-to-string
+       (λ () (and/success (run-pipeline `(,(λ () (error 'foobar "aoeu"))))
+                          (run-pipeline '(echo hello)))))
+     "")
+    (check-equal?
+     (with-output-to-string
+       (λ () (or/success (run-pipeline `(,(λ () (error 'foobar "aoeu"))))
+                         (run-pipeline '(echo hello)))))
+     "hello\n"))
+
   )
 
 

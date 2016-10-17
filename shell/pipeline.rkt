@@ -38,13 +38,27 @@
                                                   (or/c 'error 'append 'truncate)))
                       )
                      #:rest (listof (or/c list? pipeline-member-spec?))
-                     any/c)]
+                     pipeline?)]
   [run-pipeline/out (->* ()
                          (#:in (or/c input-port? false/c path-string-symbol?)
                           #:end-exit-flag any/c
                           #:status-and? any/c)
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
+  [run-pipeline/return (->* ()
+                            (#:in (or/c input-port? false/c path-string-symbol?)
+                             #:out (or/c output-port? false/c path-string-symbol?
+                                         (list/c path-string-symbol?
+                                                 (or/c 'error 'append 'truncate)))
+                             #:end-exit-flag any/c
+                             #:status-and? any/c
+                             #:failure-as-exn? any/c
+                             #:default-err (or/c output-port? false/c path-string-symbol?
+                                                 (list/c path-string-symbol?
+                                                         (or/c 'error 'append 'truncate)))
+                             )
+                            #:rest (listof (or/c list? pipeline-member-spec?))
+                            any/c)]
   [struct pipeline-member-spec ([argl (listof any/c)]
                                 [port-err
                                  (or/c output-port? false/c
@@ -61,12 +75,14 @@
   [pipeline-running? (-> pipeline? boolean?)]
   [pipeline-status (-> pipeline? any/c)]
   [pipeline-status/list (-> pipeline? (listof any/c))]
+  [pipeline-success? (-> pipeline? any/c)]
+  [pipeline-has-failures? (-> pipeline? any/c)]
 
   [path-string-symbol? (-> any/c boolean?)]
   )
 
- and0
- or0
+ and/success
+ or/success
  )
 
 
@@ -186,7 +202,10 @@
 (define (pipeline-member-kill m)
   (if (pipeline-member-process? m)
       (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
-      (kill-thread (pipeline-member-subproc-or-thread m))))
+      (let ([thread (pipeline-member-subproc-or-thread m)])
+        (when (not (thread-dead? thread))
+          (kill-thread (pipeline-member-subproc-or-thread m))
+          (set-box! (pipeline-member-thread-exn-box m) 'killed)))))
 
 (define (pipeline-member-running? m)
   (if (pipeline-member-process? m)
@@ -203,11 +222,17 @@
             'running
             (or ret err)))))
 
+(define (pipeline-member-success? m)
+  (if (pipeline-member-process? m)
+      (equal? 0 (subprocess-status (pipeline-member-subproc-or-thread m)))
+      (not (unbox (pipeline-member-thread-exn-box m)))))
+
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline
   (port-to port-from members end-exit-flag start-bg? status-and? from-port-copier err-port-copiers)
-  #:transparent)
+  ;#:transparent
+  )
 
 (define (pipeline-spec? pline)
   (for/and ([m (pipeline-members pline)])
@@ -253,19 +278,33 @@ members that have been killed.  Also, it should count as success for
 pipelines where it is set to always kill when the end member exits
 |#
 (define (pipeline-status/list pline)
+  (pipeline-wait/all pline)
   (map pipeline-member-status (pipeline-members pline)))
 (define (pipeline-status/and pline)
-  (define (rec sl)
-    (cond [(null? sl) 0]
-          [(equal? 0 (car sl)) (rec (cdr sl))]
-          [else (car sl)]))
-  (rec (pipeline-status/list pline)))
+  (pipeline-wait/all pline)
+  (let ([first-error (ormap (λ (m) (and (not (pipeline-member-success? m))
+                                        (pipeline-member-status m)))
+                            (pipeline-members pline))])
+    (or first-error
+        (pipeline-member-status (car (reverse (pipeline-members pline)))))))
 (define (pipeline-status/end pline)
+  (pipeline-wait/end pline)
   (pipeline-member-status (car (reverse (pipeline-members pline)))))
 (define (pipeline-status pline)
   (if (pipeline-status-and? pline)
       (pipeline-status/and pline)
       (pipeline-status/end pline)))
+
+(define (pipeline-has-failures? pline)
+  (ormap (λ (m) (not (pipeline-member-success? m)))
+         (pipeline-members pline)))
+
+(define (pipeline-success? pline)
+  (pipeline-wait pline)
+  (if (pipeline-status-and? pline)
+      (for/and ([m (pipeline-members pline)])
+        (pipeline-member-success? m))
+      (pipeline-member-success? (car (reverse (pipeline-members pline))))))
 
 
 (define (make-pipeline-spec #:in [in (current-input-port)]
@@ -302,7 +341,7 @@ pipelines where it is set to always kill when the end member exits
     (if bg?
         pline
         (begin (pipeline-wait pline)
-               (pipeline-status pline)))))
+               pline))))
 
 (define (run-pipeline/out #:end-exit-flag [end-exit-flag #t]
                           #:status-and? [status-and? #f]
@@ -323,12 +362,35 @@ pipelines where it is set to always kill when the end member exits
          [wait (pipeline-wait pline)]
          [kill (pipeline-kill pline)]
          [status (pipeline-status pline)])
-    (if (not (equal? 0 status))
+    (if (not (pipeline-success? pline))
         (error 'run-pipeline/out
-               "nonzero pipeline exit (~a) with stderr: ~v"
+               "unsuccessful pipeline with return ~a and stderr: ~v"
                status
                (get-output-string err))
         (get-output-string out))))
+
+(define (run-pipeline/return #:in [in (current-input-port)]
+                             #:out [out (current-output-port)]
+                             #:end-exit-flag [end-exit-flag #t]
+                             #:status-and? [status-and? #f]
+                             #:default-err [default-err (current-error-port)]
+                             #:failure-as-exn? [failure-as-exn? #t]
+                             . members)
+  (let ([pline (apply run-pipeline
+                      #:in in #:out out
+                      #:default-err default-err
+                      #:end-exit-flag end-exit-flag
+                      #:status-and? status-and?
+                      #:background? #f
+                      members)])
+    (pipeline-wait pline)
+    (if (or (pipeline-success? pline) (not failure-as-exn?))
+        (pipeline-status pline)
+        (let ([err (pipeline-status pline)])
+          (if (exn? err)
+              (raise err)
+              (error 'run-pipeline/return
+                     "pipeline unsuccessful with return ~a" err))))))
 
 
 (define (run-pipeline/spec pipeline-spec)
@@ -617,8 +679,7 @@ pipelines where it is set to always kill when the end member exits
     (let* ([in-str (port->string (current-input-port))]
            [out-str (apply f in-str args)])
       (display out-str)
-      (flush-output)
-      0)))
+      (flush-output))))
 
 (define (->string a)
   (cond [(string? a) a]
@@ -649,10 +710,10 @@ pipelines where it is set to always kill when the end member exits
                  (map ->string args))))
 
 ;;;; and/or macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(define-simple-macro (and0 e ...)
-  (and (equal? e 0) ...))
-(define-simple-macro (or0 e ...)
-  (or (equal? e 0) ...))
+(define-simple-macro (and/success e ...)
+  (and (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
+(define-simple-macro (or/success e ...)
+  (or (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
 
 ;;;; Base Shell Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -669,12 +730,10 @@ pipelines where it is set to always kill when the end member exits
         (cond [(string? dir) dir]
               [(path? dir) dir]
               [(symbol? dir) (symbol->string dir)]
-              [else (error 'cd "cd argument needs to be a string, path, or symbol")])))
-     0)))
+              [else (error 'cd "cd argument needs to be a string, path, or symbol")]))))))
 
 (define (shell-printf f-string . args)
-  (apply printf f-string args)
-  0)
+  (apply printf f-string args))
 
 (define (shell-echo . args)
   (for ([a args]
@@ -682,8 +741,7 @@ pipelines where it is set to always kill when the end member exits
     (when (not (equal? i 0))
       (display " "))
     (display a))
-  (display "\n")
-  0)
+  (display "\n"))
 
 (define base-shell-functions
   (hash 'cd shell-cd
