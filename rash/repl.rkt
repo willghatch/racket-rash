@@ -1,7 +1,8 @@
 #lang racket/base
 
 (require
- rash
+ "main.rkt"
+ (submod "private/lang-funcs.rkt" for-module-begin)
  rash/private/read-funcs
 
  basedir
@@ -15,6 +16,17 @@
 (define ns (namespace-anchor->namespace ns-a))
 
 
+(define (format-ret last-ret)
+  (cond [(exn? last-ret)
+         (begin (eprintf "~a~n" last-ret)
+                ;; let any filtering output finish
+                (sleep 0)
+                "exn!")]
+        [(pipeline? last-ret)
+         (format-ret (pipeline-status last-ret))]
+        [(void? last-ret) ""]
+        [else (format "~s" last-ret)]))
+
 (define (basic-prompt last-ret)
   (let* ([cdate (current-date)]
          [chour (date-hour cdate)]
@@ -22,12 +34,7 @@
          [padded-min (if (< cmin 10)
                          (string-append "0" (number->string cmin))
                          cmin)]
-         [ret-show (if (exn? last-ret)
-                       (begin (eprintf "~a~n" last-ret)
-                              ;; let any filtering output finish
-                              (sleep 0)
-                              "exn!")
-                       last-ret)])
+         [ret-show (format-ret last-ret)])
     (printf "~a:~a ~a~n｢~a｣ ~a "
             chour padded-min
             (path->string (current-directory))

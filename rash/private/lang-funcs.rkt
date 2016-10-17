@@ -1,15 +1,15 @@
 #lang racket/base
 
 (provide
- rash-line-parse
- rash-line
  rash
  rash/out
- rash/values
  rash/trim
  rash/number
  (all-from-out shell/pipeline)
  )
+
+(module+ for-module-begin
+  (provide rash-line-parse))
 
 (require (for-syntax racket/base
                      racket/syntax
@@ -118,32 +118,16 @@
            (parameterize ([current-output-port out]
                           [current-error-port err]
                           [current-input-port in])
-             (let ([ret-val (rash-line-parse parg ...)])
-               (if (equal? ret-val 0)
+             (let ([pline (rash-line-parse parg ...)])
+               (if (pipeline-success? pline)
                    (get-output-string out)
                    (error 'rash/out
-                          "non-zero exit (~a) with stderr: ~a"
-                          ret-val
+                          (string-append
+                           "pipeline error:~n"
+                           "pipeline member exited with: ~a~n"
+                           "stderr:~n~a~n")
+                          (pipeline-status pline)
                           (get-output-string err)))))))]
-    [(rash arg:str ...+)
-     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
-       #'(rash one-str))]))
-
-(define-syntax (rash/values stx)
-  (syntax-parse stx
-    [(rash arg:str)
-     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
-                                    (syntax->list
-                                     (rash-read-syntax* (syntax-source #'arg)
-                                                        (stx-string->port #'arg))))])
-       #'(let* ([out (open-output-string)]
-                [err (open-output-string)]
-                [in (open-input-string "")])
-           (parameterize ([current-output-port out]
-                          [current-error-port err]
-                          [current-input-port in])
-             (let ([ret-val (rash-line-parse parg ...)])
-               (values ret-val (get-output-string out) (get-output-string err))))))]
     [(rash arg:str ...+)
      (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
        #'(rash one-str))]))

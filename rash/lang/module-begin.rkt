@@ -7,10 +7,9 @@
  )
 
 (require rash
-         syntax/wrap-modbeg
+         (submod "../private/lang-funcs.rkt" for-module-begin)
          (for-syntax racket/base
                      syntax/parse))
-
 
 (define-syntax (module-begin stx)
   (syntax-parse stx
