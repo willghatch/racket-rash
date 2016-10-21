@@ -21,9 +21,9 @@
   [struct alias-func ([func procedure?])]
   [struct pipeline-same-thread-func ([func procedure?])]
 
-  [shell-cd (->* () ((or/c string? path? symbol?)) integer?)]
-  [shell-printf (->* (string?) #:rest (listof any/c) integer?)]
-  [shell-echo (->* () #:rest (listof any/c) integer?)]
+  [shell-cd (->* () ((or/c string? path? symbol?)) void?)]
+  [shell-printf (->* (string?) #:rest (listof any/c) void?)]
+  [shell-echo (->* () #:rest (listof any/c) void?)]
 
   [run-pipeline (->* ()
                      (#:in (or/c input-port? false/c path-string-symbol?)
