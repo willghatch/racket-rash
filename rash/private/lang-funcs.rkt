@@ -9,7 +9,9 @@
  )
 
 (module+ for-module-begin
-  (provide rash-line-parse))
+  (provide rash-line-parse
+           rash-read-and-line-parse
+           ))
 
 (require (for-syntax racket/base
                      racket/syntax
@@ -18,10 +20,18 @@
                      udelim
                      ))
 (require racket/string)
+(require syntax/parse)
 (require racket/port)
 (require shell/pipeline)
 (require "read-funcs.rkt")
 (require (for-syntax "read-funcs.rkt"))
+
+(define (rash-read-and-line-parse src in)
+  (let ([stx (rash-read-syntax src in)])
+    (if (eof-object? stx)
+        stx
+        (syntax-parse stx
+          [e #'(rash-line-parse e)]))))
 
 (begin-for-syntax
   (define-syntax-class not-pipe
@@ -53,26 +63,18 @@
     (pattern (~or (~literal %%rash-newline-symbol)
                   ((~literal %%rash-racket-line) e ...))))
   (syntax-parse stx
-    #:datum-literals (%%rash-newline-symbol %%rash-racket-line)
-    ;; strip any newlines at the beginning
-    [(rash-line-parse %%rash-newline-symbol post ...)
-     #'(rash-line-parse post ...)]
-    ;; strip any newlines at the end
-    [(rash-line-parse pre ... %%rash-newline-symbol)
-     #'(rash-line-parse pre ...)]
-    ;; if all I have is a rash-racket-line, then just do that...
-    [(rash-line-parse (%%rash-racket-line e ...)) #'(begin e ...)]
-    ;; take care of embedded racket lines
-    [(rash-line-parse (%%rash-racket-line e ...) post ...+)
-     #'(begin e ... (rash-line-parse post ...))]
-    [(rash-line-parse pre ...+ (%%rash-racket-line e ...))
-     #'(begin (rash-line-parse pre ...) e ...)]
-    ;; not last line
-    [(rash-line-parse pre:not-newline ...+ sep:rash-newline post ...+)
-     #'(begin (rash-line pre ...) (rash-line-parse sep post ...))]
-    ;; last line
-    [(rash-line-parse ll:not-newline ...+)
-     #'(rash-line ll ...)]
+    #:datum-literals (%%rash-newline-symbol %%rash-racket-line %%rash-line-start)
+    [(rash-line-parse (%%rash-line-start arg ...) post ...+)
+     #'(begin (rash-line arg ...)
+              (rash-line-parse post ...))]
+    [(rash-line-parse (%%rash-line-start arg ...))
+     #'(rash-line arg ...)]
+    [(rash-line-parse (%%rash-racket-line arg ...) post ...+)
+     #'(begin arg ...
+              (rash-line-parse post ...))]
+    [(rash-line-parse (%%rash-racket-line arg ...))
+     #'(begin arg ...)]
+    [(rash-line-parse) #'(void)]
     ))
 
 (define-syntax (rash-line stx)
@@ -98,8 +100,8 @@
     [(rash arg:str)
      (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
                                     (syntax->list
-                                     (rash-read-syntax* (syntax-source #'arg)
-                                                        (stx-string->port #'arg))))])
+                                     (rash-read-syntax-all (syntax-source #'arg)
+                                                           (stx-string->port #'arg))))])
        #'(rash-line-parse parg ...))]
     [(rash arg:str ...+)
      (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
@@ -110,8 +112,8 @@
     [(rash arg:str)
      (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
                                     (syntax->list
-                                     (rash-read-syntax* (syntax-source #'arg)
-                                                        (stx-string->port #'arg))))])
+                                     (rash-read-syntax-all (syntax-source #'arg)
+                                                           (stx-string->port #'arg))))])
        #'(let* ([out (open-output-string)]
                 [err (open-output-string)]
                 [in (open-input-string "")])

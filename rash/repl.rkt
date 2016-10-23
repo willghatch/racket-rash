@@ -44,30 +44,25 @@
 
 (define (rash-repl last-ret-val)
   ((current-prompt-function) last-ret-val)
-  (let* ([next-line (read-line)]
-         [exit? (if (equal? next-line eof) (exit) #f)]
-         [read-input (with-handlers ([(λ (ex) #t)
-                                      (λ (ex) (eprintf "~a~n" ex))])
-                       (rash-read*
-                        ;; prepend a newline so that it properly parses lines
-                        ;; that start with an open paren (IE treat them as racket)
-                        (open-input-string (string-append "\n" next-line))))]
-         )
-    (if (equal? read-input 'cantparse)
-        (rash-repl "Couldn't parse input.")
-        (let ([ret-val
-               (with-handlers ([(λ (e) #t) (λ (e) e)])
-                 (eval `(rash-line-parse
-                         ,@read-input)
-                       ns))])
-          ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
-          ;; to be able to output before the next prompt.
-          (sleep 0.01)
-          (rash-repl ret-val)))))
+  (flush-output (current-output-port))
+  (flush-output (current-error-port))
+  (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
+                                              #`(%%rash-racket-line (void)))])
+                       (rash-read (current-input-port)))]
+         [exit? (if (equal? next-input eof) (exit) #f)])
+    (let ([ret-val
+           (with-handlers ([(λ (e) #t) (λ (e) e)])
+             (eval `(rash-line-parse
+                     ,next-input)
+                   ns))])
+      ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
+      ;; to be able to output before the next prompt.
+      (sleep 0.01)
+      (rash-repl ret-val))))
 
 (define (eval-rashrc rcfile)
-  (eval `(rash-line-parse ,@(rash-read-syntax* (object-name rcfile)
-                                               (open-input-file rcfile)))
+  (eval `(rash-line-parse ,@(rash-read-syntax-all (object-name rcfile)
+                                                  (open-input-file rcfile)))
         ns))
 
 (for ([rcfile (list-config-files #:program "rash" "rashrc")])
