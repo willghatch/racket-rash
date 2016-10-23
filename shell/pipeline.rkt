@@ -133,7 +133,7 @@
              (string? pathstr)
              (find-executable-path
               (string-append (->string cmd) ".exe")))
-        pathstr)))
+        (error 'resolve-command-path "can't find executable for ~s" cmd))))
 
 (define (resolve-spec pm-spec)
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
