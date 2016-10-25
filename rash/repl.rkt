@@ -3,7 +3,8 @@
 (require
  "main.rkt"
  (submod "private/lang-funcs.rkt" for-module-begin)
- rash/private/read-funcs
+ "private/repl-namespace.rkt"
+ "private/read-funcs.rkt"
 
  basedir
  racket/exn
@@ -12,8 +13,6 @@
  (for-syntax syntax/parse
              racket/base))
 
-(define-namespace-anchor ns-a)
-(define ns (namespace-anchor->namespace ns-a))
 
 
 (define (format-ret last-ret)
@@ -54,7 +53,7 @@
            (with-handlers ([(λ (e) #t) (λ (e) e)])
              (eval `(rash-line-parse
                      ,next-input)
-                   ns))])
+                   repl-namespace))])
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
       ;; to be able to output before the next prompt.
       (sleep 0.01)
@@ -63,7 +62,7 @@
 (define (eval-rashrc rcfile)
   (eval `(rash-line-parse ,@(rash-read-syntax-all (object-name rcfile)
                                                   (open-input-file rcfile)))
-        ns))
+        repl-namespace))
 
 (for ([rcfile (list-config-files #:program "rash" "rashrc")])
   (with-handlers ([(λ _ #t) (λ (ex)
