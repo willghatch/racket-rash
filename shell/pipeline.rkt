@@ -210,7 +210,7 @@
 
 (define (pipeline-member-running? m)
   (if (pipeline-member-process? m)
-      (equal? 'running (subprocess-status (pipeline-member-subproc-or-thread m) #t))
+      (equal? 'running (subprocess-status (pipeline-member-subproc-or-thread m)))
       (thread-running? (pipeline-member-subproc-or-thread m))))
 
 (define (pipeline-member-status m)
@@ -232,6 +232,13 @@
 
 (struct pipeline
   (port-to port-from members end-exit-flag start-bg? status-and? from-port-copier err-port-copiers)
+  #:methods gen:custom-write
+  [(define (write-proc pline output-port output-mode)
+     (if (pipeline-running? pline)
+         (fprintf output-port "#<pipeline:running=#t>")
+         (fprintf output-port "#<pipeline:success=~a,output=~a>"
+                  (pipeline-success? pline)
+                  (pipeline-status pline))))]
   ;#:transparent
   )
 
