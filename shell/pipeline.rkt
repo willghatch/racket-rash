@@ -236,7 +236,7 @@
   [(define (write-proc pline output-port output-mode)
      (if (pipeline-running? pline)
          (fprintf output-port "#<pipeline:running=#t>")
-         (fprintf output-port "#<pipeline:success=~a,output=~a>"
+         (fprintf output-port "#<pipeline:success=~a,return=~a>"
                   (pipeline-success? pline)
                   (pipeline-status pline))))]
   ;#:transparent
