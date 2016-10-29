@@ -59,11 +59,18 @@
       (sleep 0.01)
       (rash-repl ret-val))))
 
+(define (eval-rashrc.rkt rcfile)
+  (eval `(require (file ,(path->string rcfile))) repl-namespace))
 (define (eval-rashrc rcfile)
   (eval `(rash-line-parse ,@(rash-read-syntax-all (object-name rcfile)
                                                   (open-input-file rcfile)))
         repl-namespace))
 
+(for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
+  (with-handlers ([(λ _ #t) (λ (ex)
+                              (eprintf "error in rc file ~a: ~a"
+                                       rcfile (exn->string ex)))])
+    (eval-rashrc.rkt rcfile)))
 (for ([rcfile (list-config-files #:program "rash" "rashrc")])
   (with-handlers ([(λ _ #t) (λ (ex)
                               (eprintf "error in rc file ~a: ~a"

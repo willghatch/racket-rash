@@ -173,11 +173,14 @@ repl.  Eventually, I hope to make a nice, usable interactive shell repl.
 
 The syntax in the repl is the same as in @code{#lang rash}.
 
-The repl also loads ~/.config/rash/rashrc, which must be written in
-the language of #lang rash, but not have #lang rash at the top.
-Yeah... that should be improved.  But basically it's meant to be
-evaluated interactively so it can muck up your interactive namespace
-with definitions and requires that you want in an interactive shell.
+The repl also loads configuration.  First it top-level evaluates
+@code{(require (file PATH))}, for each file
+@code{$XDG_CONFIG_DIRS/rash/rashrc.rkt} (generally
+~/.config/rash/rashrc.rkt), if any, where rashrc.rkt is just any
+racket module (that likely requires and provides identifiers you want
+to use, and generally sets up your dynamic environment).  Then for any
+files @code{$XDG_CONFIG_DIRS/rash/rashrc}, it reads and evaluates them
+as top-level rash code.
 
 Here are some big things you will feel are missing:
 
