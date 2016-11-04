@@ -690,10 +690,7 @@ pipelines where it is set to always kill when the end member exits
       (flush-output))))
 
 (define (->string a)
-  (cond [(string? a) a]
-        [(symbol? a) (symbol->string a)]
-        [(number? a) (number->string a)]
-        [else (format "~a" a)]))
+  (if (string? a) a (format "~a" a)))
 
 (define (path-string-symbol? pss)
   (or (path-string? pss)
