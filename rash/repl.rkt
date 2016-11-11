@@ -61,14 +61,15 @@
   (flush-output (current-error-port))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
                                               #`(%%rash-racket-line (void)))])
-                       (rash-read (current-input-port)))]
+                       (rash-read-syntax #f (current-input-port)))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
-            (call-with-values (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
-                                      (eval `(rash-line-parse
-                                              ,next-input)
-                                            repl-namespace)))
-                              list)]
+            (call-with-values
+             (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
+                     (eval-syntax (parameterize ([current-namespace repl-namespace])
+                                    (namespace-syntax-introduce #`(rash-line-parse
+                                                                   #,next-input))))))
+             list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
                         (car ret-val-list)
@@ -83,11 +84,15 @@
       (rash-repl ret-val new-n))))
 
 (define (eval-rashrc.rkt rcfile)
-  (eval `(require (file ,(path->string rcfile))) repl-namespace))
+  (eval-syntax (parameterize ([current-namespace repl-namespace])
+                 (namespace-syntax-introduce
+                  #`(require (file #,(path->string rcfile)))))))
 (define (eval-rashrc rcfile)
-  (eval `(rash-line-parse ,@(rash-read-syntax-all (object-name rcfile)
-                                                  (open-input-file rcfile)))
-        repl-namespace))
+  (eval-syntax (parameterize ([current-namespace repl-namespace])
+                 (namespace-syntax-introduce
+                  #`(rash-line-parse
+                     #,@(rash-read-syntax-all (object-name rcfile)
+                                              (open-input-file rcfile)))))))
 
 (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
   (with-handlers ([(λ _ #t) (λ (ex)
