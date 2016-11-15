@@ -412,11 +412,12 @@ pipelines where it is set to always kill when the end member exits
                              [(path-string-symbol? to-port)
                               (open-input-file (path-string-sym->path to-port))]
                              [else #f])]
+         ;; re-use name...
+         [to-port (or to-file-port to-port)]
          [to-use (cond [(and (pm-spec-path? (car members))
                              (port? to-port)
                              (not (file-stream-port? to-port)))
                         #f]
-                       [to-file-port to-file-port]
                        [else to-port])]
          [from-port (pipeline-port-from pipeline-spec)]
          [from-file-port (with-handlers ([(λ _ #t) (λ (e)
@@ -433,11 +434,12 @@ pipelines where it is set to always kill when the end member exits
                                    (path-string-sym->path (first from-port))
                                    #:exists (second from-port))]
                                  [else #f]))]
+         ;; re-use from-port name
+         [from-port (or from-file-port from-port)]
          [from-use (cond [(and (pm-spec-path? (car (reverse members)))
                                (port? from-port)
                                (not (file-stream-port? from-port)))
                           #f]
-                         [from-file-port from-file-port]
                          [else from-port])]
          [err-ports (map pipeline-member-spec-port-err members)]
          [err-ports-with-paths (map (λ (p) (cond [(path-string-symbol? p)
