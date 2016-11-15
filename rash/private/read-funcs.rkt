@@ -135,6 +135,8 @@
                   #\` #\a #f
                   #\' #\a #f
                   #\@ #\a #f
+                  ;; -i is a number constant!
+                  #\- #\a #f
                   ;#\# #\a #f
                   #\( #\a #f
                   #\) #\a #f
