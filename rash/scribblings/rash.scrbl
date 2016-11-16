@@ -185,11 +185,9 @@ as top-level rash code.
 Here are some big things you will feel are missing:
 
 @itemlist[
-@item{Completion (tab or otherwise)}
+@item{Completion}
 @item{expansion of ~, $ENVIRONMENT_VARS, /generally/$variables/in/paths, globs, etc}
 @item{(line) editing (but you can wrap it with rlwrap!)}
-@item{customizable prompts}
-@item{syntax to pipe output to a file -- it's in the pipeline library, there's just no syntax here yet.}
 @item{strings/command output as temp files to pass as arguments to commands (IE <() in bash)}
           ]
 
