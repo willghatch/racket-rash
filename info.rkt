@@ -8,5 +8,6 @@
                "scribble-lib"
                "scribble-doc"
                "racket-doc"
+               "rackunit-lib"
                ))
 
