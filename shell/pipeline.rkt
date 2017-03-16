@@ -3,6 +3,7 @@
 (require racket/port)
 (require racket/exn)
 (require racket/list)
+(require racket/format)
 (require racket/contract)
 (require syntax/parse/define)
 
@@ -127,12 +128,12 @@
                "Command not found: ~a" cmd))))
 
 (define (resolve-command-path cmd)
-  (let ([pathstr (if (path? cmd) cmd (->string cmd))])
+  (let ([pathstr (if (path? cmd) cmd (~a cmd))])
     (or (find-executable-path pathstr)
         (and (equal? 'windows (system-type 'os))
              (string? pathstr)
              (find-executable-path
-              (string-append (->string cmd) ".exe")))
+              (string-append (~a cmd) ".exe")))
         (error 'resolve-command-path "can't find executable for ~s" cmd))))
 
 (define (resolve-spec pm-spec)
@@ -691,9 +692,6 @@ pipelines where it is set to always kill when the end member exits
       (display out-str)
       (flush-output))))
 
-(define (->string a)
-  (if (string? a) a (format "~a" a)))
-
 (define (path-string-symbol? pss)
   (or (path-string? pss)
       (and (symbol? pss) (path-string? (symbol->string pss)))))
@@ -714,7 +712,7 @@ pipelines where it is set to always kill when the end member exits
                        in
                        err
                        cmdpath)
-                 (map ->string args))))
+                 (map ~a args))))
 
 ;;;; and/or macros ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 (define-simple-macro (and/success e ...)
