@@ -6,6 +6,7 @@
  rash/trim
  rash/number
  (all-from-out shell/pipeline)
+ rash-splice
  )
 
 (module+ for-module-begin
@@ -25,6 +26,28 @@
 (require shell/pipeline)
 (require "read-funcs.rkt")
 (require (for-syntax "read-funcs.rkt"))
+
+
+(struct rash-splice
+  ;; struct for signalling that a pipeline-member argument needs to be
+  ;; spliced into the argument list
+  (content))
+
+(define (run-pipeline/splice #:out [out (current-output-port)] . members)
+  (define (do-splice inlist outlist)
+    (cond [(null? inlist) (reverse outlist)]
+          [(rash-splice? (car inlist))
+           (let* ([content (rash-splice-content (car inlist))]
+                  [cspliced (if (list? content)
+                                (reverse content)
+                                (list content))])
+             (do-splice (cdr inlist) (append cspliced outlist)))]
+          [else (do-splice (cdr inlist) (cons (car inlist) outlist))]))
+  ;; All pipeline members that we get in rash are lists.
+  (define (splice-member m)
+    (do-splice m '()))
+  (apply run-pipeline (map splice-member members) #:out out))
+
 
 (define (rash-read-and-line-parse src in)
   (let ([stx (rash-read-syntax src in)])
@@ -83,16 +106,16 @@
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... > filename)
      (with-disappeared-uses
        (record-disappeared-uses #'(pn.pipe-char ...))
-       #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'error)
-                       p1.argv pn.argv ...))]
+       #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'error)
+                              p1.argv pn.argv ...))]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >! filename)
-     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'truncate)
-                     p1.argv pn.argv ...)]
+     #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'truncate)
+                            p1.argv pn.argv ...)]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >> filename)
-     #`(run-pipeline #:out (list #,(quote-maybe #'filename) 'append)
-                     p1.argv pn.argv ...)]
+     #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'append)
+                            p1.argv pn.argv ...)]
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
-     #'(run-pipeline p1.argv pn.argv ...)]
+     #'(run-pipeline/splice p1.argv pn.argv ...)]
     ))
 
 (define-syntax (rash stx)

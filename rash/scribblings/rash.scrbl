@@ -163,6 +163,8 @@ rash/trim -- like rash/out, but does string-trim to it.
 
 rash/number -- runs string->number on the output of rash/trim.
 
+rash-splice -- wrapper for lists to be spliced into a pipeline-member argument list.
+
 @section{RASH repl}
 
 To launch a rash repl, run @code{racket -l rash/repl}, or if you have
