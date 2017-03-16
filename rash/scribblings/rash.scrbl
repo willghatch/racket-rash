@@ -72,6 +72,17 @@ ls $(rash/trim "dirname $(rash/trim \"pwd\")")
 ;; guillemets are enabled for nestable string delimiters
 ls $(rash/trim «dirname $(rash/trim «pwd»)»)
 
+;; $$ escapes to racket but splices the result
+(require file/glob)
+cat $$(glob "*.rkt")
+
+;; update timestamps on all racket files not modified in the last minute
+;; (to demo that with rash you can do the sorts of things that are possible
+;; with zsh extended glob qualifiers)
+(define (not-modified-this-minute f)
+  (< 60 (- (current-seconds) (file-or-directory-modify-seconds f))))
+touch $$(filter not-modified-this-minute (glob "*.rkt"))
+
 }|
 
 An example snippet of just using rash macros in #lang racket/base

@@ -70,8 +70,9 @@
              ))
   (define (quote-maybe stx)
     (syntax-parse stx
-      #:datum-literals (%%rash-dispatch-marker)
+      #:datum-literals (%%rash-dispatch-marker %%rash-dispatch-marker-splice)
       [(%%rash-dispatch-marker s) #'s]
+      [(%%rash-dispatch-marker-splice s) #'(rash-splice s)]
       [x:id #'(quote x)]
       [else stx]))
 

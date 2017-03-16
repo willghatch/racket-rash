@@ -113,8 +113,10 @@
 
 (define (mark-dispatched stx)
   (syntax-parse stx
-    [x:id #'(%%rash-dispatch-marker x)]
-    [else stx]))
+    [f #'(%%rash-dispatch-marker f)]))
+(define (mark-dispatched-splice stx)
+  (syntax-parse stx
+    [f #'(%%rash-dispatch-marker-splice f)]))
 
 (define dispatch-read
   (case-lambda
@@ -122,7 +124,14 @@
      (syntax->datum (dispatch-read ch port #f #f #f #f))]
     [(ch port src line col pos)
      (parameterize ([current-readtable rash-dispatch-read-table])
-       (mark-dispatched (read-syntax src port)))]))
+       ;; I need to peek to see if it's actually $$ - this would be
+       ;; better multi-character matches could be defined on the readtable!
+       (let ([c (peek-char port)])
+         (if (equal? c #\$)
+             (begin
+               (read-char port)
+               (mark-dispatched-splice (read-syntax src port)))
+             (mark-dispatched (read-syntax src port)))))]))
 
 (define bare-line-readtable
   (make-readtable #f
