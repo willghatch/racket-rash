@@ -1,22 +1,33 @@
-Main TODO items
----------------
+Main stable release blockers
+----------------------------
+
+* How should shell functions and aliases be done?  Should aliases be able to include pipes?  The current way I'm doing it is clearly wrong.
+
+* add features to shell/pipeline from its todo to get to a stable release point
 
 * add access to all the features of run-pipeline from the line-based syntax
-** redirections < > >! >>
-* make $ read into some sort of transformer macro that can do different things
-** $var should be variable reference, as it is
-** $ALL_CAPS should be an environment variable reference
-** $"string" (and better still, $«nestable «string»») should do glob expansion
-*** {foo,bar}, *, expand environment vars, ... what other sorts of globs would be useful?
-*** zsh has lots of really cool glob patterns that are impossible to remember.  What would be a good way to use them, but not have magic syntax and 1 character name nonsense?
-*** globs produce lists of arguments, not just one, so I'll have to manage splicing them in somehow.
-** $(normal racket here) should of course be normal racket
-** are there other expansions that would be useful?
-* it would be good to have racket lines on the first line, but the way they are parsed is bound up in how newline characters are parsed...
+** redirections < > >! >>, error redirection e> e>> etc, default error redirection, <() >() fd/temp-file redirection a la bash
+** way to specify #:status-and? and #:end-exit-flag in rash (also end-exit-flag is a terrible name...)
+** && || (this is a level above pipelines and redirections)
+
+* #lang rash and (require rash) should be re-exports of rash1 for future proofing -- document that rash1 is stable and rash may switch to be a rash2
+** how should eg. rc files be treated with this scheme?  Check for both $XDG_CONFIG/rash/rashrc and $XDG_CONFIG/rashN/rashrc?
+
+Other TODO items
+----------------
+
 * the rash macros should have optional arguments that affect the readtable used.  Currently upon entering the rash macro, you can *only* use #lang rash syntax with no modifications.  I'd like to let people extend the rash readtable, and maybe define wrapper versions of the macros [rash-ext/out, etc] to easily use extended readtables in outer languages and inner
+
+* glob wrapper to interpolate variables into glob paths
+** glob shorthand (eg. $${glob/goes/here/*}) that hopefully uses the interpolating wrapper.
+
+* I should explore making some sort of port wrapper for the initial input port of a pipeline to solve the problem of copy-port eating at least 1 character that isn't read by the first process.  Or maybe somehow recognize certain file-port wrappers like the readline port and get their underlying file-port to give to the process...
+
+* option-app -- needs better name (kw-check-app?), and should it be part of another package?  I think I want to use it in more packages...
+
 
 About interactive shells
 ------------------------
 
-job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
+* job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
 
