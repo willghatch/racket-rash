@@ -46,6 +46,8 @@ and
 <program text here>
 }|
 
+Except that #lang rash does not print the values of top-level expressions.
+
 Here is some quick example code:
 
 @codeblock|{
