@@ -1,11 +1,19 @@
-* kw-args for functions in shell pipelines?  For functions you can always wrap with a lambda, so I don't think this is a big deal.
-* a custom exn type for pipeline failures
-* Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?
+Fully stable release blockers
+-----------------------------
 
-* path expansion functions -- ~, globs, /paths/with/$VARS/in/middle
-* easy port opening functions for redirection to files (>, >|, >>, <) and temp-file redirects ( <() >() )
-* wrapper struct for functions to return non-zero but have it still count as success
-** really, I think I just want functions to be able to return whatever, and only count as unsuccessful if they throw.  Maybe pipelines should return a pipeline-success or pipeline-failure object that has the final result.  People rarely care what the result is in case of external programs, and for functions I might really want to use the return value of the last function in the pipeline rather than its stdout.  Of course, this would be similar to wrapping the pipeline up to that last function with a call to said last function using run/out.  But it might be more convenient to just get the output.  Maybe run-pipeline should just always return the pipeline object, upon which you can query success/failure/status.  and0/or0 can be replace with and/success or/success.  Add pipeline-success?, pipeline-success?/and, export pipeline-status/end maybe.
+* how should shell aliases be done?  The current way I'm doing it is clearly wrong.  Is that something that should be at the rash level instead of the shell-pipeline layer?  Or maybe there should be some sort of middle layer that inspects things that is in this library but optional for use?
+
+* process fd/temp-file redirects a la <() >() from bash
+
+* shellify -- maybe replace with shellify/left and shellify/right, or have another argument that determines the position in the arg list to put the string -- maybe allow negative numbers to count from end.
+
+* a custom exn type for pipeline failures?
+
+Other todo, maybe for version 2
+-------------------------------
+
+* Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?  But this is a pretty standard shell feature for job control.
+
 * bg pipeline disowning?
     Disowning will probably only work for pipelines
     without any racket functions or filters in them.  But perhaps you should
