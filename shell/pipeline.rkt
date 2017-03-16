@@ -13,12 +13,6 @@
   [shellify (-> procedure?
                 procedure?)]
 
-  [current-shell-functions (->* ()
-                                ((hash/c symbol? procedure?))
-                                (or/c (hash/c symbol? procedure?) void?))]
-  [base-shell-functions (hash/c symbol? procedure?)]
-  [add-shell-function (-> symbol? procedure? void?)]
-  [shell-alias (-> symbol? (listof any/c) void?)]
   [struct alias-func ([func procedure?])]
   [struct pipeline-same-thread-func ([func procedure?])]
 
@@ -89,16 +83,6 @@
 
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(define (add-shell-function name function)
-  (current-shell-functions (hash-set (current-shell-functions)
-                                     name
-                                     function)))
-(define (shell-alias name argl-start)
-  (add-shell-function name (alias-func (λ args (append argl-start args)))))
-
-(define (lookup-shell-function key)
-  (hash-ref (current-shell-functions) key #f))
-
 (define (resolve-alias pm-spec)
   (if (pm-spec-alias? pm-spec)
       (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
@@ -108,9 +92,7 @@
                          (error 'resolve-alias "alias did not produce an argument list")
                          #f)]
              [new-cmd (car new-argl)]
-             [self-alias? (if (or (equal? old-cmd new-cmd)
-                                  (and (or (string? new-cmd) (symbol? new-cmd))
-                                       (equal? (lookup-shell-function new-cmd) old-cmd)))
+             [self-alias? (if (equal? old-cmd new-cmd)
                               (error 'resolve-alias "alias ~a resolves to itself." new-cmd)
                               #f)])
         (struct-copy pipeline-member-spec pm-spec
@@ -142,11 +124,7 @@
     (cond
       [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
       [(symbol? cmd)
-       (let ([looked (lookup-shell-function cmd)])
-         (if looked
-             (resolve-spec (struct-copy pipeline-member-spec pm-spec
-                                        [argl (cons looked (cdr argl))]))
-             (resolve-pipeline-member-spec-path pm-spec)))]
+       (resolve-pipeline-member-spec-path pm-spec)]
       ;; Note that paths are safe from further resolution -- an alias
       ;; chain should always end with a path.
       [else pm-spec])))
@@ -748,13 +726,5 @@ pipelines where it is set to always kill when the end member exits
     (display a))
   (display "\n"))
 
-(define base-shell-functions
-  (hash 'cd shell-cd
-        'printf shell-printf
-        'echo shell-echo
-        ))
-
-(define current-shell-functions
-  (make-parameter base-shell-functions))
 
 

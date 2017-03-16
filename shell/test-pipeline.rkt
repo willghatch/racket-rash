@@ -32,10 +32,6 @@
                                   `(,my-grep hello))
                 "hello \n")
 
-  ;; check that aliases work
-  (shell-alias 'aoeu '(echo aoeu))
-  (check-equal? (run-pipeline/out '(aoeu hello))
-                "aoeu hello\n" )
 
   ;; run-pipeline/out should raise an exception if it has a nonzero exit for the last member
   (check-exn exn?

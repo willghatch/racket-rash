@@ -40,7 +40,7 @@ This library is also intended to support other libraries providing different sur
 [#:status-and? status-and? any/c #f]
 [#:background? bg? any/c #f])
 any/c]{
-Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a string or path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If it is a symbol, it will look up in @racket[current-shell-functions] and use the resulting function if one is found.  If no shell function is found, it will be converted into a string.  If the command (or the shell-function found by a lookup) is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.
+Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a string or path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If the command is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.
 
 A @racket[pipeline-member-spec], in addition to the command/argument list, has an error-port specification.  All lists given will be turned into @racket[pipeline-member-spec]s using the @racket[default-err] specification.
 
@@ -94,29 +94,6 @@ Is it a pipeline object?
 Convenience function for putting Racket functions into pipelines.
 
 Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port].
-}
-
-@defparam[current-shell-functions table (hash/c symbol? procedure?)]{
-Parameter that holds the current mapping for strings and symbols to look up shell functions (including aliases) before looking for an executable program.
-}
-
-@defthing[base-shell-functions
-]{
-Base table for @racket[current-shell-functions].  Includes a binding from @code{'cd} to @racket[shell-cd], @code{'printf} to @racket[shell-printf], and @code{'echo} to @racket[shell-echo].
-}
-
-@defproc[(add-shell-function
-[name symbol?]
-[shell-func procedure?])
-void?]{
-Adds @racket[shell-func] to current-shell-functions under @racket[name].  @racket[shell-func] should follow the rules for function members of pipelines.
-}
-
-@defproc[(shell-alias
-[name symbol?]
-[alias-list (listof any/c)])
-void?]{
-Makes an @racket[alias-func] and adds it to the current-shell-functions under @racket[name].  The alias func that is created appends any use-site arguments to the argument list in @racket[alias-list].  Basically like what @code{alias} does in @code{bash}.
 }
 
 @defstruct[alias-func ([func procedure?])]{
