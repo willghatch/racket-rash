@@ -37,6 +37,12 @@ and
 <program text here>
 }|
 
+Note that I don't really recommend including rash code in industrial-strength applications, and I would like to warn that shell scripts are often very brittle -- if you distribute a shell script you have to go to great lengths to ensure that the programs used by your script are installed on machines where the script is used, and even the most basic programs that you assume are available may have incompatible options (eg. GNU vs BSD options for standard Unix programs, or stripped-down busybox versions, etc).
+
+However, shell scripting is a @emph{very} convenient way to do certain kinds of programming.  It's great for automating your workflow and doing quick prototype work.  It's great for glue code around programs that already do 90% of what you need.  And interactive shell language repls are unparalleled for live system administration tasks (which can almost just be recorded to generate an automation script).
+
+I have loads of shell scripts that I use on my computers, from simple wrapper scripts to complex system administration tasks.  But as scripts like these want to grow and become more complex, bash and friends don't scale up to deal with the added complexity, and all kinds of frustration and crazy, dirty hack work ensues until the programmer eventually starts from scratch in a more general-purpose language.  But then you lose the domain-specific ease of wiring programs together in a simple syntax.  Rash aims to solve those problems by offloading any part of a shell script that simple program piping doesn't solve well into full-on Racket, and allowing any Racket program to slide easily into the domain of external program wiring by embedding rash macros.
+
 
 Here is some quick example code:
 
@@ -125,12 +131,17 @@ EOS
 ;; To use a racket function, return a closure.
 (rash "$(λ () (printf \"Hello~nWorld~n\")) | grep Hello")
 
+;; As you can see with all the string escaping, alternating languages is much
+;; nicer with a nestable string delimiter like «» in #lang udelim metalanguage
+;; or #lang rash than with normal "" string delimiters.
+
 ;; If you have a function that takes a string and returns a string, you can shellify it.
 ;; shellify turns current-input-port into a string, passes it in, prints the output
 ;; to current-output-port, and returns 0.
 (rash "ls /etc | $(shellify string-upcase) | grep HOSTNAME")
 
-;; If a function in the pipeline raises an exception, the exception is printed to current-error-port and it gives a nonzero exit status
+;; If a function in the pipeline raises an exception, the exception is printed to current-error-port and the
+;; pipeline may be unsuccessful (depending on the functions position in the pipeline and #:status-and?)
 (rash "$(λ () (error 'something \"this is an error\")))")
 
 ;; So... there you have it.
@@ -145,7 +156,6 @@ $(λ () (printf "hello\nmars\njupiter\nand\nneptune")) | $(shellify string-upcas
 EOS
 )
 
-;; As you can see, it is much better with a nestable string delimiter like «» in #lang udelim or #lang rash
 
 }|
 

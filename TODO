@@ -1,6 +1,10 @@
 Main stable release blockers
 ----------------------------
 
+* aliases can't be provided right now...
+
+* provide a cd alias by default
+
 * add features to shell/pipeline from its todo to get to a stable release point
 
 * add access to all the features of run-pipeline from the line-based syntax
