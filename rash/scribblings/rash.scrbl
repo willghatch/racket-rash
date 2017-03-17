@@ -10,20 +10,6 @@
 
 THIS IS ALL ALPHA AND UNSTABLE
 
-tl;dr -- in the string argument of a rash macro and @literal{#lang rash} each line is
-wrapped in a pipeline s-expression, and you can escape to racket with
-@literal{$} (or escape to racket splicing with @literal{$$}).
-A line that starts with an open paren is normal racket -- not wrapped to be a
-pipeline.
-
-@codeblock|{
-#lang rash
-;; this line is normal racket
-(define dir "/etc")
-;; this line is in rash pipeline syntax
-ls $dir | grep profile | cowsay
-}|
-
 Rash is a language and library for writing shell scripts (and including them in
 larger Racket programs if desired).  It is basically a syntax wrapper for the
 @other-doc['(lib "shell/shell-pipeline.scrbl") #:indirect "shell/pipeline"] library.
