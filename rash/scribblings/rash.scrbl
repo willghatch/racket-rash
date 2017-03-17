@@ -12,23 +12,28 @@ THIS IS ALL ALPHA AND UNSTABLE
 
 tl;dr -- in the string argument of a rash macro and @literal{#lang rash} each line is
 wrapped in a pipeline s-expression, and you can escape to racket with
-@literal{$}.  A line that starts with an open paren is not wrapped to be a
-pipeline.  IE to escape a whole line to be racket, wrap the whole thing in ().
-To escape part of a line into racket, use $.
+@literal{$} (or escape to racket splicing with @literal{$$}).
+A line that starts with an open paren is normal racket -- not wrapped to be a
+pipeline.
 
-Rash is a language and library for writing shell scripts and including them in
-Racket programs.  It is basically a syntax wrapper for the
+@codeblock|{
+#lang rash
+;; this line is normal racket
+(define dir "/etc")
+;; this line is in rash pipeline syntax
+ls $dir | grep profile | cowsay
+}|
+
+Rash is a language and library for writing shell scripts (and including them in
+larger Racket programs if desired).  It is basically a syntax wrapper for the
 @other-doc['(lib "shell/shell-pipeline.scrbl") #:indirect "shell/pipeline"] library.
-This library exposes a subset of its functionality in a line-based syntax.
-So if you look at the docs for the pipeline library, you should see how
-this just wraps it.
 
-To get started, simply @code{(require rash)} in your program.
-You can then use @code|{(rash "string of rash code")}|.
-Or use @code{#lang rash}, and your whole language is as if wrapped in the
-@racket[rash] macro.
+You can either use @code{#lang rash} or @code{(require rash)} and use
+@code{(rash "string of rash code")} to embed rash syntax into any
+expression position of a module in another #lang.
 
-These two are basically equivalent:
+The following two modules are basically equivalent, except that #lang
+rash does not print the values of top-level expressions:
 
 @codeblock|{
 #lang racket/base
@@ -46,7 +51,6 @@ and
 <program text here>
 }|
 
-Except that #lang rash does not print the values of top-level expressions.
 
 Here is some quick example code:
 
@@ -164,17 +168,96 @@ EOS
 
 @section{Reference}
 
-TODO - but first I should nail down the syntax, etc.
+Remember, this is not yet stable!
 
-But variants of the rash macro are:
 
-rash/out -- returns output as string.
+The rash module also exports everything provided by @other-doc['(lib "shell/shell-pipeline.scrbl")].
 
-rash/trim -- like rash/out, but does string-trim to it.
+@defform[(rash code-string)]{
+Macro to use rash syntax in any expression position of another language.  Returns the result of the last expression (IE the lines are wrapped with @racket[begin]).
 
-rash/number -- runs string->number on the output of rash/trim.
+@codeblock|{
+#lang racket/base
+(require rash)
 
-rash-splice -- wrapper for lists to be spliced into a pipeline-member argument list.
+;; This is a bad example.
+(if (pipeline-success? (rash "ls /etc | grep -E «^hostname$»"))
+    (displayln "There is an /etc/hostname file.")
+    (displayln "There is apparently not a hostname file, or ls or grep weren't found."))
+}|
+}
+
+@defform[(rash/out code-string)]{
+Like @racket[rash], but returns a string printed by any contained code to the @racket[current-output-port] (or stdout for any processes).
+
+@codeblock|{
+#lang racket/base
+(require rash)
+
+(define hostname-string
+  ;; This will return the string "hostname\n", or raise an exception if there is an error.
+  (rash/out "ls /etc | grep -E «^hostname$»"))
+}|
+}
+
+@defform[(rash/trim code-string)]{
+Like @racket[rash/out], but wraps the output with @racket[string-trim].
+
+@codeblock|{
+#lang rash
+;; let's read the source of the xdg-open script (if it's found on the path).
+;; Note that we need to trim the output, or the trailing newline will cause
+;; `cat` to try to open a file whose name ends in a newline (which probably
+;; is not what we want).
+cat $(rash/trim «which xdg-open»)
+}|
+}
+
+@defform[(rash/number code-string)]{
+Wraps the output of @racket[rash/trim] with @racket[string->number].
+
+@codeblock|{
+#lang racket/base
+(require rash)
+
+;; Use (current-seconds), not this.  But the answer should be the same.
+(define seconds-since-epoch (rash/number «date +%s»))
+(define my-file "/home/me/some-file.txt")
+;; Let's find out how many lines some-file.txt has.
+(define file-lines (rash/number "wc -l $my-file | cut -f 1 -d « »"))
+}|
+}
+
+@defproc[(rash-splice [v any/c]) rash-splice?]{
+Puts the given value in a wrapper that tells rash to splice it into a @racket[pipeline-member-spec] command/argument list.  Generally in rash syntax you would use $$ instead.
+
+Examples:
+@codeblock|{
+#lang rash
+(require file/glob)
+;; these two lines are equivalent
+cat $(rash-splice (glob "*.rkt"))
+cat $$(glob "*.rkt")
+}|
+}
+
+@defproc[(rash-splice? [v any/c]) boolean?]{
+Predicate for rash-splice objects.
+}
+
+@defform[(define-alias alias-name lambda-list body ...+)]{
+Defines an alias function that can be accessed in rash syntax without needing $ escapes.
+
+@racket[lambda-list] and @racket[body] are used to make a lambda wrapped with @racket[alias-func].  The form is also set up so that rash recognizes @racket[alias-name] and doesn't quote it when in command position in a pipeline.
+
+Examples:
+@codeblock|{
+;; The main purpose of shell aliases is to make common uses really short.
+(define-alias l args (list* 'ls '--color=auto args))
+;; Can't remember how your common flags for find work?
+(define-alias find-files args `(find ,@args -type f))
+}|
+}
 
 @section{RASH repl}
 
@@ -197,23 +280,19 @@ to use, and generally sets up your dynamic environment).  Then for any
 files @code{$XDG_CONFIG_DIRS/rash/rashrc}, it reads and evaluates them
 as top-level rash code.
 
-Here are some big things you will feel are missing:
+Here are some big things you will feel are missing (primarily in the repl):
 
 @itemlist[
 @item{Completion}
-@item{expansion of ~, $ENVIRONMENT_VARS, /generally/$variables/in/paths, globs, etc}
+@item{expansion of ~ as $HOME, /generally/$variables/in/paths, etc}
+@item{glob syntax more convenient than $$(glob "*.rkt")}
 @item{(line) editing (but you can wrap it with rlwrap!)}
 @item{strings/command output as temp files to pass as arguments to commands (IE <() in bash)}
           ]
 
-I'm not sure what I want to do about all of the expansion stuff -- especially since globs are an easy way I've shot myself in the foot many times.  But ~ expansion is so convenient, and so is path interpolation.
+But you know what's already not missing?
 
-At any rate, fancy stuff would be great to add at some point.
-
-But you know what's not missing?
-Real, recursive data structures, a module system, macros, closures, ... everything
-that Racket provides that most shell languages (and many other languages...) are
-sorely missing.
+Recursive data structures, first class functions/closures, lexically-scoped definitions by default, a module system, hygienic macros, seamless integration with other modules and #langs, ... everything that Racket provides that most shell languages (and many other languages...) are sorely missing.
 
 @section{Code and License}
 

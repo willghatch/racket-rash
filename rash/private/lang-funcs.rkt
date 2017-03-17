@@ -7,6 +7,7 @@
  rash/number
  (all-from-out shell/pipeline)
  rash-splice
+ rash-splice?
  define-alias
  )
 
