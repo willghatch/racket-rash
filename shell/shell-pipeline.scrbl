@@ -125,9 +125,6 @@ Like @racket[path-string?], except it also includes symbols that would be valid 
 @defproc[(shell-cd [dir (or/c string? path? symbol?) ""]) void?]{
 Changes @racket[current-directory].  It's a @racket[pipeline-same-thread-func], so it changes the @racket[current-directory] for the current thread rather than a throwaway thread.  If no directory is given, it changes to the user's home directory.
 }
-@defproc[(shell-echo [arg ang/c] ...) void?]{
-Each argument is displayed to the @racket[current-output-port] with a space in between.  A newline is displayed after all arguments.  This just exists to have an echo function that works like echo in bash.
-}
 
 @defform[(and/success e ...)]{
 Like @racket[and], but only treats pipeline objects as truthy if they pass @racket[pipeline-success?].

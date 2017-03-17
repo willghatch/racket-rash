@@ -17,7 +17,6 @@
   [struct pipeline-same-thread-func ([func procedure?])]
 
   [shell-cd (->* () ((or/c string? path? symbol?)) void?)]
-  [shell-echo (->* () #:rest (listof any/c) void?)]
 
   [run-pipeline (->* ()
                      (#:in (or/c input-port? false/c path-string-symbol?)
@@ -713,14 +712,4 @@ pipelines where it is set to always kill when the end member exits
               [(path? dir) dir]
               [(symbol? dir) (symbol->string dir)]
               [else (error 'cd "cd argument needs to be a string, path, or symbol")]))))))
-
-(define (shell-echo . args)
-  (for ([a args]
-        [i (in-naturals)])
-    (when (not (equal? i 0))
-      (display " "))
-    (display a))
-  (display "\n"))
-
-
 
