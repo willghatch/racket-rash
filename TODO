@@ -1,8 +1,6 @@
 Main stable release blockers
 ----------------------------
 
-* How should shell functions and aliases be done?  Should aliases be able to include pipes?  The current way I'm doing it is clearly wrong.
-
 * add features to shell/pipeline from its todo to get to a stable release point
 
 * add access to all the features of run-pipeline from the line-based syntax
