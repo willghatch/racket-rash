@@ -1,8 +1,6 @@
 Fully stable release blockers
 -----------------------------
 
-* how should shell aliases be done?  The current way I'm doing it is clearly wrong.  Is that something that should be at the rash level instead of the shell-pipeline layer?  Or maybe there should be some sort of middle layer that inspects things that is in this library but optional for use?
-
 * process fd/temp-file redirects a la <() >() from bash
 
 * shellify -- maybe replace with shellify/left and shellify/right, or have another argument that determines the position in the arg list to put the string -- maybe allow negative numbers to count from end.
