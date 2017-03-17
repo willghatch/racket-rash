@@ -76,13 +76,6 @@
              #:attr pipe-char #`pipe
              ))
 
-  (struct rash-alias (v)
-    #:property prop:procedure (λ (stx)
-                                (syntax-parse stx
-                                  [(name arg ...)
-                                   (with-syntax ([val (struct-field-index v)])
-                                     #'(val arg ...))])))
-
   (define (quote-maybe stx)
     (syntax-parse stx
       #:datum-literals (%%rash-dispatch-marker %%rash-dispatch-marker-splice)
@@ -96,24 +89,32 @@
                     ;; the repl to work.  But I worry that it could break
                     ;; something for non-top-level code...
                     (identifier-binding stx (syntax-local-phase-level) #t)
-                    (syntax-local-value stx))])
-      (if (rash-alias? slv)
-          (rash-alias-v slv)
+                    (let-values ([(transform-val normal-val)
+                                  (syntax-local-value/immediate stx
+                                                                (λ _ (values #f #f)))])
+                      normal-val))])
+      (if (and (syntax? slv) (identifier? slv)
+               (syntax-property slv 'rash-alias-identifier?))
+          stx
           (quote-maybe stx))))
 
   )
 
 (define-syntax (define-alias stx)
-  #| TODO - is there a way to make this available as a normal function as well
-  as something I can identify in quote-maybe-cmd?
-  |#
   (syntax-parse stx
     [(_ name:id arglist body ...+)
      (with-syntax ([defname (datum->syntax stx (gensym (syntax->datum #'name)))])
        #'(begin
            ;; define a temp name so val is only evaluated once
            (define defname (alias-func (λ arglist body ...)))
-           (define-syntax name (rash-alias #'defname))))]))
+           (define-syntax name (make-rename-transformer
+                                (syntax-property
+                                 (syntax-property #'defname
+                                                  'rash-alias-identifier?
+                                                  #t #t)
+                                 ;; this not-free-identifier=? makes it export
+                                 ;; name instead of defname when provided.
+                                 'not-free-identifier=? #t #t)))))]))
 
 
 (define-syntax (rash-line-parse stx)

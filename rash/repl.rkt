@@ -48,7 +48,7 @@
 (define (eval-rashrc.rkt rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
-                  #`(require (file #,(path->string rcfile)))))))
+                  (datum->syntax #f `(require (file ,(path->string rcfile))))))))
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
