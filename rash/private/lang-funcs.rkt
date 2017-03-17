@@ -7,6 +7,7 @@
  rash/number
  (all-from-out shell/pipeline)
  rash-splice
+ define-alias
  )
 
 (module+ for-module-begin
@@ -59,15 +60,28 @@
 (begin-for-syntax
   (define-syntax-class not-pipe
     (pattern (~not (~literal \|))))
+  (define (quote-argv argv-stx)
+    (syntax-parse argv-stx
+      [(cmd arg ...)
+       #`(list #,(quote-maybe-cmd #'cmd)
+               #,@(map quote-maybe (syntax->list #'(arg ...))))]))
   (define-splicing-syntax-class pipeline-part
     (pattern (~seq arg:not-pipe ...+)
-             #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(arg ...))))
+             #:attr argv (quote-argv #'(arg ...))
              ))
   (define-splicing-syntax-class pipeline-part/not-first
     (pattern (~seq (~and (~var pipe) (~literal \|)) part:pipeline-part)
-             #:attr argv #`(list #,@(map quote-maybe (syntax->list #'(part.arg ...))))
+             #:attr argv (quote-argv #'(part.arg ...))
              #:attr pipe-char #`pipe
              ))
+
+  (struct rash-alias (v)
+    #:property prop:procedure (λ (stx)
+                                (syntax-parse stx
+                                  [(name arg ...)
+                                   (with-syntax ([val (struct-field-index v)])
+                                     #'(val arg ...))])))
+
   (define (quote-maybe stx)
     (syntax-parse stx
       #:datum-literals (%%rash-dispatch-marker %%rash-dispatch-marker-splice)
@@ -75,8 +89,30 @@
       [(%%rash-dispatch-marker-splice s) #'(rash-splice s)]
       [x:id #'(quote x)]
       [else stx]))
+  (define (quote-maybe-cmd stx)
+    (let ([slv (and (identifier? stx)
+                    ;; TODO I need the third argument of this to be true for
+                    ;; the repl to work.  But I worry that it could break
+                    ;; something for non-top-level code...
+                    (identifier-binding stx (syntax-local-phase-level) #t)
+                    (syntax-local-value stx))])
+      (if (rash-alias? slv)
+          (rash-alias-v slv)
+          (quote-maybe stx))))
 
   )
+
+(define-syntax (define-alias stx)
+  #| TODO - is there a way to make this available as a normal function as well
+  as something I can identify in quote-maybe-cmd?
+  |#
+  (syntax-parse stx
+    [(_ name:id arglist body ...+)
+     (with-syntax ([defname (datum->syntax stx (gensym (syntax->datum #'name)))])
+       #'(begin
+           ;; define a temp name so val is only evaluated once
+           (define defname (alias-func (λ arglist body ...)))
+           (define-syntax name (rash-alias #'defname))))]))
 
 
 (define-syntax (rash-line-parse stx)
