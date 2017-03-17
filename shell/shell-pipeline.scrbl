@@ -40,7 +40,7 @@ This library is also intended to support other libraries providing different sur
 [#:status-and? status-and? any/c #f]
 [#:background? bg? any/c #f])
 any/c]{
-Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a string or path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If the command is an @racket[alias-func], it is called to receive a new command/argument list which is resolved similarly.
+Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a string or path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If the command is an @racket[alias-func], it is called with its arguments before the pipeline is started to receive a new command/argument list which replaces it.
 
 A @racket[pipeline-member-spec], in addition to the command/argument list, has an error-port specification.  All lists given will be turned into @racket[pipeline-member-spec]s using the @racket[default-err] specification.
 
@@ -98,6 +98,17 @@ Takes a procedure which takes a string as its first argument and returns a strin
 
 @defstruct[alias-func ([func procedure?])]{
 Wrapper struct with @racket[prop:procedure] for alias functions.  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
+
+If you want to define aliases for #lang rash, you probably want to use the define-alias form from that package (which wraps alias-func with some rash-specific things).
+
+Examples:
+@codeblock|{
+;; A simple common case -- have an alias that sets initial arguments.
+(define ls-alias (alias-func (λ args (list* 'ls '--color=auto args))))
+;; Slightly more complicated: `find` requires that its path argument go before
+;; its modifier flags.
+(define find-files-alias (alias-func (λ args `(find ,@args -type f))))
+}|
 }
 
 @defstruct[pipeline-same-thread-func ([func procedure?])
