@@ -6,7 +6,7 @@
  "private/repl-namespace.rkt"
  "private/read-funcs.rkt"
  "private/option-app.rkt"
- "rashrc-lib.rkt"
+ "private/rashrc-lib.rkt"
 
  basedir
  racket/exn
