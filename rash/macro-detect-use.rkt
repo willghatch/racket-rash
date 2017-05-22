@@ -20,10 +20,24 @@
 
 (define-syntax tp-rename (make-rename-transformer #'=testpipe=))
 
+(define-syntax (loc stx)
+  (syntax-parse stx
+    [(loc arg ...+)
+     (datum->syntax stx (map (λ (s)
+                               (local-expand s
+                                             (syntax-local-context)
+                                             (list #'default-pipe-starter!)))
+                             (syntax->list #'(arg ...))))]))
 
 ;(rash-pipeline-splitter =testpipe= 1 2 3 =testpipe= 4 5 6)
-(rash-pipeline-splitter  =testpipe= 1 2 3 =testpipe= 4 5 6)
-(rash-pipeline-splitter  =testpipe= 1 2 3 tp-rename 'after-rename 5 6)
-(rash-pipeline-splitter 1 2 3 =testpipe= 4 5 6)
-(syntax-parameterize ([the-implicit-pipe-starter #'=testpipe=])
+;(let ()
+(loc
+  (rash-pipeline-splitter  =testpipe= 1 2 3 =testpipe= 4 5 6)
+  (rash-pipeline-splitter  =testpipe= 1 2 3 tp-rename 'after-rename 5 6)
+  (rash-pipeline-splitter 1 2 3 =testpipe= 4 5 6)
+  (default-pipe-starter! tp-rename)
+  (rash-pipeline-splitter 'after-default-switch 2 3 =testpipe= 4 5 6)
+#;(syntax-parameterize ([the-implicit-pipe-starter #'=testpipe=])
   (rash-pipeline-splitter  97 1 2 3 =testpipe= 4 5 6))
+)
+;)

@@ -5,9 +5,15 @@
   prop:rash-pipeline-starter rash-pipeline-starter? rash-pipeline-starter-ref
   prop:rash-pipeline-joiner rash-pipeline-joiner? rash-pipeline-joiner-ref)
  define-rash-pipe
+ ;; TODO - if the macro to change the starter is in a stop-list of local-expand,
+ ;; it can cause the default to be wrong because it works via side-effect!
+ ;; How can this be fixed?
+ ;; Maybe instead of letting it run as a macro, the outer rash macro can detect
+ ;; it and eagerly do all side-effect-y things.  This would also require eagerly
+ ;; splitting pipelines.
+ default-pipe-starter!
  ;; temporarily
  rash-pipeline-splitter
- the-implicit-pipe-starter
  )
 
 (require
@@ -61,48 +67,44 @@
           as-joiner
           outside-of-rash))]))
 
+;; TODO - make a way to define a rash-pipe-operator by desugaring to existing operators (or a combination of operators)
+
 ;; TODO - define for real
-(define-rash-pipe the-implicit-pipe-starter/default
+(define-rash-pipe default-pipe-starter
   (syntax-parser
     [(_ arg ...)
-     #'(eprintf "implicit-pipe-starter used with args ~a~n" '(arg ...))])
-  (λ (stx) (error 'the-implicit-pipe-starter/default "Can't be used as a pipeline joiner.  Also, that shouldn't normally be possible."))
+     #'(eprintf "default-pipe-starter used with args ~a~n" '(arg ...))])
+  (λ (stx) (error 'default-pipe-starter "Can't be used as a pipeline joiner.  Also, that shouldn't normally be possible."))
   (λ (stx)
-    (error 'the-implicit-pipe-starter/default "Can't be used as a normal macro."))
+    (error 'default-pipe-starter "Can't be used as a normal macro."))
   )
 
-#|
-TODO - how do I expose this?  Not as a stxparam.
-1:  Potentially in splitting lines is the rash macro I can use
-    a macro that sets this with splicing-syntax-parameterize
-    that gets the rest of the rash segment.  This would work well
-    in modules, but not interactively.
-2:  Interactively I could have some interactive variable that
-    is set by this that determines the parameter when at top-level.
-    So maybe I can detect when I'm in the top level of interactivity?
-    That sounds difficult and brittle.
-3:  If all macros into rash-land parameterize this, then the default
-    can be a special value that looks up the current interactive default.
-    The setting macro can check whether the current value is the flag value,
-    and if so, set the interactive default that is looked up.
-    This interactive-default would have to be namespace-specific.
-    To accomplish that... I can have a magic hopefull-unique-name that I set
-    with rash macros if it is unset in the namespace...
-|#
-(define-syntax-parameter the-implicit-pipe-starter
-  #'the-implicit-pipe-starter/default)
+(begin-for-syntax
+  (define top-level-pipe-starter-default #'default-pipe-starter))
+
+(define-syntax-parameter get-implicit-pipe-starter
+  (λ () top-level-pipe-starter-default))
+(define-syntax-parameter set-implicit-pipe-starter
+  (λ (new-setter)
+    (set! top-level-pipe-starter-default new-setter)))
+
+
+(define-syntax (default-pipe-starter! stx)
+  (syntax-parse stx
+    [(_ new-starter:pipe-starter-op)
+     (begin
+       ({syntax-parameter-value #'set-implicit-pipe-starter}
+        #'new-starter)
+       #'(void))]))
 
 
 (define-syntax (rash-pipeline-splitter stx)
-  (syntax-parse stx #:literals (#'the-implicit-pipe-starter)
-    [(_ (~and starter
-              (~or (~var starter-explicit pipe-starter-op)
-                   (the-implicit-pipe-starter)))
-        args:not-pipeline-op ...
-        rest ...)
+  (syntax-parse stx
+    [(_ starter:pipe-starter-op args:not-pipeline-op ... rest ...)
      #'(rash-pipeline-splitter/rest ([starter args ...]) (rest ...))]
     [(rps iargs:not-pipeline-op ...+ rest ...)
-     #'(rps (the-implicit-pipe-starter) iargs ... rest ...)]
+     #`(rps #,({syntax-parameter-value #'get-implicit-pipe-starter})
+            iargs ... rest ...)]
     ))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
@@ -126,12 +128,10 @@ TODO - how do I expose this?  Not as a stxparam.
                                      (rash-transform-joiner-segment joinseg) ...)]))
 
 (define-syntax (rash-transform-starter-segment stx)
-  (syntax-parse stx #:literals (#'the-implicit-pipe-starter)
+  (syntax-parse stx
     [(_ op:pipe-starter-op arg:not-pipeline-op ...)
      (let ([slv (syntax-local-value #'op)])
-       ({rash-pipeline-starter-ref slv} slv #'(op arg ...)))]
-    [(rtss (the-implicit-pipe-starter) arg:not-pipeline-op ...)
-     #`(rtss #,(syntax-parameter-value #'the-implicit-pipe-starter) arg ...)]))
+       ({rash-pipeline-starter-ref slv} slv #'(op arg ...)))]))
 
 (define-syntax (rash-transform-joiner-segment stx)
   (syntax-parse stx
