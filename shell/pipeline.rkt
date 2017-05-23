@@ -313,6 +313,7 @@ pipelines where it is set to always kill when the end member exits
                       #:end-exit-flag [end-exit-flag #t]
                       #:status-and? [status-and? #f]
                       #:background? [bg? #f]
+                      ;; TODO -- allow 'string-port
                       #:default-err [default-err (current-error-port)]
                       . members)
   (let ([pline

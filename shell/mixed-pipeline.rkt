@@ -1,0 +1,196 @@
+#lang racket/base
+
+(provide
+ -run-pipeline
+ (struct-out obj-pipeline-member-spec)
+ (struct-out composite-pipeline-member-spec)
+ u-pipeline-member-spec
+ pipeline-success?
+ pipeline-wait
+ pipeline-ret
+ 
+ )
+
+
+(require (prefix-in u- "pipeline.rkt"))
+(require racket/format
+         racket/list
+         )
+
+(struct obj-pipeline-member-spec
+  (func)
+  #:transparent)
+(struct composite-pipeline-member-spec
+  (members)
+  #:transparent)
+
+(struct obj-pipeline-member
+  (thread ret-box err-box)
+  #:transparent)
+(define (obj-pipeline-member-wait m)
+  (thread-wait (obj-pipeline-member-thread m)))
+(define (obj-pipeline-member-success? m)
+  (obj-pipeline-member-wait m)
+  (not (unbox (obj-pipeline-member-err-box m))))
+
+(define (pipeline-segment-wait seg)
+  (if (u-pipeline? seg)
+      (u-pipeline-wait seg)
+      (obj-pipeline-member-wait seg)))
+(define (pipeline-segment-success? seg)
+  (pipeline-segment-wait seg)
+  (if (u-pipeline? seg)
+      (u-pipeline-success? seg)
+      (obj-pipeline-member-success? seg)))
+(define (pipeline-segment-ret seg)
+  (pipeline-segment-wait seg)
+  (if (u-pipeline? seg)
+      (u-pipeline-status seg)
+      (or (unbox (obj-pipeline-member-err-box seg))
+          (unbox (obj-pipeline-member-ret-box seg)))))
+
+(struct pipeline
+  (manager-thread segment-box))
+(define (pipeline-wait pl)
+  (thread-wait (pipeline-manager-thread pl))
+  (for ([seg (unbox (pipeline-segment-box pl))])
+    (pipeline-segment-wait seg)))
+(define (pipeline-success? pl)
+  ;; TODO - fix
+  (pipeline-segment-success? (car (unbox (pipeline-segment-box pl)))))
+(define (pipeline-ret pl)
+  (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
+
+;; TODO - what APIs should exist for getting intermediate results/statuses from pipelines?
+;; They should mirror the shape of the spec -- results of composite members should be the `and` of the results of their sub-parts, and maybe composite members should be able to supply a predicate on the parts to tell if the whole is successful based on the parts.
+
+
+
+(define (member-spec? x)
+  (or (obj-pipeline-member-spec? x)
+      (u-pipeline-member-spec? x)
+      (composite-pipeline-member-spec? x)))
+
+(define (flatten-specs specs)
+  (define (rec specs flat-specs-rev)
+    (cond [(null? specs) flat-specs-rev]
+          [(composite-pipeline-member-spec? (car specs))
+           (rec (cdr specs)
+                (rec (composite-pipeline-member-spec-members (car specs))
+                     flat-specs-rev))]
+          [else (rec (cdr specs) (cons (car specs) flat-specs-rev))]))
+  (reverse (rec specs '())))
+
+(define (->iport arg)
+  (if (port? arg)
+      arg
+      (open-input-string (~a arg))))
+
+(define (pipeline-drive-segment specs arg starter? init-in-port final-out-port)
+  (cond [(u-pipeline-member-spec? (car specs))
+         (drive-unix-segment specs
+                             (if starter? init-in-port (->iport arg))
+                             final-out-port)]
+        [else (drive-obj-segment specs arg starter?)]))
+
+(define (drive-unix-segment specs in-port final-out-port)
+  ;; TODO - There is probably a better way to handle this error.
+  ;;        The things that can go wrong here are alias resolution and
+  ;;        not having an executable for the command.
+  ;;        Aliases should ideally be resolved before this, and executables
+  ;;        checked, but there could always be a race condition if an
+  ;;        executable is removed after an initial check is made.
+  (with-handlers ([(λ _ #t) (λ (e) (values (obj-pipeline-member (thread (λ () (void)))
+                                                                (box #f)
+                                                                (box e))
+                                           '()))])
+    (define-values (u-specs specs-rest) (splitf-at specs u-pipeline-member-spec?))
+    (define use-out (if (null? specs-rest)
+                        final-out-port
+                        #f))
+    (define sub-pipe-obj (apply u-run-pipeline
+                                #:in in-port
+                                #:out use-out
+                                #:background? #t
+                                ;; TODO - status options, etc
+                                u-specs
+                                ))
+    (values sub-pipe-obj specs-rest)))
+
+(define (drive-obj-segment specs arg starter?)
+  (define rbox (box #f))
+  (define ebox (box #f))
+  (define driver-thread
+    (thread (λ () (with-handlers ([(λ (e) #t) (λ (e) (set-box! ebox e))])
+                    (set-box!
+                     rbox
+                     (if starter?
+                         ({obj-pipeline-member-spec-func (car specs)})
+                         ({obj-pipeline-member-spec-func (car specs)} arg)))))))
+  (values (obj-pipeline-member driver-thread rbox ebox) (cdr specs)))
+
+(define (-run-pipeline specs init-in-port final-out-transformer)
+  ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
+  ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
+  ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
+  (define seg-box (box '()))
+
+  (define final-out-port (if (output-port? final-out-transformer)
+                             final-out-transformer
+                             #f))
+  (define out-transform (if (and final-out-transformer
+                                 (not (output-port? final-out-transformer)))
+                            final-out-transformer
+                            #f))
+
+  (define (segment-get-arg s)
+    (cond [(u-pipeline? s) (u-pipeline-port-from s)]
+          [(obj-pipeline-member? s) (unbox (obj-pipeline-member-ret-box s))]
+          [else #f]))
+
+  (define (drive specs arg starter?)
+    (pipeline-drive-segment (flatten-specs specs)
+                            arg
+                            starter?
+                            init-in-port
+                            final-out-port))
+
+  (define (runner-func)
+    (define (rec last-seg specs)
+      (cond [(and (null? specs) (u-pipeline? last-seg) out-transform)
+             ;; add implicit transformer pipe segment
+             (let-values ([(new-seg specs-rest)
+                           (drive (list (obj-pipeline-member out-transform))
+                                  (segment-get-arg last-seg)
+                                  #f)])
+               (set-box! seg-box (cons new-seg (unbox seg-box)))
+               ;; Done.
+               (void))]
+            [(null? specs) (void)]
+            [(obj-pipeline-member? last-seg)
+             (begin
+               (thread-wait (obj-pipeline-member-thread last-seg))
+               (if (obj-pipeline-member-success? last-seg)
+                   (let-values ([(new-seg specs-rest)
+                                 (drive specs
+                                        (segment-get-arg last-seg)
+                                        (not last-seg))])
+                     (set-box! seg-box (cons new-seg (unbox seg-box)))
+                     (rec new-seg specs-rest))
+                   ;; Done.
+                   (void)))]
+            [else
+             (let-values ([(new-seg specs-rest)
+                           (drive specs
+                                  (segment-get-arg last-seg)
+                                  (not last-seg))])
+               (set-box! seg-box (cons new-seg (unbox seg-box)))
+               (rec new-seg specs-rest))]))
+    (rec #f specs))
+
+  (pipeline (thread runner-func) seg-box))
+
+
+;; TODO - orig. pipelines need newer status options, string-error-ports, <() >() redirects, environment modifiers, ...
+;; TODO - the structs for pipeline-member-specs should not be exported entirely, only creation functions with #:keyword args, and some inspection functions.
+;; TODO - make pipeline objects synchronizable
