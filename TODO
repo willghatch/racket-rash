@@ -1,25 +1,55 @@
 Main stable release blockers
 ----------------------------
 
+* add strict/lazy/permissive success/failure in unix/mixed pipes
+
+* decide what to do about reader for recursive list reads in () [] etc to avoid newline objects
+* decide what to do about reader for backslash escaping newlines
+
+* error messages for unix-segments returning non-zero
+** pipeline-members error-port as a string-port stuff
+
+* inspecting pipeline segments with correct compound member handling
+
+* &bg, &env, status flags, etc arguments on pipelines
+** also an option to return the pipeline object instead of the return, and not raise an exception on error, but rather just let the error be retrieved from the pipeline obj. [IE like bg, but without being actually backgrounded]
+
+* rash macros
+** the main one will have input as (open-input-string ""), output-transformer do string-trim, default stderr will be to a string-port for error reporting
+** the other one will use stdin/out/err, always return pipe object (rash/wired?)
+*** what does it mean to run with stdin in the background unless I have job control?
+*** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
+** both will have #:arguments to specify defaults like input, output, etc
+
+* $_ implicit argument on pipelines
+** for unix ones, detect it, use compound member to turn the input into an empty port and use $_ as a shell argument.  This may require rethinking the eager evaluation of arg list members...
+
+* <() >() > >> etc redirection and substitution
+
+* unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
+** success determination should allow a predicate on the return value OR a list of good statuses
+** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
+
+* unix pipeline operator that does globbing
+
+* initial input-port transformer to try to solve readline-port issues
+
+
+* rash macro and #lang makers that allow modifications to readtable, defaults for in/out/err stuff, etc.
+
+
+old
+---
+
 * add features to shell/pipeline from its todo to get to a stable release point
 
-* add access to all the features of run-pipeline from the line-based syntax
-** redirections < > >! >>, error redirection e> e>> etc, default error redirection, <() >() fd/temp-file redirection a la bash
-** way to specify #:status-and? and #:end-exit-flag in rash (also end-exit-flag is a terrible name...)
-** && || (this is a level above pipelines and redirections)
 
-* #lang rash and (require rash) should be re-exports of rash1 for future proofing -- document that rash1 is stable and rash may switch to be a rash2
-** how should eg. rc files be treated with this scheme?  Check for both $XDG_CONFIG/rash/rashrc and $XDG_CONFIG/rashN/rashrc?
 
 Other TODO items
 ----------------
 
 * the rash macros should have optional arguments that affect the readtable used.  Currently upon entering the rash macro, you can *only* use #lang rash syntax with no modifications.  I'd like to let people extend the rash readtable, and maybe define wrapper versions of the macros [rash-ext/out, etc] to easily use extended readtables in outer languages and inner
 
-* glob wrapper to interpolate variables into glob paths
-** glob shorthand (eg. $${glob/goes/here/*}) that hopefully uses the interpolating wrapper.
-
-* I should explore making some sort of port wrapper for the initial input port of a pipeline to solve the problem of copy-port eating at least 1 character that isn't read by the first process.  Or maybe somehow recognize certain file-port wrappers like the readline port and get their underlying file-port to give to the process...
 
 * option-app -- needs better name (kw-check-app?), and should it be part of another package?  I think I want to use it in more packages...
 

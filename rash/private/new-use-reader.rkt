@@ -2,10 +2,12 @@
 
 (require (for-syntax racket/base))
 
-(define-syntax =o= (make-rename-transformer #'=basic-object-pipe=))
+(define-syntax =o= (make-rename-transformer #'=object-pipe=))
 (define-syntax =u= (make-rename-transformer #'=crappy-basic-unix-pipe=))
 
-=u= echo testing 123 =u= grep test
+=u= echo testing 123 =u= grep test =o= string-upcase =u= cat -
+;=u= echo testing 123 =u= grep test =o= string-upcase =u= grep aoeu
+
 (printf "here~n")
 =o= eprintf "here~n"
 (default-pipe-starter! =u=)

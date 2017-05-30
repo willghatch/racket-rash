@@ -15,6 +15,7 @@
  ;; temporarily
  rash-pipeline-splitter
  =basic-object-pipe=
+ =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
  )
 
@@ -105,6 +106,14 @@
   #:start
   (λ (stx) (raise-syntax-error 'default-pipe-starter "No default pipe starter has been set, and the default default is to be an error.")))
 
+(define-rash-pipe =non-quoting-basic-unix-pipe=
+  #:start
+  (syntax-parser
+    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) (current-error-port))])
+  #:joint
+  (syntax-parser
+    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) (current-error-port))]))
+
 (define-rash-pipe =crappy-basic-unix-pipe=
   #:start
   (syntax-parser
@@ -133,8 +142,8 @@
      #'(obj-pipeline-member-spec (λ (prev-ret) (func prev-ret arg ...)))]))
 
 ;; TODO - so much... name, $_ arg, etc
-(provide =obj=)
-(define-rash-pipe =obj=
+(provide =object-pipe=)
+(define-rash-pipe =object-pipe=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])

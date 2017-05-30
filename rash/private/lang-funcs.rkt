@@ -12,8 +12,9 @@
 
  ;; pipe operator detection
  =basic-object-pipe=
+ =object-pipe=
+ =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
- =obj=
  default-pipe-starter!
  )
 

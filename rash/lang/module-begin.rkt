@@ -16,7 +16,8 @@
   (syntax-parse stx
     [(m-b arg ...)
      (with-syntax ([(parg ...) (replace-context #'foo #'(arg ...))])
-       #'(#%plain-module-begin
+       ;; #%plain-module-begin would suppress printing...
+       #'(#%module-begin
           (module* configure-runtime #f
             (current-read-interaction rash-read-and-line-parse))
           (rash-line-parse parg ...)))]))
