@@ -9,6 +9,12 @@
  rash-splice
  rash-splice?
  define-alias
+
+ ;; pipe operator detection
+ =basic-object-pipe=
+ =crappy-basic-unix-pipe=
+ =obj=
+ default-pipe-starter!
  )
 
 (module+ for-module-begin
@@ -16,12 +22,17 @@
            rash-read-and-line-parse
            ))
 
-(require (for-syntax racket/base
-                     racket/syntax
-                     syntax/parse
-                     syntax/strip-context
-                     udelim
-                     ))
+(require
+ (for-syntax
+  racket/base
+  racket/syntax
+  syntax/parse
+  syntax/strip-context
+  udelim
+  )
+ "macro-detect.rkt"
+ )
+
 (require racket/string)
 (require syntax/parse)
 (require racket/port)
@@ -140,6 +151,10 @@
     ))
 
 (define-syntax (rash-line stx)
+  (syntax-parse stx
+    [(_ arg ...+) #'(rash-pipeline-splitter arg ...)]))
+
+#;(define-syntax (rash-line stx)
   (syntax-parse stx
     #:datum-literals (> >! >>)
     [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... > filename)

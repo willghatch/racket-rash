@@ -14,10 +14,14 @@
  default-pipe-starter!
  ;; temporarily
  rash-pipeline-splitter
+ =basic-object-pipe=
+ =crappy-basic-unix-pipe=
  )
 
 (require
  racket/stxparam
+ shell/mixed-pipeline
+ racket/port
  (for-syntax
   racket/base
   syntax/parse
@@ -58,7 +62,7 @@
                    (~not x:pipe-starter-op))))
   )
 
-(define-syntax (define-rash-pipe stx)
+(define-syntax (define-rash-pipe/no-kw stx)
   (syntax-parse stx
     [(def name as-starter as-joiner outside-of-rash)
      #'(define-syntax name
@@ -67,17 +71,82 @@
           as-joiner
           outside-of-rash))]))
 
+(define-syntax (define-rash-pipe stx)
+  (syntax-parse stx
+    [(def name
+       (~or (~optional (~seq #:start s-impl:expr))
+            (~optional (~seq #:joint j-impl:expr))
+            (~optional (~seq #:macro m-impl:expr)))
+       ...)
+     (with-syntax ([starter (if (attribute s-impl)
+                                #'s-impl
+                                #'(λ (stx)
+                                    (raise-syntax-error
+                                     #''name
+                                     "Can't be used as a pipeline starter operator")))]
+                   [joiner (if (attribute j-impl)
+                               #'j-impl
+                               #'(λ (stx)
+                                   (raise-syntax-error
+                                    #''name
+                                    "Can't be used as a pipeline joint operator")))]
+                   [nmacro (if (attribute m-impl)
+                               #'m-impl
+                               #'(λ (stx)
+                                   (raise-syntax-error
+                                    #''name
+                                    "Can't be used as a normal macro")))])
+       #'(define-rash-pipe/no-kw name starter joiner nmacro))]))
+
 ;; TODO - make a way to define a rash-pipe-operator by desugaring to existing operators (or a combination of operators)
 
 ;; TODO - define for real
 (define-rash-pipe default-pipe-starter
+  #:start
+  (λ (stx) (raise-syntax-error 'default-pipe-starter "No default pipe starter has been set, and the default default is to be an error.")))
+
+(define-rash-pipe =crappy-basic-unix-pipe=
+  #:start
   (syntax-parser
-    [(_ arg ...)
-     #'(eprintf "default-pipe-starter used with args ~a~n" '(arg ...))])
-  (λ (stx) (error 'default-pipe-starter "Can't be used as a pipeline joiner.  Also, that shouldn't normally be possible."))
-  (λ (stx)
-    (error 'default-pipe-starter "Can't be used as a normal macro."))
-  )
+    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) (current-error-port))])
+  #:joint
+  (syntax-parser
+    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) (current-error-port))]))
+
+;; TODO - the basic object pipes should still recognize the prev-arg $_ parameter
+(define-rash-pipe =basic-object-pipe=
+  #:start
+  (syntax-parser
+    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+  #:joint
+  (syntax-parser
+    [(_ arg ...+)
+     #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))]))
+
+(define-rash-pipe =basic-object-pipe/left=
+  #:start
+  (syntax-parser
+    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+  #:joint
+  (syntax-parser
+    [(_ func arg ...)
+     #'(obj-pipeline-member-spec (λ (prev-ret) (func prev-ret arg ...)))]))
+
+;; TODO - so much... name, $_ arg, etc
+(provide =obj=)
+(define-rash-pipe =obj=
+  #:start
+  (syntax-parser
+    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+  #:joint
+  (syntax-parser
+    [(_ arg ...+)
+     #'(composite-pipeline-member-spec
+        (list (obj-pipeline-member-spec (λ (prev-ret) (if (input-port? prev-ret)
+                                                          ;; TODO - should this trim?
+                                                          (port->string prev-ret)
+                                                          prev-ret)))
+              (obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))))]))
 
 (begin-for-syntax
   (define top-level-pipe-starter-default #'default-pipe-starter))
@@ -98,6 +167,7 @@
        #'(void))]))
 
 
+;; TODO - accept pipeline modifiers about bg, env, etc
 (define-syntax (rash-pipeline-splitter stx)
   (syntax-parse stx
     [(_ starter:pipe-starter-op args:not-pipeline-op ... rest ...)
@@ -121,6 +191,7 @@
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
 
+;; TODO - this should have args like #:bg, #:env, etc
 (define-syntax (rash-do-pipeline stx)
   (syntax-parse stx
     [(_ startseg joinseg ...)
@@ -140,5 +211,5 @@
        ({rash-pipeline-joiner-ref slv} slv #'(op arg ...)))]))
 
 ;; TODO - implement for real
-(define (rash-do-transformed-pipeline . args)
-  (eprintf "rash-do-transformed got: ~a~n" args))
+(define (rash-do-transformed-pipeline #:bg [bg #f] . args)
+  (run-pipeline args #:bg bg #:in (current-input-port) #:out (current-output-port)))

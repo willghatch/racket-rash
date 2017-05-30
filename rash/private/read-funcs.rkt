@@ -155,6 +155,28 @@
                   #\] #\a #f
                   #\$ 'terminating-macro dispatch-read
                   ))
+(define newrash-bare-line-readtable
+  (make-readtable #f
+                  #\newline 'terminating-macro read-newline
+                  #\; 'terminating-macro read-line-comment
+                  ;; take away the special meanings of characters
+                  #\| #\a #f
+                  #\. #\a #f
+                  #\, #\a #f
+                  #\` #\a #f
+                  #\' #\a #f
+                  #\@ #\a #f
+                  ;; -i is a number constant!
+                  #\- #\a #f
+                  ;#\# #\a #f
+                  #\( #\a #f
+                  #\) #\a #f
+                  #\{ #\a #f
+                  #\} #\a #f
+                  #\[ #\a #f
+                  #\] #\a #f
+                  ;#\$ 'terminating-macro dispatch-read
+                  ))
 
 (define rash-dispatch-read-table
   (udelimify #f))
