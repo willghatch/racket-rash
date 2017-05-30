@@ -1,14 +1,13 @@
 #lang racket/base
 
 (provide
- -run-pipeline
+ run-pipeline
  (struct-out obj-pipeline-member-spec)
  (struct-out composite-pipeline-member-spec)
  u-pipeline-member-spec
  pipeline-success?
  pipeline-wait
  pipeline-ret
- 
  )
 
 
@@ -129,6 +128,23 @@
                          ({obj-pipeline-member-spec-func (car specs)} arg)))))))
   (values (obj-pipeline-member driver-thread rbox ebox) (cdr specs)))
 
+(define (run-pipeline specs
+                      #:in [init-in-port (current-input-port)]
+                      #:out [final-output-port-or-transformer #f]
+                      #:bg [bg #f])
+  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer))
+  (if bg
+      pline
+      (begin
+        (pipeline-wait pline)
+        (let ([ret (pipeline-ret pline)])
+          ;; TODO - get the error correctly for different kinds of pipelines, including error text
+          (if (pipeline-success? pline)
+              ret
+              (if (exn? ret)
+                  (raise ret)
+                  (error 'run-pipeline "pipeline error - TODO - give real info")))))))
+
 (define (-run-pipeline specs init-in-port final-out-transformer)
   ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
   ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
@@ -194,3 +210,4 @@
 ;; TODO - orig. pipelines need newer status options, string-error-ports, <() >() redirects, environment modifiers, ...
 ;; TODO - the structs for pipeline-member-specs should not be exported entirely, only creation functions with #:keyword args, and some inspection functions.
 ;; TODO - make pipeline objects synchronizable
+;; TODO - u-pipeline's real implementation should be in a private dir, and the pipeline.rkt should just export some things from it.
