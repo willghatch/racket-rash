@@ -28,6 +28,8 @@
  =object-pipe/left=
  =object-pipe/expression=
 
+ =for/list=
+
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
  )
@@ -305,6 +307,23 @@
   #:start (syntax-parser [(_ e) #'(=basic-object-pipe/expression= e)])
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
+
+(define-rash-pipe =for/list=
+  #:joint
+  (syntax-parser
+    [(_ arg ...+)
+     (expand-pipeline-arguments
+        #'(arg ...)
+        #'for-iter
+        (syntax-parser
+          [(#t narg ...)
+           #'(obj-pipeline-member-spec (λ (prev-ret)
+                                         (for/list ([for-iter prev-ret])
+                                           (narg ...))))]
+          [(#f narg ...)
+           #'(obj-pipeline-member-spec (λ (prev-ret)
+                                         (for/list ([for-iter prev-ret])
+                                           (narg ... for-iter))))]))]))
 
 
 (begin-for-syntax

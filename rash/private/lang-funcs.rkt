@@ -17,6 +17,7 @@
  =object-pipe=
  =object-pipe/left=
  =object-pipe/expression=
+ =for/list=
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
  default-pipe-starter!
