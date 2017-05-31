@@ -150,12 +150,10 @@
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     #'(composite-pipeline-member-spec
-        (list (obj-pipeline-member-spec (λ (prev-ret) (if (input-port? prev-ret)
-                                                          ;; TODO - should this trim?
-                                                          (port->string prev-ret)
-                                                          prev-ret)))
-              (obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))))]))
+     #'(obj-pipeline-member-spec (λ (prev-ret)
+                                   (if (input-port? prev-ret)
+                                       (arg ... (port->string prev-ret))
+                                       (arg ... prev-ret))))]))
 
 (begin-for-syntax
   (define top-level-pipe-starter-default #'default-pipe-starter))
