@@ -59,6 +59,8 @@
   (pipeline-segment-success? (car (unbox (pipeline-segment-box pl)))))
 (define (pipeline-ret pl)
   (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
+(define (pipeline-ends-with-unix-seg? pl)
+  (u-pipeline? (car (unbox (pipeline-segment-box pl)))))
 
 ;; TODO - what APIs should exist for getting intermediate results/statuses from pipelines?
 ;; They should mirror the shape of the spec -- results of composite members should be the `and` of the results of their sub-parts, and maybe composite members should be able to supply a predicate on the parts to tell if the whole is successful based on the parts.
@@ -85,14 +87,16 @@
       arg
       (open-input-string (~a arg))))
 
-(define (pipeline-drive-segment specs arg starter? init-in-port final-out-port)
+(define (pipeline-drive-segment specs arg starter? init-in-port final-out-port
+                                default-err)
   (cond [(u-pipeline-member-spec? (car specs))
          (drive-unix-segment specs
                              (if starter? init-in-port (->iport arg))
-                             final-out-port)]
+                             final-out-port
+                             default-err)]
         [else (drive-obj-segment specs arg starter?)]))
 
-(define (drive-unix-segment specs in-port final-out-port)
+(define (drive-unix-segment specs in-port final-out-port default-err)
   ;; TODO - There is probably a better way to handle this error.
   ;;        The things that can go wrong here are alias resolution and
   ;;        not having an executable for the command.
@@ -110,6 +114,7 @@
     (define sub-pipe-obj (apply u-run-pipeline
                                 #:in in-port
                                 #:out use-out
+                                #:default-err default-err
                                 #:background? #t
                                 ;; TODO - status options, etc
                                 u-specs
@@ -131,21 +136,36 @@
 (define (run-pipeline specs
                       #:in [init-in-port (current-input-port)]
                       #:out [final-output-port-or-transformer #f]
+                      #:default-err [default-err (current-error-port)]
                       #:bg [bg #f])
-  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer))
+  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err))
   (if bg
       pline
       (begin
         (pipeline-wait pline)
-        (let ([ret (pipeline-ret pline)])
+        (let ([ret (pipeline-ret pline)]
+              [last-seg (car (unbox (pipeline-segment-box pline)))])
           ;; TODO - get the error correctly for different kinds of pipelines, including error text
-          (if (pipeline-success? pline)
-              ret
-              (if (exn? ret)
-                  (raise ret)
-                  (error 'run-pipeline "pipeline error - TODO - give real info")))))))
+          (cond
+            [(pipeline-success? pline) ret]
+            [(exn? ret) (raise ret)]
+            [(pipeline-ends-with-unix-seg? pline)
+             (let ([stderr (u-pipeline-error-captured-stderr last-seg)]
+                   [argl (u-pipeline-error-argl last-seg)])
+               (if (and stderr (not (equal? stderr "")))
+                   (error 'run-pipeline
+                          (format
+                           "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
+                           argl
+                           ret
+                           stderr))
+                   (error 'run-pipeline
+                          (format "unix pipeline-segment ~a terminated with code ~a~n"
+                                  argl ret))))]
+            [else (error 'run-pipeline "pipeline error - TODO - give real info")])
+          ))))
 
-(define (-run-pipeline specs init-in-port final-out-transformer)
+(define (-run-pipeline specs init-in-port final-out-transformer default-err)
   ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
   ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
   ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
@@ -169,7 +189,8 @@
                             arg
                             starter?
                             init-in-port
-                            final-out-port))
+                            final-out-port
+                            default-err))
 
   (define (runner-func)
     (define (rec last-seg specs)

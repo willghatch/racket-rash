@@ -73,6 +73,8 @@
 
   [path-string-symbol? (-> any/c boolean?)]
   )
+ pipeline-error-captured-stderr
+ pipeline-error-argl
 
  and/success
  or/success
@@ -130,7 +132,7 @@
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline-member
-  (subproc-or-thread port-err thread-ret-box thread-exn-box)
+  (subproc-or-thread port-err thread-ret-box thread-exn-box argl stderr-capture-port)
   #:transparent)
 (struct pipeline-member-spec
   (argl port-err)
@@ -199,6 +201,11 @@
         (if (not dead)
             'running
             (or ret err)))))
+
+(define (pipeline-member-captured-stderr m)
+  (if (string-port? (pipeline-member-stderr-capture-port m))
+      (get-output-string (pipeline-member-stderr-capture-port m))
+      #f))
 
 (define (pipeline-member-success? m)
   (if (pipeline-member-process? m)
@@ -280,6 +287,32 @@ pipelines where it is set to always kill when the end member exits
       (pipeline-status/and pline)
       (pipeline-status/end pline)))
 
+(define (pipeline-error-captured-stderr/and pline)
+  (pipeline-wait/all pline)
+  (ormap (λ (m) (and (not (pipeline-member-success? m))
+                     (pipeline-member-captured-stderr m)))
+         (pipeline-members pline)))
+(define (pipeline-error-captured-stderr/end pline)
+  (pipeline-wait pline)
+  (pipeline-member-captured-stderr (car (reverse (pipeline-members pline)))))
+(define (pipeline-error-captured-stderr pline)
+  (if (pipeline-status-and? pline)
+      (pipeline-error-captured-stderr/and pline)
+      (pipeline-error-captured-stderr/end pline)))
+
+(define (pipeline-error-argl/and pline)
+  (pipeline-wait/all pline)
+  (ormap (λ (m) (and (not (pipeline-member-success? m))
+                     (pipeline-member-argl m)))
+         (pipeline-members pline)))
+(define (pipeline-error-argl/end pline)
+  (pipeline-wait pline)
+  (pipeline-member-argl (car (reverse (pipeline-members pline)))))
+(define (pipeline-error-argl pline)
+  (if (pipeline-status-and? pline)
+      (pipeline-error-argl/and pline)
+      (pipeline-error-argl/end pline)))
+
 (define (pipeline-has-failures? pline)
   (ormap (λ (m) (not (pipeline-member-success? m)))
          (pipeline-members pline)))
@@ -299,14 +332,21 @@ pipelines where it is set to always kill when the end member exits
                             #:background? [bg? #f]
                             #:default-err [default-err (current-error-port)]
                             members)
-  (pipeline in out
-            (map (λ (m)
-                   (if (pipeline-member-spec? m)
-                       m
-                       (pipeline-member-spec m default-err)))
-                 members)
-            end-exit-flag bg? status-and?
-            #f #f))
+  (let* ([members1 (map (λ (m)
+                          (if (pipeline-member-spec? m)
+                              m
+                              (pipeline-member-spec m default-err)))
+                        members)]
+         [members2 (map (λ (m)
+                          (if (equal? 'default (pipeline-member-spec-port-err m))
+                              (struct-copy pipeline-member-spec m
+                                           [port-err default-err])
+                              m))
+                        members1)])
+    (pipeline in out
+              members2
+              end-exit-flag bg? status-and?
+              #f #f)))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
@@ -434,6 +474,7 @@ pipelines where it is set to always kill when the end member exits
               ;; if an exception is thrown, catch it and save it for later
               (cond
                 [(equal? p 'stdout) p]
+                [(equal? p 'string-port) (open-output-string)]
                 [(equal? p 'null) (open-output-nowhere)]
                 ;; If this is the second instance of the file, note the number
                 ;; so they can share ports rather than trying to open
@@ -530,7 +571,7 @@ pipelines where it is set to always kill when the end member exits
   (struct pmi
     ;; pmi for pipeline-member-intermediate -- has info important for running
     ;; things that I don't want to expose in the final output.
-    (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box)
+    (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box argl capture-port-err)
     #:transparent)
   (define (pmi-process? pmember)
     (and (pmi? pmember) (subprocess? (pmi-subproc-or-thread pmember))))
@@ -559,14 +600,16 @@ pipelines where it is set to always kill when the end member exits
                 [err-to-send (if (and (port? err-spec)
                                       (not (file-stream-port? err-spec)))
                                  #f
-                                 err-spec)])
+                                 err-spec)]
+                [capture-err (if (string-port? err-spec) err-spec #f)]
+                [argl (pipeline-member-spec-argl m)])
            (let-values ([(sproc from to err-from)
-                         (subprocess+ (pipeline-member-spec-argl m)
+                         (subprocess+ argl
                                       #:err err-to-send
                                       #:in to-spec
                                       #:out from-spec)])
              (when (and to-spec (> i 0)) (close-input-port to-spec))
-             (let ([out-member (pmi to from err-from sproc #f #f)])
+             (let ([out-member (pmi to from err-from sproc #f #f argl capture-err)])
                (values
                 (cons out-member m-outs)
                 (cons (if (and err-spec err-from)
@@ -594,7 +637,11 @@ pipelines where it is set to always kill when the end member exits
                 [prev-is-running? (and prev (pmi? prev))]
                 [err-spec (pipeline-member-spec-port-err m)]
                 [ret-box (box #f)]
-                [err-box (box #f)])
+                [err-box (box #f)]
+                [capture-err (and (output-port? err-spec)
+                                  (string-port? err-spec)
+                                  err-spec)]
+                [argl (pipeline-member-spec-argl m)])
            (let-values ([(to-use to-ret)
                          (cond
                            [prev-is-running? (values (pmi-port-from prev) #f)]
@@ -624,7 +671,7 @@ pipelines where it is set to always kill when the end member exits
                              (thread (λ () #f)))
                            (thread (mk-run-thunk m err-box ret-box))))]
                     [ret-member (pmi to-ret from-ret err-ret
-                                     ret-thread ret-box err-box)])
+                                     ret-thread ret-box err-box argl capture-err)])
                (cons ret-member m-outs))))]
         [else (cons m m-outs)])))
 
@@ -654,7 +701,9 @@ pipelines where it is set to always kill when the end member exits
      (pmi-subproc-or-thread m)
      (pmi-port-err m)
      (pmi-thread-ret-box m)
-     (pmi-thread-exn-box m)))
+     (pmi-thread-exn-box m)
+     (pmi-argl m)
+     (pmi-capture-port-err m)))
 
   (define out-members (map finalize-member r3-members))
   (list out-members to-port from-port err-port-copy-threads))
