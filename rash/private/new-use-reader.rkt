@@ -5,7 +5,10 @@
 (define-syntax =o= (make-rename-transformer #'=object-pipe=))
 (define-syntax =u= (make-rename-transformer #'=crappy-basic-unix-pipe=))
 
-=u= echo testing 123 =u= grep test =o= string-upcase =u= cat -
+=u= echo testing 123 =u= grep test =o= string-upcase =basic-object-pipe= list 1 2 3
+=u= echo testing 123 =u= grep test =o= string-upcase =basic-object-pipe= list 1 current-rash-pipeline-argument 2 3
+
+=u= echo testing 123 =o= string-upcase =basic-object-pipe= list 1 (rash «=o= list 5 =basic-object-pipe= list 11 22 current-rash-pipeline-argument 33») 2 current-rash-pipeline-argument 3
 ;=u= echo testing 123 =u= grep test =o= string-upcase =u= grep aoeu
 
 (printf "here~n")

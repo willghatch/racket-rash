@@ -17,6 +17,7 @@
  =basic-object-pipe=
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
+ current-rash-pipeline-argument
  )
 
 (require
@@ -25,6 +26,7 @@
  racket/port
  (for-syntax
   racket/base
+  racket/match
   syntax/parse
   racket/stxparam-exptime
   ))
@@ -122,6 +124,58 @@
   (syntax-parser
     [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) (current-error-port))]))
 
+
+(begin-for-syntax
+  (define (stx-replace stx from-id to-id)
+    ;; Replace from-id with to-id recursively.
+    ;; If the result is eq? to stx, then no change was made.
+    ;; If the result is NOT eq? to stx, then at least one change was made.
+
+    #|
+    syntax-e can produce:
+    symbol
+    syntax-pair
+    empty-list
+    immutable vector of syntax objects
+    immutable box of syntax objects
+    TODO - immutable hash table with syntax object values (but not necessarily syntax object keys!)
+    TODO - immutable prefab struct with syntax objects
+    some other datum like number, string, etc
+    |#
+    (define (rec s)
+      (stx-replace s from-id to-id))
+    (define (->s datum)
+      (datum->syntax stx datum stx stx))
+    (if (and (identifier? stx) (free-identifier=? stx from-id))
+        to-id
+        (let ([expanded (if (syntax? stx)
+                            (syntax-e stx)
+                            stx)])
+          (match expanded
+            [(cons l r) (let ([l* (rec l)]
+                              [r* (rec r)])
+                          (if (and (eq? l l*)
+                                   (eq? r r*))
+                              stx
+                              (if (syntax? stx)
+                                  (->s (cons l* r*))
+                                  (cons l* r*))))]
+            [(vector elems ...) (let ([elems* (map rec elems)])
+                                  (if (andmap (λ(x)x)
+                                              (map eq? elems* elems))
+                                      stx
+                                      (->s apply vector-immutable elems*)))]
+            [(box x) (let ([x* (rec x)])
+                       (if (eq? x x*)
+                           stx
+                           (->s (box-immutable x))))]
+            [_ stx]))))
+  )
+
+(define-syntax-parameter current-rash-pipeline-argument #f)
+;; placeholder value so local-expand doesn't barf
+(define rash-pipeline-argument-standin #f)
+
 ;; TODO - the basic object pipes should still recognize the prev-arg $_ parameter
 (define-rash-pipe =basic-object-pipe=
   #:start
@@ -130,7 +184,28 @@
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))]))
+     (with-syntax ([prev-arg #'rash-pipeline-argument-standin]
+                   [prev-ret #'prev-ret])
+       (local-expand #'(let ([prev-arg #f]) 5) 'expression '())
+       (let ([e-args
+              (map (λ (s) (local-expand
+                           #`(syntax-parameterize
+                                 ([current-rash-pipeline-argument
+                                   (syntax-id-rules () [_ prev-arg])])
+                               #,s)
+                           'expression '()))
+                   (syntax->list #'(arg ...)))])
+         ;; Detect if #'prev-arg is in the expanded syntax, and replace it.
+         ;; If it's not in the expanded syntax, then put the argument at the end.
+         (define new-e-args (stx-replace e-args
+                                         #'prev-arg
+                                         #'prev-ret))
+         (define explicit-reference-exists? (not (eq? new-e-args e-args)))
+         (with-syntax ([(nargs ...) new-e-args])
+           (if explicit-reference-exists?
+               #'(obj-pipeline-member-spec (λ (prev-ret) (nargs ...)))
+               #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))))))]))
+
 
 (define-rash-pipe =basic-object-pipe/left=
   #:start

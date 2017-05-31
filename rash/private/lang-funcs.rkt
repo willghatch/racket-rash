@@ -16,6 +16,7 @@
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
  default-pipe-starter!
+ current-rash-pipeline-argument
  )
 
 (module+ for-module-begin
