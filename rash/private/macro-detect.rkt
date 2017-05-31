@@ -79,29 +79,33 @@
     [(def name
        (~or (~optional (~seq #:start s-impl:expr))
             (~optional (~seq #:joint j-impl:expr))
-            (~optional (~seq #:macro m-impl:expr)))
+            ;; I think it's probably best to NOT allow it to be used as a normal macro.
+            ;(~optional (~seq #:macro m-impl:expr))
+            )
        ...)
      (with-syntax ([starter (if (attribute s-impl)
                                 #'s-impl
                                 #'(λ (stx)
                                     (raise-syntax-error
-                                     #''name
-                                     "Can't be used as a pipeline starter operator")))]
+                                    (syntax->datum #'name)
+                                    "Can't be used as a pipeline starter operator"
+                                    stx)))]
                    [joiner (if (attribute j-impl)
                                #'j-impl
                                #'(λ (stx)
                                    (raise-syntax-error
-                                    #''name
-                                    "Can't be used as a pipeline joint operator")))]
-                   [nmacro (if (attribute m-impl)
+                                    (syntax->datum #'name)
+                                    "Can't be used as a pipeline joint operator"
+                                    stx)))]
+                   [nmacro (if #f #;(attribute m-impl)
                                #'m-impl
                                #'(λ (stx)
                                    (raise-syntax-error
-                                    #''name
-                                    "Can't be used as a normal macro")))])
+                                    (syntax->datum #'name)
+                                    "Must be used as a rash pipeline operator"
+                                    stx)))])
        #'(define-rash-pipe/no-kw name starter joiner nmacro))]))
 
-;; TODO - make a way to define a rash-pipe-operator by desugaring to existing operators (or a combination of operators)
 
 ;; TODO - define for real
 (define-rash-pipe default-pipe-starter
@@ -206,6 +210,20 @@
                #'(obj-pipeline-member-spec (λ (prev-ret) (nargs ...)))
                #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))))))]))
 
+(define-rash-pipe =rash-composite-pipe=
+  #:start
+  (syntax-parser
+    [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
+        (join-op:pipe-joiner-op join-arg:not-pipeline-op ...) ...)
+     #'(composite-pipeline-member-spec
+        (list (rash-transform-starter-segment start-op start-arg ...)
+              (rash-transform-joiner-segment join-op join-arg ...) ...))])
+  #:joint
+  (syntax-parser
+    [(_ (op:pipe-joiner-op arg:not-pipeline-op ...) ...+)
+     #'(composite-pipeline-member-spec
+        (list (rash-transform-joiner-segment op arg ...) ...))]))
+
 
 (define-rash-pipe =basic-object-pipe/left=
   #:start
@@ -216,19 +234,18 @@
     [(_ func arg ...)
      #'(obj-pipeline-member-spec (λ (prev-ret) (func prev-ret arg ...)))]))
 
-;; TODO - so much... name, $_ arg, etc
 (provide =object-pipe=)
 (define-rash-pipe =object-pipe=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+    [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     #'(obj-pipeline-member-spec (λ (prev-ret)
-                                   (if (input-port? prev-ret)
-                                       (arg ... (port->string prev-ret))
-                                       (arg ... prev-ret))))]))
+     #'(=rash-composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
+                                                              (port->string x)
+                                                              x)))
+                              (=basic-object-pipe= arg ...))]))
 
 (begin-for-syntax
   (define top-level-pipe-starter-default #'default-pipe-starter))
@@ -252,21 +269,28 @@
 ;; TODO - accept pipeline modifiers about bg, env, etc
 (define-syntax (rash-pipeline-splitter stx)
   (syntax-parse stx
-    [(_ starter:pipe-starter-op args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/rest ([starter args ...]) (rest ...))]
-    [(rps iargs:not-pipeline-op ...+ rest ...)
-     #`(rps #,({syntax-parameter-value #'get-implicit-pipe-starter})
-            iargs ... rest ...)]
-    ))
+    [(_ arg ...)
+     #'(rash-pipeline-splitter/start rash-pipeline-splitter/done/do arg ...)]))
+
+(define-syntax (rash-pipeline-splitter/start stx)
+  (syntax-parse stx
+    [(_ done-macro starter:pipe-starter-op args:not-pipeline-op ... rest ...)
+     #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
+    [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
+     #`(rps done-macro
+            #,({syntax-parameter-value #'get-implicit-pipe-starter})
+            iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
   (syntax-parse stx
-    [(rpsr (done-parts ...) ())
-     #'(rash-pipeline-splitter/done done-parts ...)]
-    [(rpsr (done-parts ...) (op:pipe-joiner-op arg:not-pipeline-op ... rest ...))
-     #'(rpsr (done-parts ... [op arg ...]) (rest ...))]))
+    [(rpsr done-macro (done-parts ...) ())
+     #'(done-macro done-parts ...)]
+    [(rpsr done-macro
+           (done-parts ...)
+           (op:pipe-joiner-op arg:not-pipeline-op ... rest ...))
+     #'(rpsr done-macro (done-parts ... [op arg ...]) (rest ...))]))
 
-(define-syntax (rash-pipeline-splitter/done stx)
+(define-syntax (rash-pipeline-splitter/done/do stx)
   (syntax-parse stx
     [(_ (starter startarg ...) (joiner joinarg ...) ...)
      #'(rash-do-transformed-pipeline
@@ -282,15 +306,25 @@
 
 (define-syntax (rash-transform-starter-segment stx)
   (syntax-parse stx
-    [(_ op:pipe-starter-op arg:not-pipeline-op ...)
-     (let ([slv (syntax-local-value #'op)])
-       ({rash-pipeline-starter-ref slv} slv #'(op arg ...)))]))
+    [(tr op:pipe-starter-op arg:not-pipeline-op ...)
+     (let* ([slv (syntax-local-value #'op)]
+            [transformed ({rash-pipeline-starter-ref slv} slv #'(op arg ...))])
+       (syntax-parse transformed
+         ;; If the transformed result is another pipeline operator, try again
+         [(op:pipe-starter-op arg:not-pipeline-op ...)
+          #'(tr op arg ...)]
+         [_ transformed]))]))
 
 (define-syntax (rash-transform-joiner-segment stx)
   (syntax-parse stx
-    [(_ op:pipe-joiner-op arg:not-pipeline-op ...)
-     (let ([slv (syntax-local-value #'op)])
-       ({rash-pipeline-joiner-ref slv} slv #'(op arg ...)))]))
+    [(tr op:pipe-joiner-op arg:not-pipeline-op ...)
+     (let* ([slv (syntax-local-value #'op)]
+            [transformed ({rash-pipeline-joiner-ref slv} slv #'(op arg ...))])
+       (syntax-parse transformed
+         ;; If the transformed result is another pipeline operator, try again
+         [(op:pipe-joiner-op arg:not-pipeline-op ...)
+          #'(tr op arg ...)]
+         [_ transformed]))]))
 
 ;; TODO - implement for real
 (define (rash-do-transformed-pipeline #:bg [bg #f] . args)

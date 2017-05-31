@@ -5,6 +5,7 @@
 (define-syntax =o= (make-rename-transformer #'=object-pipe=))
 (define-syntax =u= (make-rename-transformer #'=crappy-basic-unix-pipe=))
 
+=o= string-upcase "hello"
 =u= echo testing 123 =u= grep test =o= string-upcase =basic-object-pipe= list 1 2 3
 =u= echo testing 123 =u= grep test =o= string-upcase =basic-object-pipe= list 1 current-rash-pipeline-argument 2 3
 
