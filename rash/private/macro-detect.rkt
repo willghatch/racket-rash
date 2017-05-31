@@ -3,7 +3,9 @@
 (provide
  (for-syntax
   prop:rash-pipeline-starter rash-pipeline-starter? rash-pipeline-starter-ref
-  prop:rash-pipeline-joiner rash-pipeline-joiner? rash-pipeline-joiner-ref)
+  prop:rash-pipeline-joiner rash-pipeline-joiner? rash-pipeline-joiner-ref
+  expand-pipeline-arguments
+  )
  define-rash-pipe
  ;; TODO - if the macro to change the starter is in a stop-list of local-expand,
  ;; it can cause the default to be wrong because it works via side-effect!
@@ -14,10 +16,20 @@
  default-pipe-starter!
  ;; temporarily
  rash-pipeline-splitter
+
+ current-rash-pipeline-argument
+
+ =composite-pipe=
+
  =basic-object-pipe=
+ =basic-object-pipe/left=
+ =basic-object-pipe/expression=
+ =object-pipe=
+ =object-pipe/left=
+ =object-pipe/expression=
+
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
- current-rash-pipeline-argument
  )
 
 (require
@@ -112,7 +124,7 @@
   #:start
   (λ (stx) (raise-syntax-error 'default-pipe-starter "No default pipe starter has been set, and the default default is to be an error.")))
 
-(define-rash-pipe =rash-composite-pipe=
+(define-rash-pipe =composite-pipe=
   #:start
   (syntax-parser
     [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
@@ -241,7 +253,6 @@
              #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
-
 (define-rash-pipe =basic-object-pipe/left=
   #:start
   (syntax-parser
@@ -259,20 +270,42 @@
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
 
-
-
-(provide =object-pipe=)
-(define-rash-pipe =object-pipe=
+(define-rash-pipe =basic-object-pipe/expression=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
+    [(_ e) #'(obj-pipeline-member-spec (λ () e))])
   #:joint
   (syntax-parser
-    [(_ arg ...+)
-     #'(=rash-composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
-                                                              (port->string x)
-                                                              x)))
-                              (=basic-object-pipe= arg ...))]))
+    [(_ e)
+     (expand-pipeline-arguments
+        #'(e)
+        #'prev-ret
+        (λ (expanded-stx)
+          (syntax-parse expanded-stx
+            ;; Ignore the possibility of throwing away the pipe argument
+            [(_ ne)
+             #'(obj-pipeline-member-spec (λ (prev-ret) ne))])))]))
+
+
+(define-for-syntax (with-port-sugar pipe-stx)
+  #`(=composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
+                                                           (port->string x)
+                                                           x)))
+                           #,pipe-stx))
+
+(define-rash-pipe =object-pipe=
+  #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
+  #:joint
+  (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe= arg ...))]))
+(define-rash-pipe =object-pipe/left=
+  #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe/left= arg ...)])
+  #:joint
+  (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe/left= arg ...))]))
+(define-rash-pipe =object-pipe/expression=
+  #:start (syntax-parser [(_ e) #'(=basic-object-pipe/expression= e)])
+  #:joint
+  (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
+
 
 (begin-for-syntax
   (define top-level-pipe-starter-default #'default-pipe-starter))

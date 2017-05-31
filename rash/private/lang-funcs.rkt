@@ -12,7 +12,11 @@
 
  ;; pipe operator detection
  =basic-object-pipe=
+ =basic-object-pipe/left=
+ =basic-object-pipe/expression=
  =object-pipe=
+ =object-pipe/left=
+ =object-pipe/expression=
  =non-quoting-basic-unix-pipe=
  =crappy-basic-unix-pipe=
  default-pipe-starter!
