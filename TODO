@@ -30,6 +30,8 @@ Main stable release blockers
 ** success determination should allow a predicate on the return value OR a list of good statuses
 ** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
 
+* unix pipeline operator that has a higher level alias functionality like the old rash had
+
 * unix pipeline operator that does globbing
 
 * initial input-port transformer to try to solve readline-port issues
