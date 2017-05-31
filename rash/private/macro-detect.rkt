@@ -112,6 +112,20 @@
   #:start
   (λ (stx) (raise-syntax-error 'default-pipe-starter "No default pipe starter has been set, and the default default is to be an error.")))
 
+(define-rash-pipe =rash-composite-pipe=
+  #:start
+  (syntax-parser
+    [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
+        (join-op:pipe-joiner-op join-arg:not-pipeline-op ...) ...)
+     #'(composite-pipeline-member-spec
+        (list (rash-transform-starter-segment start-op start-arg ...)
+              (rash-transform-joiner-segment join-op join-arg ...) ...))])
+  #:joint
+  (syntax-parser
+    [(_ (op:pipe-joiner-op arg:not-pipeline-op ...) ...+)
+     #'(composite-pipeline-member-spec
+        (list (rash-transform-joiner-segment op arg ...) ...))]))
+
 (define-rash-pipe =non-quoting-basic-unix-pipe=
   #:start
   (syntax-parser
@@ -180,7 +194,37 @@
 ;; placeholder value so local-expand doesn't barf
 (define rash-pipeline-argument-standin #f)
 
-;; TODO - the basic object pipes should still recognize the prev-arg $_ parameter
+(begin-for-syntax
+  (define (expand-pipeline-arguments
+           stx
+           ;; arg-replacement will replace current-rash-pipeline-argument
+           arg-replacement
+           ;; transformer should be a syntax parser, and the first element
+           ;; of syntax will be #t if at least one replacement was made,
+           ;; else false.
+           transformer)
+    (syntax-parse stx
+      [(arg ...+)
+       (with-syntax ([prev-arg #'rash-pipeline-argument-standin])
+         (local-expand #'(let ([prev-arg #f]) 5) 'expression '())
+         (let ([e-args
+                (map (λ (s) (local-expand
+                             #`(syntax-parameterize
+                                   ([current-rash-pipeline-argument
+                                     (syntax-id-rules () [_ prev-arg])])
+                                 #,s)
+                             'expression '()))
+                     (syntax->list #'(arg ...)))])
+           ;; Detect if #'prev-arg is in the expanded syntax, and replace it.
+           ;; If it's not in the expanded syntax, then put the argument at the end.
+           (define new-e-args (stx-replace e-args
+                                           #'prev-arg
+                                           arg-replacement))
+           (define explicit-reference-exists? (not (eq? new-e-args e-args)))
+           (transformer #`(#,(datum->syntax #'here explicit-reference-exists?)
+                           #,@new-e-args))))]))
+  )
+
 (define-rash-pipe =basic-object-pipe=
   #:start
   (syntax-parser
@@ -188,42 +232,15 @@
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     (with-syntax ([prev-arg #'rash-pipeline-argument-standin]
-                   [prev-ret #'prev-ret])
-       (local-expand #'(let ([prev-arg #f]) 5) 'expression '())
-       (let ([e-args
-              (map (λ (s) (local-expand
-                           #`(syntax-parameterize
-                                 ([current-rash-pipeline-argument
-                                   (syntax-id-rules () [_ prev-arg])])
-                               #,s)
-                           'expression '()))
-                   (syntax->list #'(arg ...)))])
-         ;; Detect if #'prev-arg is in the expanded syntax, and replace it.
-         ;; If it's not in the expanded syntax, then put the argument at the end.
-         (define new-e-args (stx-replace e-args
-                                         #'prev-arg
-                                         #'prev-ret))
-         (define explicit-reference-exists? (not (eq? new-e-args e-args)))
-         (with-syntax ([(nargs ...) new-e-args])
-           (if explicit-reference-exists?
-               #'(obj-pipeline-member-spec (λ (prev-ret) (nargs ...)))
-               #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))))))]))
-
-(define-rash-pipe =rash-composite-pipe=
-  #:start
-  (syntax-parser
-    [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
-        (join-op:pipe-joiner-op join-arg:not-pipeline-op ...) ...)
-     #'(composite-pipeline-member-spec
-        (list (rash-transform-starter-segment start-op start-arg ...)
-              (rash-transform-joiner-segment join-op join-arg ...) ...))])
-  #:joint
-  (syntax-parser
-    [(_ (op:pipe-joiner-op arg:not-pipeline-op ...) ...+)
-     #'(composite-pipeline-member-spec
-        (list (rash-transform-joiner-segment op arg ...) ...))]))
-
+     (expand-pipeline-arguments
+        #'(arg ...)
+        #'prev-ret
+        (λ (expanded-stx)
+          (syntax-parse expanded-stx
+            [(#t narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
+            [(#f narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
 
 (define-rash-pipe =basic-object-pipe/left=
   #:start
@@ -231,8 +248,18 @@
     [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
   #:joint
   (syntax-parser
-    [(_ func arg ...)
-     #'(obj-pipeline-member-spec (λ (prev-ret) (func prev-ret arg ...)))]))
+    [(_ arg ...+)
+     (expand-pipeline-arguments
+        #'(arg ...)
+        #'prev-ret
+        (λ (expanded-stx)
+          (syntax-parse expanded-stx
+            [(#t narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
+            [(#f narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
+
+
 
 (provide =object-pipe=)
 (define-rash-pipe =object-pipe=
