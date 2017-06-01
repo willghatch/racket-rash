@@ -8,6 +8,8 @@
 
 (require rash
          (submod "../private/lang-funcs.rkt" for-module-begin)
+         "../private/macro-detect.rkt"
+         racket/splicing
          (for-syntax racket/base
                      syntax/parse
                      syntax/strip-context))
@@ -20,4 +22,5 @@
        #'(#%module-begin
           (module* configure-runtime #f
             (current-read-interaction rash-read-and-line-parse))
-          (rash-line-parse parg ...)))]))
+          (rash-line-parse ((open-input-string "") default-output-port-transformer 'string-port)
+                           parg ...)))]))

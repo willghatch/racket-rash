@@ -15,9 +15,6 @@
  ;; splitting pipelines.
  default-pipe-starter!
 
- ;; temporarily
- rash-pipeline-splitter
-
  current-rash-pipeline-argument
 
  =composite-pipe=
@@ -35,10 +32,16 @@
  =crappy-basic-unix-pipe=
 
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
+
+ ;; semi-private -- these are not re-provided
+ rash-pipeline-splitter
+ rash-pipeline-opt-hash
+ default-output-port-transformer
  )
 
 (require
  racket/stxparam
+ racket/string
  shell/mixed-pipeline
  racket/port
  (for-syntax
@@ -386,101 +389,103 @@
   ;; Parse out the beginning/ending whole-pipeline options, then
   ;; pass the pipeline specs to other macros to deal with.
   (syntax-parse stx
-    #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
-    [(_ (~or (~optional (~and s-bg &bg) #:name "&bg option")
-             (~optional (~and s-pr &pipeline-ret) #:name "&pipeline-ret option")
-             (~optional (~seq &env s-env-list:expr) #:name "&env option")
-             (~optional (~seq &env-replace s-env-r-list:expr) #:name "&env-replace option")
-             (~optional (~or (~seq &in s-in:expr)
-                             (~seq &< s-<:expr))
-                        #:name "&in and &< options")
-             (~optional (~or (~seq &out s-out:expr)
-                             (~seq &> s->:expr)
-                             (~seq &>! s->!:expr)
-                             (~seq &>> s->>:expr))
-                        #:name "&out, &>, &>!, and &>> options")
-             (~optional (~seq &err s-err:expr) #:name "&err option")
-             )
-        ...
-        args1-head:not-opt args1 ...)
-     ;; Now let's parse those in reverse at the end, so options are allowed at the beginning OR the end
-     (syntax-parse (datum->syntax stx (reverse (syntax->list #'(args1-head args1 ...))))
+    [(_ (outer-in outer-out outer-err) rash-arg ...)
+     (syntax-parse #'(rash-arg ...)
        #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
-       [((~or (~optional (~and e-bg &bg) #:name "&bg option")
-              (~optional (~and e-pr &pipeline-ret) #:name "&pipeline-ret option")
-              (~optional (~seq e-env-list:expr &env) #:name "&env option")
-              (~optional (~seq e-env-r-list:expr &env-replace) #:name "&env-replace option")
-              (~optional (~or (~seq e-in:expr &in)
-                              (~seq e-<:expr &<))
+       [((~or (~optional (~and s-bg &bg) #:name "&bg option")
+              (~optional (~and s-pr &pipeline-ret) #:name "&pipeline-ret option")
+              (~optional (~seq &env s-env-list:expr) #:name "&env option")
+              (~optional (~seq &env-replace s-env-r-list:expr) #:name "&env-replace option")
+              (~optional (~or (~seq &in s-in:expr)
+                              (~seq &< s-<:expr))
                          #:name "&in and &< options")
-              (~optional (~or (~seq e-out:expr &out)
-                              (~seq e->:expr &>)
-                              (~seq e->!:expr &>!)
-                              (~seq e->>:expr &>>))
+              (~optional (~or (~seq &out s-out:expr)
+                              (~seq &> s->:expr)
+                              (~seq &>! s->!:expr)
+                              (~seq &>> s->>:expr))
                          #:name "&out, &>, &>!, and &>> options")
-              (~optional (~seq e-err:expr &err) #:name "&err option")
+              (~optional (~seq &err s-err:expr) #:name "&err option")
               )
          ...
-         argrev-head:not-opt argrev ...)
-        (syntax-parse (datum->syntax stx (reverse (syntax->list #'(argrev-head argrev ...))))
-          [(arg ...)
-           ;; Let's go more meta to clean up some error checking code...
-           (define-syntax (noboth stx1)
-             (syntax-parse stx1
-               [(_ (a ...) (b ...))
-                #'(when (and (or (attribute a) ...) (or (attribute b) ...))
-                            (raise-syntax-error
-                             'rash-pipeline-splitter
-                             "duplicated occurences of pipeline options at beginning and end"
-                             stx))]
-               [(rec a:id b:id)
-                #'(rec (a) (b))]))
-           (noboth s-bg e-bg)
-           (noboth s-pr e-pr)
-           (noboth s-env-list e-env-list)
-           (noboth s-env-r-list e-env-r-list)
-           (noboth (s-in s-<) (e-in e-<))
-           (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
-           (noboth s-err e-err)
-           #`(parameterize ([rash-pipeline-opt-hash
-                             (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
-                                             #'#t #'#f)
-                                   'pipeline-ret #,(if (or (attribute s-pr) (attribute e-pr))
-                                                       #'#t #'#f)
-                                   'env #,(cond [(attribute s-env-list)]
-                                                [(attribute e-env-list)]
-                                                [else #''()])
-                                   'env-replace #,(cond [(attribute s-env-r-list)]
-                                                        [(attribute e-env-r-list)]
-                                                        [else #'#f])
-                                   'in #,(cond [(attribute s-in)]
-                                               [(attribute e-in)]
-                                               [(attribute s-<) #`(quote #,(attribute s-<))]
-                                               [(attribute e-<) #`(quote #,(attribute e-<))]
-                                               ;; TODO - respect outer macro default
-                                               [else #'(current-input-port)])
-                                   'out #,(cond [(attribute s-out)]
-                                                [(attribute e-out)]
-                                                [(attribute s->) #`(list (quote #,(attribute s->))
-                                                                         'error)]
-                                                [(attribute e->) #`(list (quote #,(attribute e->))
-                                                                         'error)]
-                                                [(attribute s->!) #`(list (quote #,(attribute s->!))
-                                                                          'truncate)]
-                                                [(attribute e->!) #`(list (quote #,(attribute e->!))
-                                                                          'truncate)]
-                                                [(attribute s->>) #`(list (quote #,(attribute s->>))
-                                                                          'append)]
-                                                [(attribute e->>) #`(list (quote #,(attribute e->>))
-                                                                          'append)]
-                                                ;; TODO - respect outer macro default
-                                                [else  #'(current-output-port)])
-                                   'err #,(cond [(attribute s-err)]
-                                                [(attribute s-err)]
-                                                ;; TODO - respect outer macro default
-                                                [else #''string-port])
-                                   )])
-               (rash-pipeline-splitter/start rash-pipeline-splitter/done/do arg ...))])])]))
+         args1-head:not-opt args1 ...)
+        ;; Now let's parse those in reverse at the end, so options are allowed at the beginning OR the end
+        (syntax-parse (datum->syntax stx (reverse (syntax->list #'(args1-head args1 ...))))
+          #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
+          [((~or (~optional (~and e-bg &bg) #:name "&bg option")
+                 (~optional (~and e-pr &pipeline-ret) #:name "&pipeline-ret option")
+                 (~optional (~seq e-env-list:expr &env) #:name "&env option")
+                 (~optional (~seq e-env-r-list:expr &env-replace) #:name "&env-replace option")
+                 (~optional (~or (~seq e-in:expr &in)
+                                 (~seq e-<:expr &<))
+                            #:name "&in and &< options")
+                 (~optional (~or (~seq e-out:expr &out)
+                                 (~seq e->:expr &>)
+                                 (~seq e->!:expr &>!)
+                                 (~seq e->>:expr &>>))
+                            #:name "&out, &>, &>!, and &>> options")
+                 (~optional (~seq e-err:expr &err) #:name "&err option")
+                 )
+            ...
+            argrev-head:not-opt argrev ...)
+           (syntax-parse (datum->syntax stx (reverse (syntax->list #'(argrev-head argrev ...))))
+             [(arg ...)
+              ;; Let's go more meta to clean up some error checking code...
+              (define-syntax (noboth stx1)
+                (syntax-parse stx1
+                  [(_ (a ...) (b ...))
+                   #'(when (and (or (attribute a) ...) (or (attribute b) ...))
+                       (raise-syntax-error
+                        'rash-pipeline-splitter
+                        "duplicated occurences of pipeline options at beginning and end"
+                        stx))]
+                  [(rec a:id b:id)
+                   #'(rec (a) (b))]))
+              (noboth s-bg e-bg)
+              (noboth s-pr e-pr)
+              (noboth s-env-list e-env-list)
+              (noboth s-env-r-list e-env-r-list)
+              (noboth (s-in s-<) (e-in e-<))
+              (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
+              (noboth s-err e-err)
+              #`(parameterize ([rash-pipeline-opt-hash
+                                (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
+                                                #'#t #'#f)
+                                      'pipeline-ret #,(if (or (attribute s-pr) (attribute e-pr))
+                                                          #'#t #'#f)
+                                      'env #,(cond [(attribute s-env-list)]
+                                                   [(attribute e-env-list)]
+                                                   [else #''()])
+                                      'env-replace #,(cond [(attribute s-env-r-list)]
+                                                           [(attribute e-env-r-list)]
+                                                           [else #'#f])
+                                      'in #,(cond [(attribute s-in)]
+                                                  [(attribute e-in)]
+                                                  [(attribute s-<) #`(quote #,(attribute s-<))]
+                                                  [(attribute e-<) #`(quote #,(attribute e-<))]
+                                                  ;; TODO - respect outer macro default
+                                                  [else #'outer-in])
+                                      'out #,(cond [(attribute s-out)]
+                                                   [(attribute e-out)]
+                                                   [(attribute s->) #`(list (quote #,(attribute s->))
+                                                                            'error)]
+                                                   [(attribute e->) #`(list (quote #,(attribute e->))
+                                                                            'error)]
+                                                   [(attribute s->!) #`(list (quote #,(attribute s->!))
+                                                                             'truncate)]
+                                                   [(attribute e->!) #`(list (quote #,(attribute e->!))
+                                                                             'truncate)]
+                                                   [(attribute s->>) #`(list (quote #,(attribute s->>))
+                                                                             'append)]
+                                                   [(attribute e->>) #`(list (quote #,(attribute e->>))
+                                                                             'append)]
+                                                   ;; TODO - respect outer macro default
+                                                   [else  #'outer-out])
+                                      'err #,(cond [(attribute s-err)]
+                                                   [(attribute s-err)]
+                                                   ;; TODO - respect outer macro default
+                                                   [else #'outer-err])
+                                      )])
+                  (rash-pipeline-splitter/start rash-pipeline-splitter/done/do arg ...))])])])]))
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
@@ -538,10 +543,12 @@
           #'(tr op arg ...)]
          [_ transformed]))]))
 
+(define default-output-port-transformer (λ (p) (string-trim (port->string p))))
+
 ;; TODO - implement for real
 (define (rash-do-transformed-pipeline #:bg [bg #f]
-                                      #:in [in (current-input-port)]
-                                      #:out [out (current-output-port)]
+                                      #:in [in (open-input-string "")]
+                                      #:out [out default-output-port-transformer]
                                       #:err [err 'string-port]
                                       . args)
   ;; TODO - environment extension/replacement

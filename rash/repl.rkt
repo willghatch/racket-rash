@@ -30,6 +30,9 @@
              (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
                      (eval-syntax (parameterize ([current-namespace repl-namespace])
                                     (namespace-syntax-introduce #`(rash-line-parse
+                                                                   ((current-input-port)
+                                                                    (current-output-port)
+                                                                    (current-error-port))
                                                                    #,next-input))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
@@ -53,6 +56,9 @@
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
                   #`(rash-line-parse
+                     ((current-input-port)
+                      (current-output-port)
+                      (current-error-port))
                      #,@(rash-read-syntax-all (object-name rcfile)
                                               (open-input-file rcfile)))))))
 

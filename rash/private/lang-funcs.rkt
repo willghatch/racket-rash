@@ -2,25 +2,27 @@
 
 (provide
  rash
- rash/out
- rash/trim
- rash/number
  (all-from-out shell/pipeline)
  rash-splice
  rash-splice?
  define-alias
 
  (except-out (all-from-out "macro-detect.rkt")
-             rash-pipeline-splitter)
- )
+             rash-pipeline-opt-hash
+             rash-pipeline-splitter
+             default-output-port-transformer
+             ))
 
 (module+ for-module-begin
   (provide rash-line-parse
            rash-read-and-line-parse
+           rash-pipeline-opt-hash
+           default-output-port-transformer
            ))
 
 (require
  (for-syntax
+  (for-syntax racket/base syntax/parse)
   racket/base
   racket/syntax
   syntax/parse
@@ -64,7 +66,10 @@
     (if (eof-object? stx)
         stx
         (syntax-parse stx
-          [e #'(rash-line-parse e)]))))
+          [e #'(rash-line-parse ((current-input-port)
+                                 (current-output-port)
+                                 (current-error-port))
+                                e)]))))
 
 (begin-for-syntax
   (define-syntax-class not-pipe
@@ -133,88 +138,52 @@
     (pattern (~or (~literal %%rash-newline-symbol)
                   ((~literal %%rash-racket-line) e ...))))
   (syntax-parse stx
-    #:datum-literals (%%rash-newline-symbol %%rash-racket-line %%rash-line-start)
-    [(rash-line-parse (%%rash-line-start arg ...) post ...+)
-     #'(begin (rash-line arg ...)
-              (rash-line-parse post ...))]
-    [(rash-line-parse (%%rash-line-start arg ...))
-     #'(rash-line arg ...)]
-    [(rash-line-parse (%%rash-racket-line arg ...) post ...+)
-     #'(begin arg ...
-              (rash-line-parse post ...))]
-    [(rash-line-parse (%%rash-racket-line arg ...))
-     #'(begin arg ...)]
-    [(rash-line-parse) #'(void)]
-    ))
-
-(define-syntax (rash-line stx)
-  (syntax-parse stx
-    [(_ arg ...+) #'(rash-pipeline-splitter arg ...)]))
-
-#;(define-syntax (rash-line stx)
-  (syntax-parse stx
-    #:datum-literals (> >! >>)
-    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... > filename)
-     (with-disappeared-uses
-       (record-disappeared-uses #'(pn.pipe-char ...))
-       #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'error)
-                              p1.argv pn.argv ...))]
-    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >! filename)
-     #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'truncate)
-                            p1.argv pn.argv ...)]
-    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ... >> filename)
-     #`(run-pipeline/splice #:out (list #,(quote-maybe #'filename) 'append)
-                            p1.argv pn.argv ...)]
-    [(shell-line p1:pipeline-part pn:pipeline-part/not-first ...)
-     #'(run-pipeline/splice p1.argv pn.argv ...)]
-    ))
+    [(rlp (in out err) arg ...)
+     (with-syntax ([ioe #'(in out err)])
+       (syntax-parse #'(arg ...)
+         #:datum-literals (%%rash-newline-symbol %%rash-racket-line %%rash-line-start)
+         [((%%rash-line-start arg ...) post ...+)
+          #'(begin (rash-pipeline-splitter ioe arg ...)
+                   (rlp ioe post ...))]
+         [((%%rash-line-start arg ...))
+          #'(rash-pipeline-splitter ioe arg ...)]
+         [((%%rash-racket-line arg ...) post ...+)
+          #'(begin arg ...
+                   (rlp ioe post ...))]
+         [((%%rash-racket-line arg ...))
+          #'(begin arg ...)]
+         [() #'(void)]
+         ))])
+  )
 
 (define-syntax (rash stx)
   (syntax-parse stx
-    [(rash arg:str)
+    [(rash (~or (~optional (~seq #:in input:expr)
+                           #:name "#:in option"
+                           #:defaults ([input #'(open-input-string "")]))
+                (~optional (~seq #:out output:expr)
+                           #:name "#:out option"
+                           #:defaults ([output #'default-output-port-transformer]))
+                (~optional (~seq #:err err:expr)
+                           #:name "#:err option"
+                           #:defaults ([err #''string-port])))
+           ...
+           arg:str)
      (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
                                     (syntax->list
                                      (rash-read-syntax-all (syntax-source #'arg)
                                                            (stx-string->port #'arg))))])
-       #'(rash-line-parse parg ...))]
-    [(rash arg:str ...+)
+       #'(let ([in-eval input]
+               [out-eval output]
+               [err-eval err])
+           (rash-line-parse (in-eval out-eval err-eval) parg ...)))]
+    [(rash (~and ops (not opstr:str)) ... arg:str ...+)
+     ;; TODO - deal with opts better
      (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
-       #'(rash one-str))]))
+       #'(rash ops ... one-str))]))
 
-(define-syntax (rash/out stx)
+#;(define-syntax (rash/wired stx)
   (syntax-parse stx
-    [(rash arg:str)
-     (with-syntax ([(parg ...) (map (λ (s) (replace-context #'arg s))
-                                    (syntax->list
-                                     (rash-read-syntax-all (syntax-source #'arg)
-                                                           (stx-string->port #'arg))))])
-       #'(let* ([out (open-output-string)]
-                [err (open-output-string)]
-                [in (open-input-string "")])
-           (parameterize ([current-output-port out]
-                          [current-error-port err]
-                          [current-input-port in])
-             (let ([pline (rash-line-parse parg ...)])
-               (if (pipeline-success? pline)
-                   (get-output-string out)
-                   (error 'rash/out
-                          (string-append
-                           "pipeline error:~n"
-                           "pipeline member exited with: ~a~n"
-                           "stderr:~n~a~n")
-                          (pipeline-status pline)
-                          (get-output-string err)))))))]
-    [(rash arg:str ...+)
-     (with-syntax ([one-str (scribble-strings->string #'(arg ...))])
-       #'(rash one-str))]))
-
-(define-syntax (rash/trim stx)
-  (syntax-parse stx
-    [(r/t arg:str ...+)
-     #'(string-trim (rash/out arg ...))]))
-(define-syntax (rash/number stx)
-  (syntax-parse stx
-    [(r/t arg:str ...+)
-     #'(string->number (string-trim (rash/out arg ...)))]))
+    [(_)]))
 
 
