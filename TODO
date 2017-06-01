@@ -6,9 +6,6 @@ Main stable release blockers
 * decide what to do about reader for recursive list reads in () [] etc to avoid newline objects
 * decide what to do about reader for backslash escaping newlines
 
-* error messages for unix-segments returning non-zero
-** pipeline-members error-port as a string-port stuff
-
 * inspecting pipeline segments with correct compound member handling
 
 * &bg, &env, status flags, etc arguments on pipelines

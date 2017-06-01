@@ -10,18 +10,8 @@
  rash-splice?
  define-alias
 
- ;; pipe operator detection
- =basic-object-pipe=
- =basic-object-pipe/left=
- =basic-object-pipe/expression=
- =object-pipe=
- =object-pipe/left=
- =object-pipe/expression=
- =for/list=
- =non-quoting-basic-unix-pipe=
- =crappy-basic-unix-pipe=
- default-pipe-starter!
- current-rash-pipeline-argument
+ (except-out (all-from-out "macro-detect.rkt")
+             rash-pipeline-splitter)
  )
 
 (module+ for-module-begin

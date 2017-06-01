@@ -140,13 +140,15 @@
                   ;; take away the special meanings of characters
                   #\| #\a #f
                   #\. #\a #f
-                  #\, #\a #f
-                  #\` #\a #f
-                  #\' #\a #f
-                  #\@ #\a #f
+                  ;#\, #\a #f
+                  ;#\` #\a #f
+                  ;#\' #\a #f
+                  ;#\@ #\a #f
+                  ;; TODO - I need to use the literal original syntax for auto-quoted things sometimes, as in -i
                   ;; -i is a number constant!
                   #\- #\a #f
                   ;#\# #\a #f
+                  ;; TODO - fix these so their inner readtable is different
                   ;;;;#\( #\a #f
                   ;;;;#\) #\a #f
                   ;;;;#\{ #\a #f
