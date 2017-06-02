@@ -5,6 +5,7 @@
  (struct-out obj-pipeline-member-spec)
  (struct-out composite-pipeline-member-spec)
  u-pipeline-member-spec
+ pipeline?
  pipeline-success?
  pipeline-wait
  pipeline-ret
