@@ -29,6 +29,10 @@ Main stable release blockers
 
 * rash macro and #lang makers that allow modifications to readtable, defaults for in/out/err stuff, etc.
 
+* some level of macros above pipelines - eg for define forms, maybe loops, etc.
+
+* a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
+
 * review names -- pick good ones before doing any stable release
 
 
