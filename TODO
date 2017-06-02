@@ -22,6 +22,9 @@ Main stable release blockers
 ** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
 
 * unix pipeline operator that has a higher level alias functionality like the old rash had
+** actually, there should probably be both a unixy operator AND an object operator that recognize aliases - these aliases can basically just make the operator resolution recur.  So you could have =u= grep foo, where grep is an alias to =u= #:success (list 1) "grep" foo.  You could have this alias checking and recursive lookup on any pipeline type, so maybe several of them should have it.  But then again, if an alias just causes a recursive operator resolution... what is the difference between having an alias and having another operator?
+
+* pipeline that acts as an object pipe unless the function part is undefined as syntax, in which case it acts as a unixy pipe instead.
 
 * unix pipeline operator that does globbing
 

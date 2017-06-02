@@ -55,6 +55,7 @@
 (def-pipeline-opt &>!)
 (def-pipeline-opt &>>)
 (def-pipeline-opt &err)
+;; TODO - add one for strict/lazy/permissive status checking
 
 
 (begin-for-syntax

@@ -5,7 +5,6 @@
  rash/wired
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
- ;define-alias
 
  (all-from-out "pipeline-operators.rkt")
  (all-from-out (submod "pipeline-operator-implicit.rkt" for-public))
@@ -24,12 +23,8 @@
 
 
 (require
- racket/stxparam
- racket/string
- syntax/parse
- racket/port
- ;shell/pipeline
  shell/mixed-pipeline
+ racket/stxparam
  "read-funcs.rkt"
  "parse-funcs.rkt"
  "pipeline-operator-implicit.rkt"
@@ -41,19 +36,12 @@
   syntax/keyword
   racket/dict
   racket/base
-  racket/match
-  racket/syntax
-  racket/string
   racket/stxparam-exptime
   syntax/parse
   syntax/strip-context
   udelim
   "read-funcs.rkt"
-
-  (for-syntax
-   racket/base
-   syntax/parse
-   )))
+  ))
 
 
 
