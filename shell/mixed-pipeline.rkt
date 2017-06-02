@@ -14,6 +14,7 @@
 (require (prefix-in u- "pipeline.rkt"))
 (require racket/format
          racket/list
+         racket/match
          )
 
 (struct obj-pipeline-member-spec
@@ -171,13 +172,16 @@
   ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
   (define seg-box (box '()))
 
-  (define final-out-port (if (output-port? final-out-transformer)
+  (define final-out-port (if (or (output-port? final-out-transformer)
+                                 (u-path-string-symbol? final-out-transformer)
+                                 (match final-out-transformer
+                                   [(list (? u-path-string-symbol?) (? symbol?)) #t]
+                                   [else #f]))
                              final-out-transformer
                              #f))
-  (define out-transform (if (and final-out-transformer
-                                 (not (output-port? final-out-transformer)))
-                            final-out-transformer
-                            #f))
+  (define out-transform (if final-out-port
+                            #f
+                            final-out-transformer))
 
   (define (segment-get-arg s)
     (cond [(u-pipeline? s) (u-pipeline-port-from s)]
@@ -197,7 +201,7 @@
       (cond [(and (null? specs) (u-pipeline? last-seg) out-transform)
              ;; add implicit transformer pipe segment
              (let-values ([(new-seg specs-rest)
-                           (drive (list (obj-pipeline-member out-transform))
+                           (drive (list (obj-pipeline-member-spec out-transform))
                                   (segment-get-arg last-seg)
                                   #f)])
                (set-box! seg-box (cons new-seg (unbox seg-box)))
