@@ -11,6 +11,8 @@
              rash-pipeline-opt-hash
              rash-pipeline-splitter
              default-output-port-transformer
+             (for-syntax implicit-pipe-starter-hash)
+             implicit-pipe-starter-key
              ))
 
 (module+ for-module-begin
@@ -18,6 +20,8 @@
            rash-read-and-line-parse
            rash-pipeline-opt-hash
            default-output-port-transformer
+           (for-syntax implicit-pipe-starter-hash)
+           implicit-pipe-starter-key
            ))
 
 (require
@@ -25,10 +29,12 @@
   (for-syntax racket/base syntax/parse)
   racket/base
   racket/syntax
+  racket/stxparam-exptime
   syntax/parse
   syntax/strip-context
   udelim
   )
+ racket/stxparam
  "macro-detect.rkt"
  )
 
@@ -173,10 +179,17 @@
                                     (syntax->list
                                      (rash-read-syntax-all (syntax-source #'arg)
                                                            (stx-string->port #'arg))))])
-       #'(let ([in-eval input]
-               [out-eval output]
-               [err-eval err])
-           (rash-line-parse (in-eval out-eval err-eval) parg ...)))]
+       (let* ([implicit-key (gensym 'rash-implicit-starter-key-)]
+              [set (hash-set! implicit-pipe-starter-hash
+                              implicit-key
+                              (hash-ref implicit-pipe-starter-hash
+                                        {syntax-parameter-value #'implicit-pipe-starter-key}))])
+         #`(let ([in-eval input]
+                 [out-eval output]
+                 [err-eval err])
+             (syntax-parameterize ([implicit-pipe-starter-key
+                                    (quote #,(datum->syntax #'here implicit-key))])
+               (rash-line-parse (in-eval out-eval err-eval) parg ...)))))]
     [(rash (~and ops (not opstr:str)) ... arg:str ...+)
      ;; TODO - deal with opts better
      (with-syntax ([one-str (scribble-strings->string #'(arg ...))])

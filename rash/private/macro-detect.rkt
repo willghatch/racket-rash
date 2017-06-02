@@ -37,7 +37,10 @@
  rash-pipeline-splitter
  rash-pipeline-opt-hash
  default-output-port-transformer
- )
+ implicit-pipe-starter-key
+ (for-syntax
+  implicit-pipe-starter-hash
+  ))
 
 (require
  racket/stxparam
@@ -336,21 +339,20 @@
 
 
 (begin-for-syntax
-  (define top-level-pipe-starter-default #'default-pipe-starter))
+  (define implicit-pipe-starter-hash
+    (make-hash (list (cons 'top-level #'default-pipe-starter)))))
 
-(define-syntax-parameter get-implicit-pipe-starter
-  (λ () top-level-pipe-starter-default))
-(define-syntax-parameter set-implicit-pipe-starter
-  (λ (new-setter)
-    (set! top-level-pipe-starter-default new-setter)))
+(define-syntax-parameter implicit-pipe-starter-key
+  'top-level)
 
 
 (define-syntax (default-pipe-starter! stx)
   (syntax-parse stx
     [(_ new-starter:pipe-starter-op)
      (begin
-       ({syntax-parameter-value #'set-implicit-pipe-starter}
-        #'new-starter)
+       (hash-set! implicit-pipe-starter-hash
+                  {syntax-parameter-value #'implicit-pipe-starter-key}
+                  #'new-starter)
        #'(void))]))
 
 (define-syntax (def-pipeline-opt stx)
@@ -493,7 +495,8 @@
      #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
     [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
      #`(rps done-macro
-            #,({syntax-parameter-value #'get-implicit-pipe-starter})
+            #,(hash-ref implicit-pipe-starter-hash
+                        {syntax-parameter-value #'implicit-pipe-starter-key})
             iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
