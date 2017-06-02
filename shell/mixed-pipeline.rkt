@@ -138,33 +138,34 @@
                       #:in [init-in-port (current-input-port)]
                       #:out [final-output-port-or-transformer #f]
                       #:default-err [default-err (current-error-port)]
-                      #:bg [bg #f])
+                      #:bg [bg #f]
+                      ;; TODO - better name
+                      #:return-pipeline-object [return-pipeline-object #f])
   (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err))
-  (if bg
+  (when (not bg) (pipeline-wait pline))
+  (if (or bg return-pipeline-object)
       pline
-      (begin
-        (pipeline-wait pline)
-        (let ([ret (pipeline-ret pline)]
-              [last-seg (car (unbox (pipeline-segment-box pline)))])
-          ;; TODO - get the error correctly for different kinds of pipelines, including error text
-          (cond
-            [(pipeline-success? pline) ret]
-            [(exn? ret) (raise ret)]
-            [(pipeline-ends-with-unix-seg? pline)
-             (let ([stderr (u-pipeline-error-captured-stderr last-seg)]
-                   [argl (u-pipeline-error-argl last-seg)])
-               (if (and stderr (not (equal? stderr "")))
-                   (error 'run-pipeline
-                          (format
-                           "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
-                           argl
-                           ret
-                           stderr))
-                   (error 'run-pipeline
-                          (format "unix pipeline-segment ~a terminated with code ~a~n"
-                                  argl ret))))]
-            [else (error 'run-pipeline "pipeline error - TODO - give real info")])
-          ))))
+      (let ([ret (pipeline-ret pline)]
+            [last-seg (car (unbox (pipeline-segment-box pline)))])
+        ;; TODO - get the error correctly for different kinds of pipelines, including error text
+        (cond
+          [(pipeline-success? pline) ret]
+          [(exn? ret) (raise ret)]
+          [(pipeline-ends-with-unix-seg? pline)
+           (let ([stderr (u-pipeline-error-captured-stderr last-seg)]
+                 [argl (u-pipeline-error-argl last-seg)])
+             (if (and stderr (not (equal? stderr "")))
+                 (error 'run-pipeline
+                        (format
+                         "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
+                         argl
+                         ret
+                         stderr))
+                 (error 'run-pipeline
+                        (format "unix pipeline-segment ~a terminated with code ~a~n"
+                                argl ret))))]
+          [else (error 'run-pipeline "pipeline error - TODO - give real info")])
+        )))
 
 (define (-run-pipeline specs init-in-port final-out-transformer default-err)
   ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
