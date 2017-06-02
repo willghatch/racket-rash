@@ -8,7 +8,7 @@
 (define (return-n n)
   (let ([pline (result-n n)])
     (if (pipeline? pline)
-        (pipeline-status pline)
+        (pipeline-ret pline)
         pline)))
 #|
 TODO --
