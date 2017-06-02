@@ -14,19 +14,18 @@
   syntax/parse
   "pipeline-operator-detect.rkt"))
 
-(begin-for-syntax
-  (struct erroring-implicit-pipe-starter ()
-    #:property
-    prop:rash-pipeline-starter
-    (λ (stx) (raise-syntax-error
-              'erroring-implicit-pipe-starter
-              "You must have left a pipeline starter implicit in a context with no default."
-              stx))))
+(define-for-syntax (implicit-pipe-error stx)
+  (raise-syntax-error
+   'erroring-implicit-pipe-starter
+   "No explicit pipeline starter given in a context with no default set."
+   stx))
 
-(define-syntax default-pipe-starter (erroring-implicit-pipe-starter))
+(define-syntax default-pipe-starter
+  (rash-pipeline-operator implicit-pipe-error implicit-pipe-error implicit-pipe-error))
 
 (define-for-syntax implicit-pipe-starter-hash
-    (make-hash (list (cons 'top-level #'default-pipe-starter))))
+  ;; TODO - what should the default really be?  I don't want to inherit from the top level in non-rash modules
+  (make-hash (list (cons 'top-level #'default-pipe-starter))))
 ;; TODO - use a box!
 (define-syntax-parameter implicit-pipe-starter-key
   'top-level)
