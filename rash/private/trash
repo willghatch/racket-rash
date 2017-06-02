@@ -1,0 +1,19 @@
+
+
+;; TODO - this is old and dead, but I probably want to look at it while writing
+;; new code for a similar purpose for the unix-y pipe operators
+(define-syntax (define-alias stx)
+  (syntax-parse stx
+    [(_ name:id arglist body ...+)
+     (with-syntax ([defname (datum->syntax stx (gensym (syntax->datum #'name)))])
+       #'(begin
+           ;; define a temp name so val is only evaluated once
+           (define defname (alias-func (λ arglist body ...)))
+           (define-syntax name (make-rename-transformer
+                                (syntax-property
+                                 (syntax-property #'defname
+                                                  'rash-alias-identifier?
+                                                  #t #t)
+                                 ;; this not-free-identifier=? makes it export
+                                 ;; name instead of defname when provided.
+                                 'not-free-identifier=? #t #t)))))]))
