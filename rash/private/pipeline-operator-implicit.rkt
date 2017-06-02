@@ -4,7 +4,7 @@
 (provide (for-syntax (all-defined-out)))
 
 (module+ for-public
-  (provide default-pipe-starter!))
+  (provide default-pipeline-starter!))
 
 (require
  racket/stxparam
@@ -36,7 +36,7 @@
 ;; Maybe instead of letting it run as a macro, the outer rash macro can detect
 ;; it and eagerly do all side-effect-y things.  This would also require eagerly
 ;; splitting pipelines.
-(define-syntax (default-pipe-starter! stx)
+(define-syntax (default-pipeline-starter! stx)
   (syntax-parse stx
     [(_ new-starter:pipe-starter-op)
      (begin
