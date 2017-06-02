@@ -9,16 +9,13 @@ Main stable release blockers
 * inspecting pipeline segments with correct compound member handling
 
 * rash macros
-** fix option handling on rash macro case with multiple strings
-** the other one will use stdin/out/err, always return pipe object (rash/wired?)
-*** what does it mean to run with stdin in the background unless I have job control?
-*** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
-** both will have #:arguments to specify defaults like input, output, etc
+** what does it mean to run with stdin in the background unless I have job control?
+** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
 
 * $_ implicit argument on pipelines
 ** for unix ones, detect it, use compound member to turn the input into an empty port and use $_ as a shell argument.  This may require rethinking the eager evaluation of arg list members...
 
-* <() >() > >> etc redirection and substitution
+* <() >() redirection and substitution
 
 * unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
 ** success determination should allow a predicate on the return value OR a list of good statuses
@@ -30,15 +27,10 @@ Main stable release blockers
 
 * initial input-port transformer to try to solve readline-port issues
 
-
 * rash macro and #lang makers that allow modifications to readtable, defaults for in/out/err stuff, etc.
-
 
 * review names -- pick good ones before doing any stable release
 
-
-old
----
 
 * add features to shell/pipeline from its todo to get to a stable release point
 
