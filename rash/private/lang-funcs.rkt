@@ -6,6 +6,10 @@
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
  ;define-alias
+
+ (all-from-out "pipeline-operators.rkt")
+ (all-from-out (submod "pipeline-operator-implicit.rkt" for-public))
+ (all-from-out (submod "parse-funcs.rkt" for-public))
  )
 
 
@@ -28,6 +32,10 @@
  shell/mixed-pipeline
  "read-funcs.rkt"
  "parse-funcs.rkt"
+ "pipeline-operator-implicit.rkt"
+ (submod "pipeline-operator-implicit.rkt" for-public)
+ (submod "parse-funcs.rkt" for-public)
+ "pipeline-operators.rkt"
 
  (for-syntax
   syntax/keyword
@@ -106,11 +114,4 @@
                    [out (opref tab '#:out #'(current-output-port))]
                    [err (opref tab '#:err #'(current-error-port))])
        #'(rash #:in in #:out out #:err err code-segs-hopefully ...))]))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;; TODO - below is "macro-detect", but I've merged the two files.  I want to organize them, and maybe break out new files.
-
-
-
-
-
 
