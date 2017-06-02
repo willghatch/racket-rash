@@ -512,7 +512,7 @@
   (syntax-parse stx
     [(_ (starter startarg ...) (joiner joinarg ...) ...)
      #'(rash-do-transformed-pipeline
-        #:bg (ropt 'bg)
+        #:bg (ropt 'bg) #:return-pipeline-object (ropt 'pipeline-ret)
         #:in (ropt 'in) #:out (ropt 'out) #:err (ropt 'err)
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
@@ -550,9 +550,11 @@
 
 ;; TODO - implement for real
 (define (rash-do-transformed-pipeline #:bg [bg #f]
+                                      #:return-pipeline-object [return-pipeline-object #f]
                                       #:in [in (open-input-string "")]
                                       #:out [out default-output-port-transformer]
                                       #:err [err 'string-port]
                                       . args)
   ;; TODO - environment extension/replacement
-  (run-pipeline args #:bg bg #:in in #:out out #:default-err err))
+  (run-pipeline args #:bg bg #:return-pipeline-object return-pipeline-object
+                #:in in #:out out #:default-err err))

@@ -8,11 +8,8 @@ Main stable release blockers
 
 * inspecting pipeline segments with correct compound member handling
 
-* &bg, &env, status flags, etc arguments on pipelines
-** also an option to return the pipeline object instead of the return, and not raise an exception on error, but rather just let the error be retrieved from the pipeline obj. [IE like bg, but without being actually backgrounded]
-
 * rash macros
-** the main one will have input as (open-input-string ""), output-transformer do string-trim, default stderr will be to a string-port for error reporting
+** fix option handling on rash macro case with multiple strings
 ** the other one will use stdin/out/err, always return pipe object (rash/wired?)
 *** what does it mean to run with stdin in the background unless I have job control?
 *** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
@@ -35,6 +32,9 @@ Main stable release blockers
 
 
 * rash macro and #lang makers that allow modifications to readtable, defaults for in/out/err stuff, etc.
+
+
+* review names -- pick good ones before doing any stable release
 
 
 old
