@@ -17,6 +17,8 @@ Main stable release blockers
 
 * <() >() redirection and substitution
 
+* pipeline definer that just takes one transformer func, and is required to return a pipeline -- so it already has #:start and #:join in one.
+
 * unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
 ** success determination should allow a predicate on the return value OR a list of good statuses
 ** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
@@ -30,24 +32,29 @@ Main stable release blockers
 
 * initial input-port transformer to try to solve readline-port issues
 
-* rash macro and #lang makers that allow modifications to readtable, defaults for in/out/err stuff, etc.
+* optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 
 * some level of macros above pipelines - eg for define forms, maybe loops, etc.
 
 * a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
 
+* timestamps in pipeline objects, so I can do time reporting like zsh
+
 * review names -- pick good ones before doing any stable release
+
+* make pipeline objects sync-able
+
+* have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
+** for status options strict/lazy/permissive, etc
 
 
 * add features to shell/pipeline from its todo to get to a stable release point
 
 
 
-Other TODO items
-----------------
 
-* the rash macros should have optional arguments that affect the readtable used.  Currently upon entering the rash macro, you can *only* use #lang rash syntax with no modifications.  I'd like to let people extend the rash readtable, and maybe define wrapper versions of the macros [rash-ext/out, etc] to easily use extended readtables in outer languages and inner
-
+misc
+----
 
 * option-app -- needs better name (kw-check-app?), and should it be part of another package?  I think I want to use it in more packages...
 
@@ -56,4 +63,16 @@ About interactive shells
 ------------------------
 
 * job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
+
+* discoverability
+** the default prompt should help with discoverability -- maybe say the command to get help, look up docs, etc.  Something like «type HELP START» in LoE.
+** how can interactive features be more discoverable than just being listed in the docs/tutorial?
+
+
+Documentation
+-------------
+
+* API docs
+* guide -- high level overview
+** maybe split it into sections for people with different backgrounds - eg. racketeers vs people coming from bash who don't know racket.
 
