@@ -8,6 +8,7 @@ Fully stable release blockers
 * timestamps in pipeline objects, so I can do time reporting like zsh
 
 * add strict/lazy/permissive success/failure in unix/mixed pipes
+** since an object segment after a unix segment may add a lazy reader to the unix segment, the unix segment may need to be alive long after the last object segment has returned (due to lazy reading).  So lazy/permissive should never kill past the end of a unix segment.
 
 * inspecting pipeline segments with correct compound member handling
 
