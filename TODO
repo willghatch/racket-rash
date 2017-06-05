@@ -5,6 +5,8 @@ Main stable release blockers
 
 * decide what to do about reader for backslash escaping newlines
 
+* alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
+
 * inspecting pipeline segments with correct compound member handling
 
 * rash macros
