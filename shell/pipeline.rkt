@@ -217,6 +217,12 @@
 
 (struct pipeline
   (port-to port-from members end-exit-flag start-bg? status-and? from-port-copier err-port-copiers)
+  #:property prop:evt (λ (pline)
+                        (let ([sema (make-semaphore)])
+                          (thread (λ ()
+                                    (pipeline-wait pline)
+                                    (semaphore-post sema)))
+                          (wrap-evt sema (λ _ pline))))
   #:methods gen:custom-write
   [(define (write-proc pline output-port output-mode)
      (if (pipeline-running? pline)

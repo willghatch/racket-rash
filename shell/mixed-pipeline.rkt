@@ -53,7 +53,13 @@
           (unbox (obj-pipeline-member-ret-box seg)))))
 
 (struct pipeline
-  (manager-thread segment-box))
+  (manager-thread segment-box)
+  #:property prop:evt (λ (pline)
+                        (let ([sema (make-semaphore)])
+                          (thread (λ ()
+                                    (pipeline-wait pline)
+                                    (semaphore-post sema)))
+                          (wrap-evt sema (λ _ pline)))))
 (define (pipeline-wait pl)
   (thread-wait (pipeline-manager-thread pl))
   (for ([seg (unbox (pipeline-segment-box pl))])

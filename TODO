@@ -5,8 +5,6 @@ Fully stable release blockers
 
 * a custom exn type for unix pipeline failures?
 
-* make pipeline objects sync-able
-
 * timestamps in pipeline objects, so I can do time reporting like zsh
 
 * add strict/lazy/permissive success/failure in unix/mixed pipes
