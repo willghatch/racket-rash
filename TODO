@@ -1,22 +1,12 @@
 Main stable release blockers
 ----------------------------
 
-* add strict/lazy/permissive success/failure in unix/mixed pipes
-
 * decide what to do about reader for backslash escaping newlines
 
 * alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
 
-* inspecting pipeline segments with correct compound member handling
-
-* rash macros
-** what does it mean to run with stdin in the background unless I have job control?
-** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
-
 * $_ implicit argument on pipelines
 ** for unix ones, detect it, use compound member to turn the input into an empty port and use $_ as a shell argument.  This may require rethinking the eager evaluation of arg list members...
-
-* <() >() redirection and substitution
 
 * unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
 ** success determination should allow a predicate on the return value OR a list of good statuses
@@ -29,26 +19,24 @@ Main stable release blockers
 
 * unix pipeline operator that does globbing
 
-* initial input-port transformer to try to solve readline-port issues
-
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 
 * some level of macros above pipelines - eg for define forms, maybe loops, etc.
 
 * a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
 
-* timestamps in pipeline objects, so I can do time reporting like zsh
-
-* review names -- pick good ones before doing any stable release
-
-* make pipeline objects sync-able
-
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 ** for status options strict/lazy/permissive, etc
 
+* optional arguments in pipelines for strict/lazy/permissive unix sections
+
+* review names -- pick good ones before doing any stable release
 
 * add features to shell/pipeline from its todo to get to a stable release point
 
+* document
+
+* look through TODO comments
 
 
 
