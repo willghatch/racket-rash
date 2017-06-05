@@ -292,11 +292,11 @@
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
-(define (rash-do-transformed-pipeline #:bg [bg #f]
-                                      #:return-pipeline-object [return-pipeline-object #f]
-                                      #:in [in (open-input-string "")]
-                                      #:out [out default-output-port-transformer]
-                                      #:err [err 'string-port]
+(define (rash-do-transformed-pipeline #:bg bg
+                                      #:return-pipeline-object return-pipeline-object
+                                      #:in in
+                                      #:out out
+                                      #:err err
                                       . args)
   ;; TODO - environment extension/replacement
   (run-pipeline args #:bg bg #:return-pipeline-object return-pipeline-object
