@@ -1,9 +1,10 @@
 #lang racket/base
 
 (provide
- define-rash-pipe
+ define-pipeline-operator
 
- current-rash-pipeline-argument
+ current-pipeline-argument
+
  (for-syntax expand-pipeline-arguments)
 
  =composite-pipe=
@@ -36,7 +37,7 @@
 
 ;;;;;;;;; Defining forms
 
-(define-syntax (define-rash-pipe/no-kw stx)
+(define-syntax (define-pipeline-operator/no-kw stx)
   (syntax-parse stx
     [(def name as-starter as-joiner outside-of-rash)
      #'(define-syntax name
@@ -45,7 +46,7 @@
           as-joiner
           outside-of-rash))]))
 
-(define-syntax (define-rash-pipe stx)
+(define-syntax (define-pipeline-operator stx)
   (syntax-parse stx
     [(def name
        (~or (~optional (~seq #:start s-impl:expr))
@@ -75,12 +76,12 @@
                                     (syntax->datum #'name)
                                     "Must be used as a rash pipeline operator"
                                     stx)))])
-       #'(define-rash-pipe/no-kw name starter joiner nmacro))]))
+       #'(define-pipeline-operator/no-kw name starter joiner nmacro))]))
 
 
 ;;;;;;;;;;;;;;;; Pipeline argument detection, replacement functions
 
-(define-syntax-parameter current-rash-pipeline-argument #f)
+(define-syntax-parameter current-pipeline-argument #f)
 ;; placeholder value so local-expand doesn't barf
 (define rash-pipeline-argument-standin #f)
 
@@ -130,9 +131,15 @@
                          (->s (box-immutable x))))]
           [_ stx]))))
 
+#|
+TODO - this function should imperatively set a flag saying whether the
+pipeline argument was explicitly used, because a macro could make it
+disappear (and I don't want to then come back as something
+re-appended).
+|#
 (define-for-syntax (expand-pipeline-arguments
                     stx
-                    ;; arg-replacement will replace current-rash-pipeline-argument
+                    ;; arg-replacement will replace current-pipeline-argument
                     arg-replacement
                     ;; transformer should be a syntax parser, and the first element
                     ;; of syntax will be #t if at least one replacement was made,
@@ -141,11 +148,10 @@
   (syntax-parse stx
     [(arg ...+)
      (with-syntax ([prev-arg #'rash-pipeline-argument-standin])
-       (local-expand #'(let ([prev-arg #f]) 5) 'expression '())
        (let ([e-args
               (map (λ (s) (local-expand
                            #`(syntax-parameterize
-                                 ([current-rash-pipeline-argument
+                                 ([current-pipeline-argument
                                    (syntax-id-rules () [_ prev-arg])])
                                #,s)
                            'expression '()))
@@ -164,7 +170,7 @@
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;; Basic pipe operators
 
-(define-rash-pipe =composite-pipe=
+(define-pipeline-operator =composite-pipe=
   #:start
   (syntax-parser
     [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
@@ -180,7 +186,7 @@
 
 ;;;; object pipes
 
-(define-rash-pipe =basic-object-pipe=
+(define-pipeline-operator =basic-object-pipe=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
@@ -196,7 +202,7 @@
              #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
-(define-rash-pipe =basic-object-pipe/left=
+(define-pipeline-operator =basic-object-pipe/left=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
@@ -213,7 +219,7 @@
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
 
-(define-rash-pipe =basic-object-pipe/expression=
+(define-pipeline-operator =basic-object-pipe/expression=
   #:start
   (syntax-parser
     [(_ e) #'(obj-pipeline-member-spec (λ () e))])
@@ -236,20 +242,20 @@
                                                            x)))
                            #,pipe-stx))
 
-(define-rash-pipe =object-pipe=
+(define-pipeline-operator =object-pipe=
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
   #:joint
   (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe= arg ...))]))
-(define-rash-pipe =object-pipe/left=
+(define-pipeline-operator =object-pipe/left=
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe/left= arg ...)])
   #:joint
   (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe/left= arg ...))]))
-(define-rash-pipe =object-pipe/expression=
+(define-pipeline-operator =object-pipe/expression=
   #:start (syntax-parser [(_ e) #'(=basic-object-pipe/expression= e)])
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
 
-(define-rash-pipe =for/list=
+(define-pipeline-operator =for/list=
   #:joint
   (syntax-parser
     [(_ arg ...+)
@@ -269,7 +275,7 @@
 
 ;;;; unix-y pipes
 
-(define-rash-pipe =non-quoting-basic-unix-pipe=
+(define-pipeline-operator =non-quoting-basic-unix-pipe=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) 'default)])
@@ -277,7 +283,7 @@
   (syntax-parser
     [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) 'default)]))
 
-(define-rash-pipe =crappy-basic-unix-pipe=
+(define-pipeline-operator =crappy-basic-unix-pipe=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) 'default)])
