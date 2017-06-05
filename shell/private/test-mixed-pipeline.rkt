@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "mixed-pipeline.rkt")
+(require "../mixed-pipeline.rkt")
 
 (define pline
   (-run-pipeline

@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "pipeline.rkt")
+(require "../pipeline.rkt")
 (require racket/string)
 (require racket/function)
 (require racket/format)

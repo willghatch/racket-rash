@@ -203,7 +203,8 @@
             (or ret err)))))
 
 (define (pipeline-member-captured-stderr m)
-  (if (string-port? (pipeline-member-stderr-capture-port m))
+  (if (and (output-port? (pipeline-member-stderr-capture-port m))
+           (string-port? (pipeline-member-stderr-capture-port m)))
       (get-output-string (pipeline-member-stderr-capture-port m))
       #f))
 
@@ -601,7 +602,10 @@ pipelines where it is set to always kill when the end member exits
                                       (not (file-stream-port? err-spec)))
                                  #f
                                  err-spec)]
-                [capture-err (if (string-port? err-spec) err-spec #f)]
+                [capture-err (if (and (output-port? err-spec)
+                                      (string-port? err-spec))
+                                 err-spec
+                                 #f)]
                 [argl (pipeline-member-spec-argl m)])
            (let-values ([(sproc from to err-from)
                          (subprocess+ argl
