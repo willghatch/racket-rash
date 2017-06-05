@@ -170,4 +170,7 @@
     (make-list-delim-readtable
      #\( #\) #:inside-readtable rash-inside-paren-readtable
      #:base-readtable
-     (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))
+     (make-string-delim-readtable
+      #\｢ #\｣ #:wrapper '#%cjk-corner-quotes
+      #:base-readtable
+      (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim))))))
