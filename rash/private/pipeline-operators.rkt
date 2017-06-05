@@ -1,7 +1,9 @@
 #lang racket/base
 
 (provide
+ ;; TODO - names of these two pipe definers
  define-pipeline-operator
+ pipeop
 
  current-pipeline-argument
 
@@ -78,58 +80,40 @@
                                     stx)))])
        #'(define-pipeline-operator/no-kw name starter joiner nmacro))]))
 
+(define-syntax (pipeop stx)
+  (syntax-parse stx
+    [(defpipe name:id clause ...+)
+     (with-syntax ([parsername (datum->syntax
+                                stx
+                                (gensym (string-append
+                                         (symbol->string (syntax->datum #'name))
+                                         "-parser-")))])
+       #'(begin
+           (define-for-syntax parsername (syntax-parser clause ...))
+           (define-pipeline-operator name #:start parsername #:joint parsername)))]))
 
 ;;;;;;;;;;;;;;;; Pipeline argument detection, replacement functions
 
 (define-syntax-parameter current-pipeline-argument #f)
-;; placeholder value so local-expand doesn't barf
-(define rash-pipeline-argument-standin #f)
 
-(define-for-syntax (stx-replace stx from-id to-id)
-  ;; Replace from-id with to-id recursively.
-  ;; If the result is eq? to stx, then no change was made.
-  ;; If the result is NOT eq? to stx, then at least one change was made.
-
-  #|
-  TODO - replace this whole function with an abstracted version from a library at some point.  If I have to make it myself, I can look in eg. syntax-strip-context and syntax-replace-context, as well as syntax-map from the racket implementation of the expander.
-  syntax-e can produce:
-  symbol
-  syntax-pair
-  empty-list
-  immutable vector of syntax objects
-  immutable box of syntax objects
-  TODO - immutable hash table with syntax object values (but not necessarily syntax object keys!)
-  TODO - immutable prefab struct with syntax objects
-  some other datum like number, string, etc
-  |#
+(define-for-syntax (stx-contains-id? stx id)
+  ;; Does the syntax contain id somethere?
   (define (rec s)
-    (stx-replace s from-id to-id))
-  (define (->s datum)
-    (datum->syntax stx datum stx stx))
-  (if (and (identifier? stx) (free-identifier=? stx from-id))
-      to-id
+    (stx-contains-id? s id))
+  (if (and (identifier? stx) (free-identifier=? stx id))
+      #t
       (let ([expanded (if (syntax? stx)
                           (syntax-e stx)
                           stx)])
         (match expanded
-          [(cons l r) (let ([l* (rec l)]
-                            [r* (rec r)])
-                        (if (and (eq? l l*)
-                                 (eq? r r*))
-                            stx
-                            (if (syntax? stx)
-                                (->s (cons l* r*))
-                                (cons l* r*))))]
-          [(vector elems ...) (let ([elems* (map rec elems)])
-                                (if (andmap (λ(x)x)
-                                            (map eq? elems* elems))
-                                    stx
-                                    (->s apply vector-immutable elems*)))]
-          [(box x) (let ([x* (rec x)])
-                     (if (eq? x x*)
-                         stx
-                         (->s (box-immutable x))))]
-          [_ stx]))))
+          [(cons l r) (or (rec l) (rec r))]
+          [(vector elems ...) (ormap rec elems)]
+          [(box x) (rec x)]
+          [(hash-table (key val) ...) (or (ormap rec val)
+                                          (ormap rec key))]
+          [(? struct?) (ormap rec
+                              (vector->list (struct->vector expanded)))]
+          [_ #f]))))
 
 #|
 TODO - this function should imperatively set a flag saying whether the
@@ -147,23 +131,23 @@ re-appended).
                     transformer)
   (syntax-parse stx
     [(arg ...+)
-     (with-syntax ([prev-arg #'rash-pipeline-argument-standin])
-       (let ([e-args
-              (map (λ (s) (local-expand
-                           #`(syntax-parameterize
-                                 ([current-pipeline-argument
-                                   (syntax-id-rules () [_ prev-arg])])
-                               #,s)
-                           'expression '()))
-                   (syntax->list #'(arg ...)))])
-         ;; Detect if #'prev-arg is in the expanded syntax, and replace it.
-         ;; If it's not in the expanded syntax, then put the argument at the end.
-         (define new-e-args (stx-replace e-args
-                                         #'prev-arg
-                                         arg-replacement))
-         (define explicit-reference-exists? (not (eq? new-e-args e-args)))
-         (transformer #`(#,(datum->syntax #'here explicit-reference-exists?)
-                         #,@new-e-args))))]))
+     (with-syntax ([prev-arg arg-replacement])
+       (with-syntax ([(e-arg ...) (map (λ (s) (local-expand
+                                          #`(syntax-parameterize
+                                                ([current-pipeline-argument
+                                                  (make-set!-transformer
+                                                   (λ (id)
+                                                     (syntax-case id ()
+                                                       [_ #'prev-arg])))])
+                                              #,s)
+                                          'expression '()))
+                                  (syntax->list #'(arg ...)))])
+         (with-syntax ([explicit-ref-exists?
+                        (datum->syntax #'here
+                                       (stx-contains-id? #'(e-arg ...)
+                                                         arg-replacement))])
+           (transformer #'(explicit-ref-exists?
+                           e-arg ...)))))]))
 
 
 
@@ -255,22 +239,28 @@ re-appended).
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
 
-(define-pipeline-operator =for/list=
-  #:joint
-  (syntax-parser
-    [(_ arg ...+)
-     (expand-pipeline-arguments
-        #'(arg ...)
-        #'for-iter
-        (syntax-parser
-          [(#t narg ...)
-           #'(obj-pipeline-member-spec (λ (prev-ret)
-                                         (for/list ([for-iter prev-ret])
-                                           (narg ...))))]
-          [(#f narg ...)
-           #'(obj-pipeline-member-spec (λ (prev-ret)
-                                         (for/list ([for-iter prev-ret])
-                                           (narg ... for-iter))))]))]))
+(define-syntax (def-forpipe stx)
+  (syntax-parse stx
+    [(_ name for-stx)
+     #'(define-pipeline-operator name
+         #:joint
+         (syntax-parser
+           [(_ arg ...+)
+            (expand-pipeline-arguments
+             #'(arg (... ...))
+             #'for-iter
+             (syntax-parser
+               [(#t narg (... ...))
+                #'(obj-pipeline-member-spec (λ (prev-ret)
+                                              (for-stx ([for-iter prev-ret])
+                                                       (narg (... ...)))))]
+               [(#f narg (... ...))
+                #'(obj-pipeline-member-spec (λ (prev-ret)
+                                              (for-stx ([for-iter prev-ret])
+                                                       (narg (... ...) for-iter))))]))]))]))
+
+(def-forpipe =for/list= for/list)
+;(def-forpipe =for/stream= for/stream)
 
 
 ;;;; unix-y pipes
