@@ -3,9 +3,32 @@ Fully stable release blockers
 
 * process fd/temp-file redirects a la <() >() from bash
 
-* shellify -- maybe replace with shellify/left and shellify/right, or have another argument that determines the position in the arg list to put the string -- maybe allow negative numbers to count from end.
+* a custom exn type for unix pipeline failures?
 
-* a custom exn type for pipeline failures?
+* make pipeline objects sync-able
+
+* timestamps in pipeline objects, so I can do time reporting like zsh
+
+* add strict/lazy/permissive success/failure in unix/mixed pipes
+
+* inspecting pipeline segments with correct compound member handling
+
+* bg issues
+** what does it mean to run with stdin in the background unless I have job control?
+** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
+
+* initial input-port transformer to try to solve readline-port issues
+
+* decide what to do with APIs that are bad, that I said are "mostly stable"...
+
+* review names -- pick good ones before doing any stable release
+
+* reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
+
+* document new stuff
+
+* look through TODO comments
+
 
 Other todo, maybe for version 2
 -------------------------------
