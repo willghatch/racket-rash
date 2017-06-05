@@ -45,15 +45,10 @@
 
 
 
-(begin-for-syntax
-  (define rash-keyword-table
-    (list (list '#:in check-expression)
-          (list '#:out check-expression)
-          (list '#:err check-expression)))
-  (define (opref table key default)
-    (with-handlers ([(λ _ #t) (λ (e) default)])
-      (cadr (dict-ref table key))))
-  )
+(define-for-syntax rash-keyword-table
+  (list (list '#:in check-expression)
+        (list '#:out check-expression)
+        (list '#:err check-expression)))
 
 (define-syntax (rash stx)
   (syntax-parse stx

@@ -5,12 +5,14 @@
  rash-read-and-line-parse
  default-output-port-transformer
  rash-pipeline-opt-hash
+ (for-syntax opref)
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
 
 (module+ for-public
   (provide
    &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
+   rash-do-pipeline
    ))
 
 (require
@@ -27,6 +29,8 @@
   racket/base
   syntax/parse
   racket/stxparam-exptime
+  syntax/keyword
+  racket/dict
   "pipeline-operator-detect.rkt"
   (for-syntax
    racket/base
@@ -232,17 +236,62 @@
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
 
+(define-for-syntax (opref table key default)
+  ;; For getting options with default out of a
+  ;; parses-keyword-options result hash
+  (with-handlers ([(λ _ #t) (λ (e) default)])
+    (cadr (dict-ref table key))))
 
 (define-syntax (rash-do-pipeline stx)
-  ;; TODO -- parameterize option hash
   (syntax-parse stx
-    [(_ startseg joinseg ...)
-     #'(rash-do-transformed-pipeline (rash-transform-starter-segment startseg)
-                                     (rash-transform-joiner-segment joinseg) ...)]))
+    [(_ arg ...+)
+     (define-values (tab rest-stx)
+       (parse-keyword-options #'(arg ...)
+                              (list (list '#:in check-expression)
+                                    (list '#:< check-expression)
+                                    (list '#:out check-expression)
+                                    (list '#:> check-expression)
+                                    (list '#:>! check-expression)
+                                    (list '#:>> check-expression)
+                                    (list '#:err check-expression)
+                                    ;; TODO - name?
+                                    (list '#:return-pipeline-object check-expression)
+                                    (list '#:bg check-expression)
+                                    (list '#:env check-expression)
+                                    (list '#:env-replace check-expression)
+                                    )
+                              #:no-duplicates? #t
+                              #:incompatible '((#:in #:<) (#:out #:> #:>! #:>>))))
+     (with-syntax ([input (cond [(opref tab '#:< #f)
+                                 => (λ (s) (syntax-case s () [in #'(quote in)]))]
+                                [(opref tab '#:in #'(open-input-string ""))])]
+                   [output (cond [(opref tab '#:> #f)
+                                  => (λ (s) (syntax-case s ()
+                                              [out #'(list (quote out) 'error)]))]
+                                 [(opref tab '#:>! #f)
+                                  => (λ (s) (syntax-case s ()
+                                              [out #'(list (quote out) 'truncate)]))]
+                                 [(opref tab '#:>> #f)
+                                  => (λ (s) (syntax-case s ()
+                                              [out #'(list (quote out) 'append)]))]
+                                 [(opref tab '#:out #'default-output-port-transformer)])]
+                   [err-output (opref tab '#:err #''string-port)]
+                   [bg (opref tab '#:bg #'#f)]
+                   [return-pipeline-object (opref tab '#:return-pipeline-object #'#f)]
+                   [env (opref tab '#:env #'#f)]
+                   [replace-env (opref tab '#:replace-env #'#f)])
+       (syntax-parse rest-stx
+         [([startop:pipe-starter-op startarg ...] [joinop:pipe-joiner-op joinarg ...] ...)
+          #'(rash-do-transformed-pipeline
+               #:bg bg #:return-pipeline-object return-pipeline-object
+               ;#:env env #:replace-env replace-env
+               #:in input #:out output #:err err-output
+               (rash-transform-starter-segment startop startarg ...)
+               (rash-transform-joiner-segment joinop joinarg ...)
+               ...)]))]))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
-;; TODO - implement for real
 (define (rash-do-transformed-pipeline #:bg [bg #f]
                                       #:return-pipeline-object [return-pipeline-object #f]
                                       #:in [in (open-input-string "")]

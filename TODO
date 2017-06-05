@@ -18,8 +18,6 @@ Main stable release blockers
 
 * <() >() redirection and substitution
 
-* pipeline definer that just takes one transformer func, and is required to return a pipeline -- so it already has #:start and #:join in one.
-
 * unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
 ** success determination should allow a predicate on the return value OR a list of good statuses
 ** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
