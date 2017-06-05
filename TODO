@@ -3,7 +3,6 @@ Main stable release blockers
 
 * add strict/lazy/permissive success/failure in unix/mixed pipes
 
-* decide what to do about reader for recursive list reads in () [] etc to avoid newline objects
 * decide what to do about reader for backslash escaping newlines
 
 * inspecting pipeline segments with correct compound member handling

@@ -53,7 +53,7 @@
   ;; TODO - this still fails for #||# comments, and generally seems brittle
   (let ([peeked (peek-char in)])
     (cond [(equal? #\( peeked)
-           (let ([s (parameterize ([current-readtable rash-dispatch-read-table])
+           (let ([s (parameterize ([current-readtable rash-inside-paren-readtable])
                       (read-syntax src in))])
              (syntax-parse s
                [(e ...) #'(%%rash-racket-line (e ...))]))]
@@ -111,55 +111,63 @@
                (read-and-ignore-hspace! port))
         (void))))
 
-(define (mark-dispatched stx)
-  (syntax-parse stx
-    [f #'(%%rash-dispatch-marker f)]))
-(define (mark-dispatched-splice stx)
-  (syntax-parse stx
-    [f #'(%%rash-dispatch-marker-splice f)]))
-
-(define dispatch-read
-  (case-lambda
-    [(ch port)
-     (syntax->datum (dispatch-read ch port #f #f #f #f))]
-    [(ch port src line col pos)
-     (parameterize ([current-readtable rash-dispatch-read-table])
-       ;; I need to peek to see if it's actually $$ - this would be
-       ;; better multi-character matches could be defined on the readtable!
-       (let ([c (peek-char port)])
-         (if (equal? c #\$)
-             (begin
-               (read-char port)
-               (mark-dispatched-splice (read-syntax src port)))
-             (mark-dispatched (read-syntax src port)))))]))
-
-(define bare-line-readtable
-  (make-readtable #f
-                  #\newline 'terminating-macro read-newline
-                  #\; 'terminating-macro read-line-comment
-                  ;; take away the special meanings of characters
-                  #\| #\a #f
-                  #\. #\a #f
-                  ;#\, #\a #f
-                  ;#\` #\a #f
-                  ;#\' #\a #f
-                  ;#\@ #\a #f
-                  ;; TODO - I need to use the literal original syntax for auto-quoted things sometimes, as in -i
-                  ;; -i is a number constant!
-                  #\- #\a #f
-                  ;#\# #\a #f
-                  ;; TODO - fix these so their inner readtable is different
-                  ;;;;#\( #\a #f
-                  ;;;;#\) #\a #f
-                  ;;;;#\{ #\a #f
-                  ;;;;#\} #\a #f
-                  ;;;;#\[ #\a #f
-                  ;;;;#\] #\a #f
-                  ;;;;#\$ 'terminating-macro dispatch-read
-                  ))
-
-(define rash-dispatch-read-table
+(define rash-inside-paren-readtable
   (udelimify #f))
 
+(define line-readtable/pre-delim
+  (make-readtable #f
+                  ;; newline and comment (which ends with newline) need
+                  ;; to give newline symbols for parsing
+                  #\newline 'terminating-macro read-newline
+                  #\; 'terminating-macro read-line-comment
+
+                  ;; take away the special meanings of characters
+
+                  ;; | is seldom used in racket in practice -- who uses symbols
+                  ;; that need escaping inside?  But I imagine it will frequently
+                  ;; be desired as a pipe identifier.
+                  #\| #\a #f
+
+                  ;; . is really only useful in lists (where it will be available),
+                  ;; and will want to be literal in a lot of command lines.
+                  #\. #\a #f
+
+                  ;; , will be useful in lists also (where it will be available),
+                  ;; and will want to be literal in many command lines.
+                  #\, #\a #f
+
+                  ;; quote and quasiquote will be useful on the command line, and
+                  ;; people are used to them having special meaning and needing to
+                  ;; quote them, so they are not commonly required in program argument
+                  ;; strings.
+                  ;#\` #\a #f
+                  ;#\' #\a #f
+
+                  ;; @ doesn't really have any special meaning normally, so we don't
+                  ;; need to strip it of any.
+                  ;#\@ #\a #f
+
+                  ;; -i is a common flag, but -i is a number constant in racket,
+                  ;; so I need to take away the meaning of - in the reader (or
+                  ;; make -i flags *really* annoying to use)!
+                  ;; TODO - I can use -i if syntax objects carry their literal original
+                  ;; string representation inside them, because I could then pull out
+                  ;; the original string for these sort of quoted things.
+                  #\- #\a #f
+
+                  ;; I want # to have its normal meaning to allow #||# comments,
+                  ;; #t and #f, #(vectors, maybe), etc.
+                  ;#\# #\a #f
+                  ))
+
 (define line-readtable
-  (make-string-delim-readtable #\« #\» #:base-readtable bare-line-readtable))
+  (make-list-delim-readtable
+   #\[ #\] #:inside-readtable rash-inside-paren-readtable
+   #:base-readtable
+   (make-list-delim-readtable
+    #\{ #\} #:inside-readtable rash-inside-paren-readtable
+    #:base-readtable
+    (make-list-delim-readtable
+     #\( #\) #:inside-readtable rash-inside-paren-readtable
+     #:base-readtable
+     (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))
