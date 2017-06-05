@@ -15,6 +15,8 @@
 (require (prefix-in u- "pipeline.rkt"))
 (require racket/format
          racket/list
+         racket/string
+         racket/port
          racket/match
          )
 
@@ -135,10 +137,14 @@
                          ({obj-pipeline-member-spec-func (car specs)} arg)))))))
   (values (obj-pipeline-member driver-thread rbox ebox) (cdr specs)))
 
+(define (default-output-transformer p)
+  (string-trim (port->string p)))
+
 (define (run-pipeline specs
-                      #:in [init-in-port (current-input-port)]
-                      #:out [final-output-port-or-transformer #f]
-                      #:default-err [default-err (current-error-port)]
+                      #:in [init-in-port (open-input-string "")]
+                      #:out [final-output-port-or-transformer
+                             default-output-transformer]
+                      #:default-err [default-err 'string-port]
                       #:bg [bg #f]
                       ;; TODO - better name
                       #:return-pipeline-object [return-pipeline-object #f])

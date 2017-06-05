@@ -1,5 +1,7 @@
 #lang racket/base
 
+(provide my-grep)
+
 (require "../pipeline.rkt")
 (require racket/string)
 (require racket/function)
