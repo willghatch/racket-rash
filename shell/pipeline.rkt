@@ -14,9 +14,6 @@
                 procedure?)]
 
   [struct alias-func ([func procedure?])]
-  [struct pipeline-same-thread-func ([func procedure?])]
-
-  [shell-cd (->* () ((or/c string? path? symbol?)) void?)]
 
   [run-pipeline (->* ()
                      (#:in (or/c input-port? false/c path-string-symbol?)
@@ -88,6 +85,7 @@
                pipeline-member-spec?)]
   )
 
+ prop:alias-func
  and/success
  or/success
  )
@@ -99,7 +97,8 @@
   (if (pm-spec-alias? pm-spec)
       (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
              [old-cmd (car old-argl)]
-             [new-argl-or-spec (apply old-cmd (cdr old-argl))]
+             [new-argl-or-spec (apply ({prop:alias-func-ref old-cmd} old-cmd)
+                                      (cdr old-argl))]
              [new-spec (cond [(and (list? new-argl-or-spec)
                                    (not (null? new-argl-or-spec)))
                               (mk-pipeline-member-spec new-argl-or-spec)]
@@ -187,13 +186,14 @@
                                  #:success [success-pred (default-option)])
   (pipeline-member-spec argl port-err success-pred))
 
+(define-values (prop:alias-func
+                prop:alias-func?
+                prop:alias-func-ref)
+  (make-struct-type-property 'alias-func))
+
 (struct alias-func
   (func)
-  #:property prop:procedure (struct-field-index func)
-  #:transparent)
-(struct pipeline-same-thread-func
-  (func)
-  #:property prop:procedure (struct-field-index func)
+  #:property prop:alias-func (λ (s) (alias-func-func s))
   #:transparent)
 
 (define (pm-spec-command m)
@@ -212,10 +212,7 @@
        (procedure? (car (pipeline-member-spec-argl pmember)))))
 (define (pm-spec-alias? pmember)
   (and (pipeline-member-spec? pmember)
-       (alias-func? (car (pipeline-member-spec-argl pmember)))))
-(define (pm-spec-same-thread? m)
-  (and (pm-spec-func? m)
-       (pipeline-same-thread-func? (pm-spec-command m))))
+       (prop:alias-func? (car (pipeline-member-spec-argl pmember)))))
 
 (define (pipeline-member-process? pmember)
   (and (pipeline-member? pmember)
@@ -700,13 +697,12 @@
   (define r1-members (reverse r1-members-rev))
   (define err-port-copy-threads (reverse err-port-copy-threads-rev))
 
-  (define (run-func-members members same-thread-ones?)
+  (define (run-func-members members)
     (for/fold ([m-outs '()])
               ([m members]
                [i (in-range pipeline-length)])
       (cond
-        [(and (pm-spec-func? m)
-              (equal? same-thread-ones? (pm-spec-same-thread? m)))
+        [(pm-spec-func? m)
          (let* ([prev (and (not (null? m-outs))
                            (car m-outs))]
                 [next (and (< i (sub1 pipeline-length))
@@ -748,11 +744,7 @@
                                     [current-error-port (if (equal? err-use 'stdout)
                                                             from-use
                                                             err-use)])
-                       (if same-thread-ones?
-                           (begin
-                             {(mk-run-thunk m err-box ret-box)}
-                             (thread (λ () #f)))
-                           (thread (mk-run-thunk m err-box ret-box))))]
+                       (thread (mk-run-thunk m err-box ret-box)))]
                     [ret-member (pmi to-ret from-ret err-ret
                                      ret-thread ret-box err-box argl
                                      capture-err success-pred)])
@@ -773,13 +765,10 @@
       (close-output-port (current-output-port))
       (close-output-port (current-error-port))))
 
-  (define r2-members-rev (run-func-members r1-members #f))
+  (define r2-members-rev (run-func-members r1-members))
   (define r2-members (reverse r2-members-rev))
-  ;; same-thread function members
-  (define r3-members-rev (run-func-members r2-members #t))
-  (define r3-members (reverse r3-members-rev))
-  (define from-port (pmi-port-from (car r3-members-rev)))
-  (define to-port (pmi-port-to (car r3-members)))
+  (define from-port (pmi-port-from (car r2-members-rev)))
+  (define to-port (pmi-port-to (car r2-members)))
   (define (finalize-member m)
     (pipeline-member
      (pmi-subproc-or-thread m)
@@ -791,7 +780,7 @@
      (box #f) ; killed-box
      (pmi-success-pred m)))
 
-  (define out-members (map finalize-member r3-members))
+  (define out-members (map finalize-member r2-members))
   (list out-members to-port from-port err-port-copy-threads))
 
 
@@ -831,21 +820,4 @@
   (and (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
 (define-simple-macro (or/success e ...)
   (or (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
-
-;;;; Base Shell Functions ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define (change-current-directory dir)
-  (if (directory-exists? dir)
-      (current-directory dir)
-      (error 'change-current-directory "No such directory: ~a" dir)))
-
-(define shell-cd
-  (pipeline-same-thread-func
-   (λ ([dir ""])
-     (let ([dir (if (equal? dir "") (getenv "HOME") dir)])
-       (change-current-directory
-        (cond [(string? dir) dir]
-              [(path? dir) dir]
-              [(symbol? dir) (symbol->string dir)]
-              [else (error 'cd "cd argument needs to be a string, path, or symbol")]))))))
 

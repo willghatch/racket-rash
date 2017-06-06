@@ -1,9 +1,7 @@
 Fully stable release blockers
 -----------------------------
 
-* use properties rather than structs for alias funcs
-
-* maybe get rid of same-thread funcs
+* environment variable augment/replace per-member
 
 * process fd/temp-file redirects a la <() >() from bash
 

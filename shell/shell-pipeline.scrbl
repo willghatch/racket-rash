@@ -111,14 +111,15 @@ Convenience function for putting Racket functions into pipelines.
 Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port].
 }
 
+@defthing[prop:alias-func]{
+Struct property for alias-funcs.  The property should be a function that takes the structure as an argument and produces a function that takes the argument list and produces a new one.
+}
 @defstruct[alias-func ([func procedure?])]{
-Wrapper struct with @racket[prop:procedure] for alias functions.  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
-
-If you want to define aliases for #lang rash, you probably want to use the define-alias form from that package (which wraps alias-func with some rash-specific things).
+Wrapper struct with @racket[prop:alias-func].  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
 
 Examples:
 @codeblock|{
-;; A simple common case -- have an alias that sets initial arguments.
+;; A simple case -- have an alias that sets initial arguments.
 (define ls-alias (alias-func (λ args (list* 'ls '--color=auto args))))
 ;; Slightly more complicated: `find` requires that its path argument go before
 ;; its modifier flags.
@@ -126,19 +127,10 @@ Examples:
 }|
 }
 
-@defstruct[pipeline-same-thread-func ([func procedure?])
-]{
-Wrapper struct with @racket[prop:procedure].  If a @racket[pipeline-member-spec] has one of these as its command, it will be executed without spawning a new thread.  This is basically a hack to make @racket[shell-cd] work while being called in a pipeline.  Don't use this.
-}
-
 @defproc[(path-string-symbol?
 [p any/c])
 boolean?]{
 Like @racket[path-string?], except it also includes symbols that would be valid paths.
-}
-
-@defproc[(shell-cd [dir (or/c string? path? symbol?) ""]) void?]{
-Changes @racket[current-directory].  It's a @racket[pipeline-same-thread-func], so it changes the @racket[current-directory] for the current thread rather than a throwaway thread.  If no directory is given, it changes to the user's home directory.
 }
 
 @defform[(and/success e ...)]{

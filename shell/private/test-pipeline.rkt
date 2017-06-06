@@ -9,7 +9,7 @@
 (require racket/runtime-path)
 (require racket/port)
 
-(define-runtime-path pipeline.rkt "pipeline.rkt")
+(define-runtime-path pipeline.rkt "../pipeline.rkt")
 
 
 (define (grep-func str regex)
@@ -23,14 +23,16 @@
      "\n")))
 (define my-grep (shellify grep-func))
 
+(define my-echo (λ args (displayln (string-join (map ~a args) " "))))
+
 (module+ test
   ;; Only tests that only rely on functions should go here -- calling
   ;; external programs will fail in the test environment.
   (require rackunit)
 
-  (check-equal? (run-pipeline/out '(echo hello))
+  (check-equal? (run-pipeline/out `(,my-echo hello))
                 "hello\n" )
-  (check-equal? (run-pipeline/out '(echo hello "\n" how are you? "\n" I am fine)
+  (check-equal? (run-pipeline/out `(,my-echo hello "\n" how are you? "\n" I am fine)
                                   `(,my-grep hello))
                 "hello \n")
 
@@ -43,11 +45,11 @@
   (check-equal? "hello\n"
                 (run-pipeline/out #:strictness 'permissive
                                   (list (λ () (error 'test-case "exceptional!")))
-                                  '(echo hello)))
+                                  `(,my-echo hello)))
   (check-exn exn?
              (λ () (run-pipeline/out #:strictness 'strict
                                      (list (λ () (error 'test-case "exceptional!")))
-                                     '(echo hello))))
+                                     `(,my-echo hello))))
 
   ;; check stdout flag for functions
   (check-regexp-match "^my-test-func: exceptional!"
@@ -61,7 +63,7 @@
   (check-equal? "hello\n"
                 (run-pipeline/out #:strictness 'permissive
                                   (list (λ () (error 'test-case "exceptional!")))
-                                  '(echo hello)))
+                                  `(,my-echo hello)))
 
   (check-equal? "hello\n"
                 (run-pipeline/out #:strictness 'lazy
@@ -69,7 +71,7 @@
                                   (list (λ ()
                                           (sleep 0.2)
                                           (error 'test-case "exceptional!")))
-                                  '(echo hello)))
+                                  `(,my-echo hello)))
 
   (check-exn exn?
              (λ ()
@@ -78,35 +80,40 @@
                                  (list (λ ()
                                          (sleep 0.2)
                                          (error 'test-case "exceptional!")))
-                                 '(echo hello))))
+                                 `(,my-echo hello))))
 
   (check-pred pipeline?
               (run-pipeline #:background? #t
                             #:in #f
                             #:out #f
                             #:err #f
-                            '(echo hello)))
+                            `(,my-echo hello)))
   (check-equal?
    (with-output-to-string
-     (λ () (and/success (run-pipeline '(echo hello))
-                        (run-pipeline '(echo hello)))))
+     (λ () (and/success (run-pipeline `(,my-echo hello))
+                        (run-pipeline `(,my-echo hello)))))
    "hello\nhello\n")
   (check-equal?
    (with-output-to-string
-     (λ () (or/success (run-pipeline '(echo hello))
-                       (run-pipeline '(echo hello)))))
+     (λ () (or/success (run-pipeline `(,my-echo hello))
+                       (run-pipeline `(,my-echo hello)))))
    "hello\n")
   (parameterize ([current-error-port (open-output-nowhere)])
     (check-equal?
      (with-output-to-string
        (λ () (and/success (run-pipeline `(,(λ () (error 'foobar "aoeu"))))
-                          (run-pipeline '(echo hello)))))
+                          (run-pipeline `(,my-echo hello)))))
      "")
     (check-equal?
      (with-output-to-string
        (λ () (or/success (run-pipeline `(,(λ () (error 'foobar "aoeu"))))
-                         (run-pipeline '(echo hello)))))
+                         (run-pipeline `(,my-echo hello)))))
      "hello\n"))
+
+  (check-equal?
+   (run-pipeline/out `(,(alias-func (λ _ `(,my-echo hellooooo)))
+                       one two three four))
+   "hellooooo\n")
 
   )
 
