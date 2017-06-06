@@ -9,6 +9,8 @@
  pipeline-success?
  pipeline-wait
  pipeline-ret
+ pipeline-start-ms
+ pipeline-end-ms
  )
 
 
@@ -53,17 +55,21 @@
           (unbox (obj-pipeline-member-ret-box seg)))))
 
 (struct pipeline
-  (manager-thread segment-box)
+  (manager-thread segment-box start-ms end-ms-box cleaner-thread)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
                                     (pipeline-wait pline)
                                     (semaphore-post sema)))
                           (wrap-evt sema (λ _ pline)))))
-(define (pipeline-wait pl)
+
+(define (pipeline-wait/internal pl)
   (thread-wait (pipeline-manager-thread pl))
   (for ([seg (unbox (pipeline-segment-box pl))])
     (pipeline-segment-wait seg)))
+(define (pipeline-wait pl)
+  (pipeline-wait/internal pl)
+  (thread-wait (pipeline-cleaner-thread pl)))
 (define (pipeline-success? pl)
   ;; TODO - fix
   (pipeline-segment-success? (car (unbox (pipeline-segment-box pl)))))
@@ -71,6 +77,10 @@
   (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
 (define (pipeline-ends-with-unix-seg? pl)
   (u-pipeline? (car (unbox (pipeline-segment-box pl)))))
+
+(define (pipeline-end-ms pl)
+  (pipeline-wait pl)
+  (unbox (pipeline-end-ms-box pl)))
 
 ;; TODO - what APIs should exist for getting intermediate results/statuses from pipelines?
 ;; They should mirror the shape of the spec -- results of composite members should be the `and` of the results of their sub-parts, and maybe composite members should be able to supply a predicate on the parts to tell if the whole is successful based on the parts.
@@ -220,6 +230,8 @@
                             strictness
                             lazy-timeout))
 
+  (define end-ms-box (box #f))
+
   (define (runner-func)
     (define (rec last-seg specs)
       (cond [(and (null? specs) (u-pipeline? last-seg) out-transform)
@@ -253,10 +265,19 @@
                (rec new-seg specs-rest))]))
     (rec #f specs))
 
-  (pipeline (thread runner-func) seg-box))
+  (define pipeline-almost
+    (pipeline (thread runner-func) seg-box
+              (current-inexact-milliseconds) end-ms-box
+              #f))
+
+  (define cleaner-thread
+    (thread (λ ()
+              (pipeline-wait/internal pipeline-almost)
+              (set-box! end-ms-box (current-inexact-milliseconds)))))
+
+  (struct-copy pipeline pipeline-almost [cleaner-thread cleaner-thread]))
 
 
-;; TODO - orig. pipelines need newer status options, string-error-ports, <() >() redirects, environment modifiers, ...
+;; TODO - orig. pipelines need <() >() redirects, environment modifiers, ...
 ;; TODO - the structs for pipeline-member-specs should not be exported entirely, only creation functions with #:keyword args, and some inspection functions.
-;; TODO - make pipeline objects synchronizable
 ;; TODO - u-pipeline's real implementation should be in a private dir, and the pipeline.rkt should just export some things from it.
