@@ -26,9 +26,6 @@ Main stable release blockers
 * a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
-** for status options strict/lazy/permissive, etc
-
-* optional arguments in pipelines for strict/lazy/permissive unix sections
 
 * review names -- pick good ones before doing any stable release
 

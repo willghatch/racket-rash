@@ -11,7 +11,8 @@
 
 (module+ for-public
   (provide
-   &bg &pipeline-ret &env &env-replace
+   &bg &pipeline-ret &env
+   ;&env-replace
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
    rash-do-pipeline
@@ -323,7 +324,7 @@
                    [bg (opref tab '#:bg #'#f)]
                    [return-pipeline-object (opref tab '#:return-pipeline-object #'#f)]
                    [env (opref tab '#:env #'#f)]
-                   [replace-env (opref tab '#:replace-env #'#f)]
+                   [replace-env (opref tab '#:env-replace #'#f)]
                    [strictness (opref tab '#:strictness #''lazy)]
                    [lazy-timeout (opref tab '#:lazy-timeout #'1)]
                    )
@@ -331,7 +332,8 @@
          [([startop:pipe-starter-op startarg ...] [joinop:pipe-joiner-op joinarg ...] ...)
           #'(rash-do-transformed-pipeline
                #:bg bg #:return-pipeline-object return-pipeline-object
-               ;#:env env #:replace-env replace-env
+               ;#:env env
+               ;#:replace-env replace-env
                #:in input #:out output #:err err-output
                (rash-transform-starter-segment startop startarg ...)
                (rash-transform-joiner-segment joinop joinarg ...)
