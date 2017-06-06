@@ -11,7 +11,9 @@
 
 (module+ for-public
   (provide
-   &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
+   &bg &pipeline-ret &env &env-replace
+   &in &< &out &> &>! &>> &err
+   &strict &permissive &lazy &lazy-timeout
    rash-do-pipeline
    ))
 
@@ -59,13 +61,20 @@
 (def-pipeline-opt &>!)
 (def-pipeline-opt &>>)
 (def-pipeline-opt &err)
-;; TODO - add one for strict/lazy/permissive status checking
+(def-pipeline-opt &strict)
+(def-pipeline-opt &permissive)
+(def-pipeline-opt &lazy)
+(def-pipeline-opt &lazy-timeout)
 
 
 (begin-for-syntax
   (define-syntax-class not-opt
-    #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
-    (pattern (~not (~or &bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)))))
+    #:literals (&bg &pipeline-ret &env &env-replace
+                    &in &out &err &< &> &>! &>>
+                    &strict &permissive &lazy &lazy-timeout)
+    (pattern (~not (~or &bg &pipeline-ret &env &env-replace
+                        &in &out &err &< &> &>! &>>
+                        &strict &permissive &lazy &lazy-timeout)))))
 
 (define (rash-read-and-line-parse src in)
   (let ([stx (rash-read-syntax src in)])
@@ -112,11 +121,20 @@
   (syntax-parse stx
     [(_ (outer-in outer-out outer-err) rash-arg ...)
      (syntax-parse #'(rash-arg ...)
-       #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
+       #:literals (&bg &pipeline-ret &env &env-replace
+                       &in &out &err &< &> &>! &>>
+                       &strict &permissive &lazy &lazy-timeout)
        [((~or (~optional (~and s-bg &bg) #:name "&bg option")
               (~optional (~and s-pr &pipeline-ret) #:name "&pipeline-ret option")
               (~optional (~seq &env s-env-list:expr) #:name "&env option")
-              (~optional (~seq &env-replace s-env-r-list:expr) #:name "&env-replace option")
+              (~optional (~seq &env-replace s-env-r-list:expr)
+                         #:name "&env-replace option")
+              (~optional (~or (~and s-strict &strict)
+                              (~and s-permissive &permissive)
+                              (~and s-lazy &lazy))
+                         #:name "&strict, &lazy, and &permissive options")
+              (~optional (~seq &lazy-timeout s-lazy-timeout)
+                         #:name "&lazy-timeout option")
               (~optional (~or (~seq &in s-in:expr)
                               (~seq &< s-<:expr))
                          #:name "&in and &< options")
@@ -131,11 +149,20 @@
          args1-head:not-opt args1 ...)
         ;; Now let's parse those in reverse at the end, so options are allowed at the beginning OR the end
         (syntax-parse (datum->syntax stx (reverse (syntax->list #'(args1-head args1 ...))))
-          #:literals (&bg &pipeline-ret &env &env-replace &in &out &err &< &> &>! &>>)
+          #:literals (&bg &pipeline-ret &env &env-replace
+                          &in &out &err &< &> &>! &>>
+                          &strict &permissive &lazy &lazy-timeout)
           [((~or (~optional (~and e-bg &bg) #:name "&bg option")
                  (~optional (~and e-pr &pipeline-ret) #:name "&pipeline-ret option")
                  (~optional (~seq e-env-list:expr &env) #:name "&env option")
-                 (~optional (~seq e-env-r-list:expr &env-replace) #:name "&env-replace option")
+                 (~optional (~seq e-env-r-list:expr &env-replace)
+                            #:name "&env-replace option")
+                 (~optional (~or (~and e-strict &strict)
+                                 (~and e-permissive &permissive)
+                                 (~and e-lazy &lazy))
+                            #:name "&strict, &lazy, and &permissive options")
+                 (~optional (~seq e-lazy-timeout &lazy-timeout)
+                            #:name "&lazy-timeout option")
                  (~optional (~or (~seq e-in:expr &in)
                                  (~seq e-<:expr &<))
                             #:name "&in and &< options")
@@ -165,6 +192,8 @@
               (noboth s-pr e-pr)
               (noboth s-env-list e-env-list)
               (noboth s-env-r-list e-env-r-list)
+              (noboth s-lazy-timeout e-lazy-timeout)
+              (noboth (s-strict s-lazy s-permissive) (e-strict e-lazy e-permissive))
               (noboth (s-in s-<) (e-in e-<))
               (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
               (noboth s-err e-err)
@@ -179,6 +208,20 @@
                                       'env-replace #,(cond [(attribute s-env-r-list)]
                                                            [(attribute e-env-r-list)]
                                                            [else #'#f])
+                                      'lazy-timeout #,(or (attribute s-lazy-timeout)
+                                                          (attribute e-lazy-timeout)
+                                                          #'1)
+                                      'strictness #,(cond
+                                                      [(or (attribute s-strict)
+                                                           (attribute e-strict))
+                                                       #''strict]
+                                                      [(or (attribute s-lazy)
+                                                           (attribute e-lazy))
+                                                       #''lazy]
+                                                      [(or (attribute s-permissive)
+                                                           (attribute e-permissive))
+                                                       #''permissive]
+                                                      [else #''lazy])
                                       'in #,(cond [(attribute s-in)]
                                                   [(attribute e-in)]
                                                   [(attribute s-<) #`(quote #,(attribute s-<))]
@@ -233,6 +276,7 @@
      #'(rash-do-transformed-pipeline
         #:bg (ropt 'bg) #:return-pipeline-object (ropt 'pipeline-ret)
         #:in (ropt 'in) #:out (ropt 'out) #:err (ropt 'err)
+        #:strictness (ropt 'strictness) #:lazy-timeout (ropt 'lazy-timeout)
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
 
@@ -259,6 +303,8 @@
                                     (list '#:bg check-expression)
                                     (list '#:env check-expression)
                                     (list '#:env-replace check-expression)
+                                    (list '#:strictness check-expression)
+                                    (list '#:lazy-timeout check-expression)
                                     )
                               #:no-duplicates? #t
                               #:incompatible '((#:in #:<) (#:out #:> #:>! #:>>))))
@@ -279,7 +325,10 @@
                    [bg (opref tab '#:bg #'#f)]
                    [return-pipeline-object (opref tab '#:return-pipeline-object #'#f)]
                    [env (opref tab '#:env #'#f)]
-                   [replace-env (opref tab '#:replace-env #'#f)])
+                   [replace-env (opref tab '#:replace-env #'#f)]
+                   [strictness (opref tab '#:strictness #''lazy)]
+                   [lazy-timeout (opref tab '#:lazy-timeout #'1)]
+                   )
        (syntax-parse rest-stx
          [([startop:pipe-starter-op startarg ...] [joinop:pipe-joiner-op joinarg ...] ...)
           #'(rash-do-transformed-pipeline
@@ -297,7 +346,10 @@
                                       #:in in
                                       #:out out
                                       #:err err
+                                      #:strictness strictness
+                                      #:lazy-timeout lazy-timeout
                                       . args)
   ;; TODO - environment extension/replacement
   (run-pipeline args #:bg bg #:return-pipeline-object return-pipeline-object
-                #:in in #:out out #:err err))
+                #:in in #:out out #:err err
+                #:strictness strictness #:lazy-timeout lazy-timeout))
