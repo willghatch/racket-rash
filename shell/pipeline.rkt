@@ -72,16 +72,21 @@
   [pipeline-has-failures? (-> pipeline? any/c)]
   [pipeline-start-ms (-> pipeline? real?)]
   [pipeline-end-ms (-> pipeline? real?)]
+  [pipeline-error-captured-stderr (-> pipeline? (or/c #f string?))]
+  [pipeline-error-argl (-> pipeline? (listof any/c))]
 
   [path-string-symbol? (-> any/c boolean?)]
+
+  [pipeline-member-spec? (-> any/c boolean?)]
+  [rename mk-pipeline-member-spec pipeline-member-spec
+          (->* ((listof any/c))
+               (#:err (or/c output-port? false/c path-string-symbol?
+                            (list/c path-string-symbol?
+                                    (or/c 'error 'append 'truncate)))
+                #:success (or/c false/c procedure? (listof any/c))
+                )
+               pipeline-member-spec?)]
   )
-
- (rename-out [mk-pipeline-member-spec pipeline-member-spec])
- ;pipeline-member-spec
- pipeline-member-spec?
-
- pipeline-error-captured-stderr
- pipeline-error-argl
 
  and/success
  or/success

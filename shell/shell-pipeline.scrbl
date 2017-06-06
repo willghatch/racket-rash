@@ -65,13 +65,21 @@ any/c]{
 Like @racket[run-pipeline], but string-ports are used as the input, output, and error ports.  It does not return until the pipeline finishes, and returns the output string.  If the pipeline has an unsuccessful status, an exception is raised (with the contents of the error port).
 }
 
-@;@defstruct[pipeline-member-spec
-@;([argl (listof any/c)]
-@;[port-err (or/c port? false/c path-string-symbol?
-@;                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))])]{
-@;@racket[argl] is the command/argument list for a member of a pipeline.  @racket[port-err] is a specification for the error port to use -- just like in the default-err argument of @racket[run-pipeline].
-@;}
+@defproc[(pipeline-member-spec? [pmspec any/c]) boolean?]{
+Is it a pipeline-member-spec?
+}
+@defproc[(pipeline-member-spec [argl any/c]
+[#:err err (or/c port? false/c path-string-symbol?
+                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
+                 hidden-default-value]
+[#:success success-pred (or/c false/c procedure? (listof any/c)) hidden-default-value])
+pipeline-member-spec?]{
+Make a pipeline-member-spec.  @racket[argl] is the command/argument list.  The first value in the list is the command, and should either be a @racket[path-string-symbol?] to a command or a function.
+@racket[err] is the error port specification for it to use.
+@racket[success-pred] is a predicate that will be applied to the return value of a pipeline member to determine its success.  Subprocesses will be considered successful if they return 0 when @racket[success-pred] is #f, or if @racket[success-pred] is a list, if they return 0 or a member of that list, or if @racket[success-pred] is a function, it will be successful if @code{(success-pred return-value)} returns a non-#f value.  Function pipeline members are always considered unsuccessful if they throw an error.  Otherwise, they are successful if @racket[success-pred] is #f, if their return is a member of @racket[success-pred] when it is a list, or when @code{(success-pred return-value)} is true when it is a function.
 
+@racket[err] and @racket[success-pred] default to values that can be overridden by the defaults set by the pipeline-running functions.  But in the end they default to current-error-port and #f.
+}
 
 @defproc[(pipeline? [p any/c]) boolean?]{
 Is it a pipeline object?
