@@ -268,16 +268,16 @@ re-appended).
 (define-pipeline-operator =non-quoting-basic-unix-pipe=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) 'default)])
+    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...))])
   #:joint
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...) 'default)]))
+    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...))]))
 
 (define-pipeline-operator =crappy-basic-unix-pipe=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) 'default)])
+    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...))])
   #:joint
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...) 'default)]))
+    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...))]))
 
