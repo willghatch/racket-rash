@@ -68,10 +68,12 @@
 
 
 (begin-for-syntax
+  (define-literal-set pipeline-opts
+    (&bg &pipeline-ret &env &env-replace
+         &in &< &out &> &>! &>> &err
+         &strict &permissive &lazy &lazy-timeout))
   (define-syntax-class not-opt
-    #:literals (&bg &pipeline-ret &env &env-replace
-                    &in &out &err &< &> &>! &>>
-                    &strict &permissive &lazy &lazy-timeout)
+    #:literal-sets (pipeline-opts)
     (pattern (~not (~or &bg &pipeline-ret &env &env-replace
                         &in &out &err &< &> &>! &>>
                         &strict &permissive &lazy &lazy-timeout)))))
@@ -121,9 +123,7 @@
   (syntax-parse stx
     [(_ (outer-in outer-out outer-err) rash-arg ...)
      (syntax-parse #'(rash-arg ...)
-       #:literals (&bg &pipeline-ret &env &env-replace
-                       &in &out &err &< &> &>! &>>
-                       &strict &permissive &lazy &lazy-timeout)
+       #:literal-sets (pipeline-opts)
        [((~or (~optional (~and s-bg &bg) #:name "&bg option")
               (~optional (~and s-pr &pipeline-ret) #:name "&pipeline-ret option")
               (~optional (~seq &env s-env-list:expr) #:name "&env option")
@@ -149,9 +149,7 @@
          args1-head:not-opt args1 ...)
         ;; Now let's parse those in reverse at the end, so options are allowed at the beginning OR the end
         (syntax-parse (datum->syntax stx (reverse (syntax->list #'(args1-head args1 ...))))
-          #:literals (&bg &pipeline-ret &env &env-replace
-                          &in &out &err &< &> &>! &>>
-                          &strict &permissive &lazy &lazy-timeout)
+          #:literal-sets (pipeline-opts)
           [((~or (~optional (~and e-bg &bg) #:name "&bg option")
                  (~optional (~and e-pr &pipeline-ret) #:name "&pipeline-ret option")
                  (~optional (~seq e-env-list:expr &env) #:name "&env option")
