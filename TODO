@@ -1,28 +1,32 @@
 Fully stable release blockers
 -----------------------------
 
-* process fd/temp-file redirects a la <() >() from bash
+* success predicates in pipeline specs -- eg. for grep returning 1
 
-* a custom exn type for unix pipeline failures?
+* alias inheritance of options -- eg. allow an alias to specify error output, success predicate, but allow any explicit settings given at the alias usage to override them.
+
+* process fd/temp-file redirects a la <() >() from bash
 
 * inspecting pipeline segments with correct compound member handling
 
-* bg issues
-** what does it mean to run with stdin in the background unless I have job control?
-** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
+* reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
 
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
 
 * review names -- pick good ones before doing any stable release
 ** 'string-port for errors -- I don't like this one
 
-* reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
+* look through TODO comments
 
 * API - be sure it's conservative enough to change implementation details (eg. for spec creation)
 * contracts - check old ones, make new ones
 * document new stuff, fix old docs
 
-* look through TODO comments
+* a custom exn type for unix pipeline failures?
+
+* bg issues
+** what does it mean to run with stdin in the background unless I have job control?
+** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
 
 
 Other todo, maybe for version 2
