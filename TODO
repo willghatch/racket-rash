@@ -16,15 +16,16 @@ Fully stable release blockers
 ** what does it mean to run with stdin in the background unless I have job control?
 ** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
 
-* initial input-port transformer to try to solve readline-port issues
-
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
 
 * review names -- pick good ones before doing any stable release
+** 'string-port for errors -- I don't like this one
 
 * reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
 
-* document new stuff
+* API - be sure it's conservative enough to change implementation details (eg. for spec creation)
+* contracts - check old ones, make new ones
+* document new stuff, fix old docs
 
 * look through TODO comments
 
@@ -51,3 +52,4 @@ Other todo, maybe for version 2
     the shell worked on Windows too, so if I can reasonably avoid relying on
     fork, I should.
 
+* initial input-port transformer to try to solve readline-port issues -- there doesn't seem to be any way to get the real stdin port from the readline port, so this is hopeless for the moment.

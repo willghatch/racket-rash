@@ -41,30 +41,50 @@
 
   ;; No error if the last pipeline member is fine
   (check-equal? "hello\n"
-                (run-pipeline/out (list (λ () (error 'test-case "exceptional!")))
+                (run-pipeline/out #:strictness 'permissive
+                                  (list (λ () (error 'test-case "exceptional!")))
                                   '(echo hello)))
   (check-exn exn?
-             (λ () (run-pipeline/out #:status-and? #t
+             (λ () (run-pipeline/out #:strictness 'strict
                                      (list (λ () (error 'test-case "exceptional!")))
                                      '(echo hello))))
 
   ;; check stdout flag for functions
   (check-regexp-match "^my-test-func: exceptional!"
-                      (run-pipeline/out (pipeline-member-spec
+                      (run-pipeline/out #:strictness 'permissive
+                                        (pipeline-member-spec
                                          (list (λ () (error 'my-test-func "exceptional!")))
                                          'stdout)
                                         (list (λ ()
                                                 (display (port->string (current-input-port)))
                                                 0))))
   (check-equal? "hello\n"
-                (run-pipeline/out (list (λ () (error 'test-case "exceptional!")))
+                (run-pipeline/out #:strictness 'permissive
+                                  (list (λ () (error 'test-case "exceptional!")))
                                   '(echo hello)))
+
+  (check-equal? "hello\n"
+                (run-pipeline/out #:strictness 'lazy
+                                  #:lazy-timeout 0.1
+                                  (list (λ ()
+                                          (sleep 0.2)
+                                          (error 'test-case "exceptional!")))
+                                  '(echo hello)))
+
+  (check-exn exn?
+             (λ ()
+               (run-pipeline/out #:strictness 'strict
+                                 #:lazy-timeout 0.1
+                                 (list (λ ()
+                                         (sleep 0.2)
+                                         (error 'test-case "exceptional!")))
+                                 '(echo hello))))
 
   (check-pred pipeline?
               (run-pipeline #:background? #t
                             #:in #f
                             #:out #f
-                            #:default-err #f
+                            #:err #f
                             '(echo hello)))
   (check-equal?
    (with-output-to-string

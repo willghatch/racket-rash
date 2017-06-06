@@ -98,15 +98,18 @@
       (open-input-string (~a arg))))
 
 (define (pipeline-drive-segment specs arg starter? init-in-port final-out-port
-                                default-err)
+                                default-err strictness lazy-timeout)
   (cond [(u-pipeline-member-spec? (car specs))
          (drive-unix-segment specs
                              (if starter? init-in-port (->iport arg))
                              final-out-port
-                             default-err)]
+                             default-err
+                             strictness
+                             lazy-timeout)]
         [else (drive-obj-segment specs arg starter?)]))
 
-(define (drive-unix-segment specs in-port final-out-port default-err)
+(define (drive-unix-segment specs in-port final-out-port
+                            default-err strictness lazy-timeout)
   ;; TODO - There is probably a better way to handle this error.
   ;;        The things that can go wrong here are alias resolution and
   ;;        not having an executable for the command.
@@ -124,7 +127,9 @@
     (define sub-pipe-obj (apply u-run-pipeline
                                 #:in in-port
                                 #:out use-out
-                                #:default-err default-err
+                                #:err default-err
+                                #:strictness strictness
+                                #:lazy-timeout lazy-timeout
                                 #:background? #t
                                 ;; TODO - status options, etc
                                 u-specs
@@ -150,11 +155,13 @@
                       #:in [init-in-port (open-input-string "")]
                       #:out [final-output-port-or-transformer
                              default-output-transformer]
-                      #:default-err [default-err 'string-port]
+                      #:err [default-err 'string-port]
+                      #:strictness [strictness 'lazy]
+                      #:lazy-timeout [lazy-timeout 1]
                       #:bg [bg #f]
                       ;; TODO - better name
                       #:return-pipeline-object [return-pipeline-object #f])
-  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err))
+  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err strictness lazy-timeout))
   (when (not bg) (pipeline-wait pline))
   (if (or bg return-pipeline-object)
       pline
@@ -180,7 +187,8 @@
           [else (error 'run-pipeline "pipeline error - TODO - give real info")])
         )))
 
-(define (-run-pipeline specs init-in-port final-out-transformer default-err)
+(define (-run-pipeline specs init-in-port final-out-transformer
+                       default-err strictness lazy-timeout)
   ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
   ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
   ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
@@ -208,7 +216,9 @@
                             starter?
                             init-in-port
                             final-out-port
-                            default-err))
+                            default-err
+                            strictness
+                            lazy-timeout))
 
   (define (runner-func)
     (define (rec last-seg specs)

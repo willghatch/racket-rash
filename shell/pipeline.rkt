@@ -23,10 +23,10 @@
                       #:out (or/c output-port? false/c path-string-symbol?
                                   (list/c path-string-symbol?
                                           (or/c 'error 'append 'truncate)))
-                      #:end-exit-flag any/c
-                      #:status-and? any/c
+                      #:strictness (or/c 'strict 'lazy 'permissive)
+                      #:lazy-timeout real?
                       #:background? any/c
-                      #:default-err (or/c output-port? false/c path-string-symbol?
+                      #:err (or/c output-port? false/c path-string-symbol?
                                           (list/c path-string-symbol?
                                                   (or/c 'error 'append 'truncate)))
                       )
@@ -34,8 +34,8 @@
                      pipeline?)]
   [run-pipeline/out (->* ()
                          (#:in (or/c input-port? false/c path-string-symbol?)
-                          #:end-exit-flag any/c
-                          #:status-and? any/c)
+                          #:strictness (or/c 'strict 'lazy 'permissive)
+                          #:lazy-timeout real?)
                          #:rest (listof (or/c list? pipeline-member-spec?))
                          any/c)]
   [run-pipeline/return (->* ()
@@ -43,16 +43,16 @@
                              #:out (or/c output-port? false/c path-string-symbol?
                                          (list/c path-string-symbol?
                                                  (or/c 'error 'append 'truncate)))
-                             #:end-exit-flag any/c
-                             #:status-and? any/c
+                             #:strictness (or/c 'strict 'lazy 'permissive)
+                             #:lazy-timeout real?
                              #:failure-as-exn? any/c
-                             #:default-err (or/c output-port? false/c path-string-symbol?
+                             #:err (or/c output-port? false/c path-string-symbol?
                                                  (list/c path-string-symbol?
                                                          (or/c 'error 'append 'truncate)))
                              )
                             #:rest (listof (or/c list? pipeline-member-spec?))
                             any/c)]
-  [struct pipeline-member-spec ([argl (listof any/c)]
+  #;[struct pipeline-member-spec ([argl (listof any/c)]
                                 [port-err
                                  (or/c output-port? false/c
                                        path-string-symbol?
@@ -73,6 +73,11 @@
 
   [path-string-symbol? (-> any/c boolean?)]
   )
+
+ ;; this WAS struct-out, but should not be.
+ pipeline-member-spec
+ pipeline-member-spec?
+
  pipeline-error-captured-stderr
  pipeline-error-argl
 
@@ -132,8 +137,14 @@
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline-member
-  (subproc-or-thread port-err thread-ret-box thread-exn-box argl stderr-capture-port)
-  #:transparent)
+  (subproc-or-thread port-err thread-ret-box thread-exn-box
+                     argl stderr-capture-port killed-box)
+  #:property prop:evt (λ (pm)
+                        (let ([sema (make-semaphore)])
+                          (thread (λ ()
+                                    (pipeline-member-wait pm)
+                                    (semaphore-post sema)))
+                          (wrap-evt sema (λ _ pm)))))
 (struct pipeline-member-spec
   (argl port-err)
   #:transparent)
@@ -181,10 +192,13 @@
 
 (define (pipeline-member-kill m)
   (if (pipeline-member-process? m)
-      (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
+      (when (pipeline-member-running? m)
+        (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
+        (set-box! (pipeline-member-killed-box #t)))
       (let ([thread (pipeline-member-subproc-or-thread m)])
         (when (not (thread-dead? thread))
           (kill-thread (pipeline-member-subproc-or-thread m))
+          (set-box! (pipeline-member-killed-box m) #t)
           (set-box! (pipeline-member-thread-exn-box m) 'killed)))))
 
 (define (pipeline-member-running? m)
@@ -194,7 +208,9 @@
 
 (define (pipeline-member-status m)
   (if (pipeline-member-process? m)
-      (subprocess-status (pipeline-member-subproc-or-thread m))
+      (if (unbox (pipeline-member-killed-box m))
+          'killed
+          (subprocess-status (pipeline-member-subproc-or-thread m)))
       (let* ([dead (thread-dead? (pipeline-member-subproc-or-thread m))]
              [ret (unbox (pipeline-member-thread-ret-box m))]
              [err (unbox (pipeline-member-thread-exn-box m))])
@@ -208,15 +224,18 @@
       (get-output-string (pipeline-member-stderr-capture-port m))
       #f))
 
-(define (pipeline-member-success? m)
-  (if (pipeline-member-process? m)
-      (equal? 0 (subprocess-status (pipeline-member-subproc-or-thread m)))
-      (not (unbox (pipeline-member-thread-exn-box m)))))
+(define (pipeline-member-success? m #:strict? [strict? #f])
+  (let* ([killed? (unbox (pipeline-member-killed-box m))]
+         [ignore-real-status (if strict? #f killed?)])
+    (or ignore-real-status
+        (if (pipeline-member-process? m)
+            (equal? 0 (subprocess-status (pipeline-member-subproc-or-thread m)))
+            (not (unbox (pipeline-member-thread-exn-box m)))))))
 
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline
-  (port-to port-from members end-exit-flag start-bg? status-and? from-port-copier err-port-copiers)
+  (port-to port-from members start-bg? strictness from-port-copier err-port-copiers lazy-timeout)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -259,9 +278,17 @@
     (thread-wait t)))
 
 (define (pipeline-wait pline)
-  (if (pipeline-status-and? pline)
-      (pipeline-wait/all pline)
-      (pipeline-wait/end pline)))
+  (cond [(equal? (pipeline-strictness pline) 'strict)
+         (pipeline-wait/all pline)]
+        [(equal? (pipeline-strictness pline) 'permissive)
+         (pipeline-wait/end pline)]
+        [else
+         (pipeline-wait/end pline)
+         ;; wait for up to timeout msecs
+         (let ([alarm (alarm-evt (* 1000 (pipeline-lazy-timeout pline)))])
+           (let loop ([sync-res #f])
+             (when (not (equal? sync-res alarm))
+               (loop (apply sync alarm (pipeline-members pline))))))]))
 
 (define (pipeline-kill pline)
   (for ([m (pipeline-members pline)])
@@ -271,73 +298,48 @@
   (for/or ([m (pipeline-members pline)])
     (pipeline-member-running? m)))
 
-#|
-TODO - pipeline status should have a special value for pipeline
-members that have been killed.  Also, it should count as success for
-pipelines where it is set to always kill when the end member exits
-|#
 (define (pipeline-status/list pline)
   (pipeline-wait/all pline)
   (map pipeline-member-status (pipeline-members pline)))
-(define (pipeline-status/and pline)
-  (pipeline-wait/all pline)
-  (let ([first-error (ormap (λ (m) (and (not (pipeline-member-success? m))
-                                        (pipeline-member-status m)))
-                            (pipeline-members pline))])
-    (or first-error
-        (pipeline-member-status (car (reverse (pipeline-members pline)))))))
-(define (pipeline-status/end pline)
-  (pipeline-wait/end pline)
-  (pipeline-member-status (car (reverse (pipeline-members pline)))))
-(define (pipeline-status pline)
-  (if (pipeline-status-and? pline)
-      (pipeline-status/and pline)
-      (pipeline-status/end pline)))
-
-(define (pipeline-error-captured-stderr/and pline)
-  (pipeline-wait/all pline)
-  (ormap (λ (m) (and (not (pipeline-member-success? m))
-                     (pipeline-member-captured-stderr m)))
-         (pipeline-members pline)))
-(define (pipeline-error-captured-stderr/end pline)
-  (pipeline-wait pline)
-  (pipeline-member-captured-stderr (car (reverse (pipeline-members pline)))))
-(define (pipeline-error-captured-stderr pline)
-  (if (pipeline-status-and? pline)
-      (pipeline-error-captured-stderr/and pline)
-      (pipeline-error-captured-stderr/end pline)))
-
-(define (pipeline-error-argl/and pline)
-  (pipeline-wait/all pline)
-  (ormap (λ (m) (and (not (pipeline-member-success? m))
-                     (pipeline-member-argl m)))
-         (pipeline-members pline)))
-(define (pipeline-error-argl/end pline)
-  (pipeline-wait pline)
-  (pipeline-member-argl (car (reverse (pipeline-members pline)))))
-(define (pipeline-error-argl pline)
-  (if (pipeline-status-and? pline)
-      (pipeline-error-argl/and pline)
-      (pipeline-error-argl/end pline)))
-
-(define (pipeline-has-failures? pline)
-  (ormap (λ (m) (not (pipeline-member-success? m)))
-         (pipeline-members pline)))
 
 (define (pipeline-success? pline)
   (pipeline-wait pline)
-  (if (pipeline-status-and? pline)
+  (define strictness (pipeline-strictness pline))
+  (define strict? (equal? strictness 'strict))
+  (if (equal? 'permissive strictness)
+      (pipeline-member-success? (car (reverse (pipeline-members pline))))
       (for/and ([m (pipeline-members pline)])
-        (pipeline-member-success? m))
-      (pipeline-member-success? (car (reverse (pipeline-members pline))))))
+        (pipeline-member-success? m #:strict? strict?))))
+
+(define ((pipeline-success-based-info-func accessor) pline)
+  (pipeline-wait pline)
+  (define strictness (pipeline-strictness pline))
+  (define strict? (equal? strictness 'strict))
+  (if (equal? 'permissive strictness)
+      (accessor (car (reverse (pipeline-members pline))))
+      (for/or ([m (pipeline-members pline)])
+        (and (not (pipeline-member-success? m #:strict? strict?))
+             (accessor m)))))
+
+(define pipeline-status
+  (pipeline-success-based-info-func pipeline-member-status))
+(define pipeline-error-captured-stderr
+  (pipeline-success-based-info-func pipeline-member-captured-stderr))
+(define pipeline-error-argl
+  (pipeline-success-based-info-func pipeline-member-argl))
+
+(define (pipeline-has-failures? pline)
+  (ormap (λ (m) (not (pipeline-member-success?
+                      m #:strict? (equal? 'strict (pipeline-strictness pline)))))
+         (pipeline-members pline)))
 
 
-(define (make-pipeline-spec #:in [in (current-input-port)]
-                            #:out [out (current-output-port)]
-                            #:end-exit-flag [end-exit-flag #t]
-                            #:status-and? [status-and? #f]
-                            #:background? [bg? #f]
-                            #:default-err [default-err (current-error-port)]
+(define (make-pipeline-spec #:in in
+                            #:out out
+                            #:strictness strictness
+                            #:background? bg?
+                            #:err default-err
+                            #:lazy-timeout lazy-timeout
                             members)
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
@@ -352,41 +354,41 @@ pipelines where it is set to always kill when the end member exits
                         members1)])
     (pipeline in out
               members2
-              end-exit-flag bg? status-and?
-              #f #f)))
+              bg? strictness
+              #f #f 0)))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
-                      #:end-exit-flag [end-exit-flag #t]
-                      #:status-and? [status-and? #f]
+                      #:strictness [strictness 'lazy]
                       #:background? [bg? #f]
                       ;; TODO -- allow 'string-port
-                      #:default-err [default-err (current-error-port)]
+                      #:err [default-err (current-error-port)]
+                      #:lazy-timeout [lazy-timeout 1]
                       . members)
   (let ([pline
          (run-pipeline/spec
           (make-pipeline-spec #:in in #:out out
-                              #:end-exit-flag end-exit-flag
-                              #:status-and? status-and?
+                              #:strictness strictness
                               #:background? bg?
-                              #:default-err default-err
+                              #:err default-err
+                              #:lazy-timeout lazy-timeout
                               members))])
     (if bg?
         pline
         (begin (pipeline-wait pline)
                pline))))
 
-(define (run-pipeline/out #:end-exit-flag [end-exit-flag #t]
-                          #:status-and? [status-and? #f]
+(define (run-pipeline/out #:strictness [strictness 'lazy]
+                          #:lazy-timeout [lazy-timeout 1]
                           #:in [in (open-input-string "")]
                           . members)
   (let* ([out (open-output-string)]
          [err (open-output-string)]
          [pline-spec (make-pipeline-spec #:in in #:out out
-                                         #:end-exit-flag end-exit-flag
-                                         #:status-and? status-and?
+                                         #:strictness strictness
+                                         #:lazy-timeout lazy-timeout
                                          #:background? #f
-                                         #:default-err err
+                                         #:err err
                                          members)]
          [pline (parameterize ([current-output-port out]
                                [current-error-port err]
@@ -404,16 +406,16 @@ pipelines where it is set to always kill when the end member exits
 
 (define (run-pipeline/return #:in [in (current-input-port)]
                              #:out [out (current-output-port)]
-                             #:end-exit-flag [end-exit-flag #t]
-                             #:status-and? [status-and? #f]
-                             #:default-err [default-err (current-error-port)]
+                             #:strictness [strictness #f]
+                             #:lazy-timeout [lazy-timeout 1]
+                             #:err [default-err (current-error-port)]
                              #:failure-as-exn? [failure-as-exn? #t]
                              . members)
   (let ([pline (apply run-pipeline
                       #:in in #:out out
-                      #:default-err default-err
-                      #:end-exit-flag end-exit-flag
-                      #:status-and? status-and?
+                      #:err default-err
+                      #:strictness strictness
+                      #:lazy-timeout lazy-timeout
                       #:background? #f
                       members)])
     (pipeline-wait pline)
@@ -429,8 +431,8 @@ pipelines where it is set to always kill when the end member exits
 (define (run-pipeline/spec pipeline-spec)
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [members (map resolve-spec members-pre-resolve)]
-         [kill-flag (pipeline-end-exit-flag pipeline-spec)]
-         [status-and? (pipeline-status-and? pipeline-spec)]
+         [strictness (pipeline-strictness pipeline-spec)]
+         [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-file-port (cond [(equal? to-port 'null) (open-input-string "")]
@@ -540,14 +542,8 @@ pipelines where it is set to always kill when the end member exits
                                  (close-output-port to-out)))
                        #f)
                      to-out)]
-         [pline (pipeline to-ret from-ret run-members kill-flag bg? status-and?
-                          from-port-copier err-port-copiers)]
-         [killer (if (or (equal? kill-flag 'always)
-                         (and kill-flag
-                              (not status-and?)))
-                     (thread (λ () (pipeline-wait pline)
-                                (pipeline-kill pline)))
-                     #f)]
+         [pline (pipeline to-ret from-ret run-members bg? strictness
+                          from-port-copier err-port-copiers lazy-timeout)]
          [closer (if (not (empty? ports-to-close))
                      (thread (λ ()
                                (pipeline-wait pline)
@@ -555,9 +551,11 @@ pipelines where it is set to always kill when the end member exits
                                  (when (output-port? p) (close-output-port p))
                                  (when (input-port? p) (close-input-port p)))))
                      #f)]
-         [pline-final (struct-copy pipeline pline
-                                   [end-exit-flag killer])])
-    pline-final))
+         [killer (if (not (equal? strictness 'strict))
+                     (thread (λ () (pipeline-wait pline)
+                                (pipeline-kill pline)))
+                     #f)])
+    pline))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   #| This has to be careful about the it starts things in for proper wiring.
@@ -713,7 +711,8 @@ pipelines where it is set to always kill when the end member exits
      (pmi-thread-ret-box m)
      (pmi-thread-exn-box m)
      (pmi-argl m)
-     (pmi-capture-port-err m)))
+     (pmi-capture-port-err m)
+     (box #f)))
 
   (define out-members (map finalize-member r3-members))
   (list out-members to-port from-port err-port-copy-threads))
