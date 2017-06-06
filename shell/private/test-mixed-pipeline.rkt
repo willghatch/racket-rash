@@ -18,8 +18,8 @@
      ;(u-pipeline-member-spec (list "grep" "-i" "ing") 'null)
      (composite-pipeline-member-spec
       (list
-       (u-pipeline-member-spec (list my-grep "ING") 'null)
-       (u-pipeline-member-spec (list my-grep "EST") 'null)))))
+       (u-pipeline-member-spec (list my-grep "ING") #:err 'null)
+       (u-pipeline-member-spec (list my-grep "EST") #:err 'null)))))
    "TESTING")
 
   )

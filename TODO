@@ -1,9 +1,9 @@
 Fully stable release blockers
 -----------------------------
 
-* success predicates in pipeline specs -- eg. for grep returning 1
+* use properties rather than structs for alias funcs
 
-* alias inheritance of options -- eg. allow an alias to specify error output, success predicate, but allow any explicit settings given at the alias usage to override them.
+* maybe get rid of same-thread funcs
 
 * process fd/temp-file redirects a la <() >() from bash
 

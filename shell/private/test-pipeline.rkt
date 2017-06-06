@@ -54,7 +54,7 @@
                       (run-pipeline/out #:strictness 'permissive
                                         (pipeline-member-spec
                                          (list (λ () (error 'my-test-func "exceptional!")))
-                                         'stdout)
+                                         #:err 'stdout)
                                         (list (λ ()
                                                 (display (port->string (current-input-port)))
                                                 0))))

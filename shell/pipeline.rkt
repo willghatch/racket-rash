@@ -76,8 +76,8 @@
   [path-string-symbol? (-> any/c boolean?)]
   )
 
- ;; this WAS struct-out, but should not be.
- pipeline-member-spec
+ (rename-out [mk-pipeline-member-spec pipeline-member-spec])
+ ;pipeline-member-spec
  pipeline-member-spec?
 
  pipeline-error-captured-stderr
@@ -94,16 +94,27 @@
   (if (pm-spec-alias? pm-spec)
       (let* ([old-argl (pipeline-member-spec-argl pm-spec)]
              [old-cmd (car old-argl)]
-             [new-argl (apply old-cmd (cdr old-argl))]
-             [error? (if (or (not (list? new-argl)) (null? new-argl))
-                         (error 'resolve-alias "alias did not produce an argument list")
-                         #f)]
-             [new-cmd (car new-argl)]
-             [self-alias? (if (equal? old-cmd new-cmd)
-                              (error 'resolve-alias "alias ~a resolves to itself." new-cmd)
-                              #f)])
-        (struct-copy pipeline-member-spec pm-spec
-                     [argl new-argl]))
+             [new-argl-or-spec (apply old-cmd (cdr old-argl))]
+             [new-spec (cond [(and (list? new-argl-or-spec)
+                                   (not (null? new-argl-or-spec)))
+                              (mk-pipeline-member-spec new-argl-or-spec)]
+                             [(pipeline-member-spec? new-argl-or-spec)
+                              new-argl-or-spec]
+                             [else
+                              (error
+                               'resolve-alias
+                               "pipeline alias did not produce an argument list")])]
+             [old-err (pipeline-member-spec-port-err pm-spec)]
+             [use-err (if (default-option? old-err)
+                          (pipeline-member-spec-port-err new-spec)
+                          old-err)]
+             [old-success (pipeline-member-spec-success-pred pm-spec)]
+             [use-success (if (default-option? old-success)
+                              (pipeline-member-spec-success-pred new-spec)
+                              old-success)])
+        (mk-pipeline-member-spec (pipeline-member-spec-argl new-spec)
+                                 #:err use-err
+                                 #:success use-success))
       pm-spec))
 
 (define (resolve-pipeline-member-spec-path pm-spec)
@@ -125,31 +136,52 @@
               (string-append (~a cmd) ".exe")))
         (error 'resolve-command-path "can't find executable for ~s" cmd))))
 
+(define (resolve-spec-defaults spec)
+  (mk-pipeline-member-spec
+   (pipeline-member-spec-argl spec)
+   #:err (let ([e (pipeline-member-spec-port-err spec)])
+           (if (default-option? e) (current-error-port) e))
+   #:success (let ([s (pipeline-member-spec-success-pred spec)])
+               (if (default-option? s) #f s))))
+
 (define (resolve-spec pm-spec)
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
+         [bad-argl? (when (or (not (list? argl))
+                              (null? argl))
+                      (error 'resolve-spec
+                             "pipeline spec had an empty command/argument list"))]
          [cmd (first argl)])
     (cond
       [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
-      [(symbol? cmd)
-       (resolve-pipeline-member-spec-path pm-spec)]
+      [(path-string-symbol? cmd)
+       (resolve-spec-defaults
+        (resolve-pipeline-member-spec-path pm-spec))]
       ;; Note that paths are safe from further resolution -- an alias
       ;; chain should always end with a path.
-      [else pm-spec])))
+      [else (resolve-spec-defaults pm-spec)])))
 
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline-member
   (subproc-or-thread port-err thread-ret-box thread-exn-box
-                     argl stderr-capture-port killed-box)
+                     argl stderr-capture-port killed-box
+                     success-pred)
   #:property prop:evt (λ (pm)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
                                     (pipeline-member-wait pm)
                                     (semaphore-post sema)))
                           (wrap-evt sema (λ _ pm)))))
+(struct default-option ())
+
 (struct pipeline-member-spec
-  (argl port-err)
+  (argl port-err success-pred)
   #:transparent)
+(define (mk-pipeline-member-spec argl
+                                 #:err [port-err (default-option)]
+                                 #:success [success-pred (default-option)])
+  (pipeline-member-spec argl port-err success-pred))
+
 (struct alias-func
   (func)
   #:property prop:procedure (struct-field-index func)
@@ -228,11 +260,17 @@
 
 (define (pipeline-member-success? m #:strict? [strict? #f])
   (let* ([killed? (unbox (pipeline-member-killed-box m))]
-         [ignore-real-status (if strict? #f killed?)])
+         [ignore-real-status (if strict? #f killed?)]
+         [success-pred (pipeline-member-success-pred m)]
+         [success-pred+ (or success-pred (λ (v) (equal? 0 v)))])
     (or ignore-real-status
         (if (pipeline-member-process? m)
-            (equal? 0 (subprocess-status (pipeline-member-subproc-or-thread m)))
-            (not (unbox (pipeline-member-thread-exn-box m)))))))
+            (success-pred+ (subprocess-status (pipeline-member-subproc-or-thread m)))
+            (let ([no-error (not (unbox (pipeline-member-thread-exn-box m)))])
+              (if success-pred
+                  (and no-error
+                       (success-pred (unbox (pipeline-member-thread-ret-box m))))
+                  no-error))))))
 
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -363,16 +401,11 @@
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
                               m
-                              (pipeline-member-spec m default-err)))
-                        members)]
-         [members2 (map (λ (m)
-                          (if (equal? 'default (pipeline-member-spec-port-err m))
-                              (struct-copy pipeline-member-spec m
-                                           [port-err default-err])
-                              m))
-                        members1)])
+                              (mk-pipeline-member-spec m #:err default-err
+                                                       #:success (default-option))))
+                        members)])
     (pipeline in out
-              members2
+              members1
               bg? strictness
               'from-port-copier 'err-port-copiers
               lazy-timeout
@@ -600,7 +633,8 @@
   (struct pmi
     ;; pmi for pipeline-member-intermediate -- has info important for running
     ;; things that I don't want to expose in the final output.
-    (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box argl capture-port-err)
+    (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box
+             argl capture-port-err success-pred)
     #:transparent)
   (define (pmi-process? pmember)
     (and (pmi? pmember) (subprocess? (pmi-subproc-or-thread pmember))))
@@ -634,14 +668,21 @@
                                       (string-port? err-spec))
                                  err-spec
                                  #f)]
-                [argl (pipeline-member-spec-argl m)])
+                [argl (pipeline-member-spec-argl m)]
+                [success-pred* (pipeline-member-spec-success-pred m)]
+                [success-pred (cond [(list? success-pred*)
+                                     (λ (v) (or (equal? 0 v)
+                                                (member v success-pred*)))]
+                                    [(procedure? success-pred*) success-pred*]
+                                    [else #f])])
            (let-values ([(sproc from to err-from)
                          (subprocess+ argl
                                       #:err err-to-send
                                       #:in to-spec
                                       #:out from-spec)])
              (when (and to-spec (> i 0)) (close-input-port to-spec))
-             (let ([out-member (pmi to from err-from sproc #f #f argl capture-err)])
+             (let ([out-member (pmi to from err-from sproc #f #f argl
+                                    capture-err success-pred)])
                (values
                 (cons out-member m-outs)
                 (cons (if (and err-spec err-from)
@@ -673,6 +714,11 @@
                 [capture-err (and (output-port? err-spec)
                                   (string-port? err-spec)
                                   err-spec)]
+                [success-pred* (pipeline-member-spec-success-pred m)]
+                [success-pred (cond [(list? success-pred*)
+                                     (λ (v) (member v success-pred*))]
+                                    [(procedure? success-pred*) success-pred*]
+                                    [else #f])]
                 [argl (pipeline-member-spec-argl m)])
            (let-values ([(to-use to-ret)
                          (cond
@@ -703,7 +749,8 @@
                              (thread (λ () #f)))
                            (thread (mk-run-thunk m err-box ret-box))))]
                     [ret-member (pmi to-ret from-ret err-ret
-                                     ret-thread ret-box err-box argl capture-err)])
+                                     ret-thread ret-box err-box argl
+                                     capture-err success-pred)])
                (cons ret-member m-outs))))]
         [else (cons m m-outs)])))
 
@@ -736,7 +783,8 @@
      (pmi-thread-exn-box m)
      (pmi-argl m)
      (pmi-capture-port-err m)
-     (box #f)))
+     (box #f) ; killed-box
+     (pmi-success-pred m)))
 
   (define out-members (map finalize-member r3-members))
   (list out-members to-port from-port err-port-copy-threads))
