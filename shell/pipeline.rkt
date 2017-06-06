@@ -70,6 +70,8 @@
   [pipeline-status/list (-> pipeline? (listof any/c))]
   [pipeline-success? (-> pipeline? any/c)]
   [pipeline-has-failures? (-> pipeline? any/c)]
+  [pipeline-start-ms (-> pipeline? real?)]
+  [pipeline-end-ms (-> pipeline? real?)]
 
   [path-string-symbol? (-> any/c boolean?)]
   )
@@ -235,7 +237,9 @@
 ;;;; Pipelines ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (struct pipeline
-  (port-to port-from members start-bg? strictness from-port-copier err-port-copiers lazy-timeout)
+  (port-to port-from members start-bg? strictness
+           from-port-copier err-port-copiers lazy-timeout
+           start-ms end-ms-box cleaner)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -259,13 +263,29 @@
 (define (pipeline-err-ports pline)
   (map pipeline-member-port-err (pipeline-members pline)))
 
-(define (pipeline-wait/all pline)
+(define (pipeline-end-ms pline)
+  (pipeline-wait pline)
+  (unbox (pipeline-end-ms-box pline)))
+
+(define (pipeline-wait/end/internal pline)
+  (pipeline-member-wait (car (reverse (pipeline-members pline)))))
+(define (pipeline-wait/all/internal pline)
   (for ([m (pipeline-members pline)])
-    (pipeline-member-wait m))
-  (pipeline-wait-port-copy/all pline))
-(define (pipeline-wait/end pline)
-  (pipeline-member-wait (car (reverse (pipeline-members pline))))
-  (pipeline-wait-port-copy/end pline))
+    (pipeline-member-wait m)))
+
+(define (pipeline-wait/internal pline)
+  (cond [(equal? (pipeline-strictness pline) 'strict)
+         (pipeline-wait/all/internal pline)]
+        [(equal? (pipeline-strictness pline) 'permissive)
+         (pipeline-wait/end/internal pline)]
+        [else
+         (pipeline-wait/end/internal pline)
+         ;; wait for up to timeout msecs
+         (let ([alarm (alarm-evt (* 1000 (pipeline-lazy-timeout pline)))])
+           (let loop ([sync-res #f])
+             (when (not (equal? sync-res alarm))
+               (loop (apply sync alarm (pipeline-members pline))))))]))
+
 (define (pipeline-wait-port-copy/end pline)
   (define ts (filter thread? (list (pipeline-from-port-copier pline)
                                    (first (reverse (pipeline-err-port-copiers pline))))))
@@ -277,18 +297,17 @@
   (for ([t ts])
     (thread-wait t)))
 
+(define (pipeline-wait-cleaner pline all?)
+  (pipeline-wait/internal pline)
+  (if all?
+      (pipeline-wait-port-copy/all pline)
+      (pipeline-wait-port-copy/end pline))
+  (thread-wait (pipeline-cleaner pline)))
+
 (define (pipeline-wait pline)
-  (cond [(equal? (pipeline-strictness pline) 'strict)
-         (pipeline-wait/all pline)]
-        [(equal? (pipeline-strictness pline) 'permissive)
-         (pipeline-wait/end pline)]
-        [else
-         (pipeline-wait/end pline)
-         ;; wait for up to timeout msecs
-         (let ([alarm (alarm-evt (* 1000 (pipeline-lazy-timeout pline)))])
-           (let loop ([sync-res #f])
-             (when (not (equal? sync-res alarm))
-               (loop (apply sync alarm (pipeline-members pline))))))]))
+  (if (equal? (pipeline-strictness pline) 'permissive)
+      (pipeline-wait-cleaner pline #f)
+      (pipeline-wait-cleaner pline #t)))
 
 (define (pipeline-kill pline)
   (for ([m (pipeline-members pline)])
@@ -299,7 +318,7 @@
     (pipeline-member-running? m)))
 
 (define (pipeline-status/list pline)
-  (pipeline-wait/all pline)
+  (pipeline-wait pline)
   (map pipeline-member-status (pipeline-members pline)))
 
 (define (pipeline-success? pline)
@@ -355,7 +374,9 @@
     (pipeline in out
               members2
               bg? strictness
-              #f #f 0)))
+              'from-port-copier 'err-port-copiers
+              lazy-timeout
+              'start-ms 'end-ms-box 'cleaner)))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
@@ -542,20 +563,23 @@
                                  (close-output-port to-out)))
                        #f)
                      to-out)]
+         [end-time-box (box #f)]
          [pline (pipeline to-ret from-ret run-members bg? strictness
-                          from-port-copier err-port-copiers lazy-timeout)]
-         [closer (if (not (empty? ports-to-close))
-                     (thread (λ ()
-                               (pipeline-wait pline)
-                               (for ([p ports-to-close])
-                                 (when (output-port? p) (close-output-port p))
-                                 (when (input-port? p) (close-input-port p)))))
-                     #f)]
-         [killer (if (not (equal? strictness 'strict))
-                     (thread (λ () (pipeline-wait pline)
-                                (pipeline-kill pline)))
-                     #f)])
-    pline))
+                          from-port-copier err-port-copiers lazy-timeout
+                          (current-inexact-milliseconds) end-time-box
+                          'cleaner-goes-here)]
+         [cleanup-thread
+          (thread (λ ()
+                    (pipeline-wait/internal pline)
+                    (for ([p ports-to-close])
+                      (when (output-port? p) (close-output-port p))
+                      (when (input-port? p) (close-input-port p)))
+                    (when (not (equal? strictness 'strict))
+                      (pipeline-kill pline))
+                    (set-box! end-time-box
+                              (current-inexact-milliseconds))))]
+         [pline-final (struct-copy pipeline pline [cleaner cleanup-thread])])
+    pline-final))
 
 (define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
   #| This has to be careful about the it starts things in for proper wiring.
