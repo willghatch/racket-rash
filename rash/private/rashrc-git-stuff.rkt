@@ -49,7 +49,7 @@
   (let ([pline (run-pipeline '(git diff --quiet --ignore-submodules HEAD)
                              #:in 'null
                              #:out 'null
-                             #:default-err 'null
+                             #:err 'null
                              )])
     (not (pipeline-success? pline))))
 

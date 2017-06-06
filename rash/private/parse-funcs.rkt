@@ -300,4 +300,4 @@
                                       . args)
   ;; TODO - environment extension/replacement
   (run-pipeline args #:bg bg #:return-pipeline-object return-pipeline-object
-                #:in in #:out out #:default-err err))
+                #:in in #:out out #:err err))
