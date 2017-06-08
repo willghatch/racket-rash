@@ -18,6 +18,7 @@
  =object-pipe/left=
  =object-pipe/expression=
 
+ =fors=
  =for/list=
 
  =non-quoting-basic-unix-pipe=
@@ -239,29 +240,24 @@ re-appended).
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
 
-(define-syntax (def-forpipe stx)
-  (syntax-parse stx
-    [(_ name for-stx)
-     #'(define-pipeline-operator name
-         #:joint
-         (syntax-parser
-           [(_ arg ...+)
-            (expand-pipeline-arguments
-             #'(arg (... ...))
-             #'for-iter
-             (syntax-parser
-               [(#t narg (... ...))
-                #'(obj-pipeline-member-spec (λ (prev-ret)
-                                              (for-stx ([for-iter prev-ret])
-                                                       (narg (... ...)))))]
-               [(#f narg (... ...))
-                #'(obj-pipeline-member-spec (λ (prev-ret)
-                                              (for-stx ([for-iter prev-ret])
-                                                       (narg (... ...) for-iter))))]))]))]))
+(define-pipeline-operator =fors=
+  #:joint
+  (syntax-parser
+    [( _ for-macro arg ...+)
+     (expand-pipeline-arguments
+      #'(arg ...)
+      #'for-iter
+      (syntax-parser
+        [(#t narg ...)
+         #'(obj-pipeline-member-spec (λ (prev-ret)
+                                       (for-macro ([for-iter prev-ret])
+                                                  (narg ...))))]
+        [(#f narg ...)
+         #'(obj-pipeline-member-spec (λ (prev-ret)
+                                       (for-macro ([for-iter prev-ret])
+                                                  (narg ... for-iter))))]))]))
 
-(def-forpipe =for/list= for/list)
-;(def-forpipe =for/stream= for/stream)
-
+(pipeop =for/list= [(_ arg ...+) #'(=fors= for/list arg ...)])
 
 ;;;; unix-y pipes
 

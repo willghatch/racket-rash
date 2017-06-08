@@ -24,6 +24,11 @@ Main stable release blockers
 * some level of macros above pipelines - eg for define forms, maybe loops, etc.
 
 * a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
+** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
+** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro to be what they ought to be
+** each level of pipeline operator unwrapping should check whether it got another pipeline operator or if it got a spec definition form, which will kill any runtime errors of not getting specs
+*** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) -- so is this a good idea?
+*** Maybe the efficient version requires no wrapping, but the convenient one allows wrapping.
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 
