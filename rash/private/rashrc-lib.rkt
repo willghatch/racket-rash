@@ -78,7 +78,7 @@
             (cyan chour) padded-min
             (git-info-with-style)
             (bblue (path->string (current-directory)))
-            (if (and last-ret (< 0 last-ret-n))
+            (if (< 0 last-ret-n)
                 (format " ~a~a ~a~a"
                         (default-style "｢R")
                         last-ret-n
