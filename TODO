@@ -22,8 +22,19 @@ Main stable release blockers
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 
 * some level of macros above pipelines - eg for define forms, maybe loops, etc.
+** examples of macros I want
+*** definition form -- {def files find . -type f |> sort}, {def (get-files d) find $d -type f |> sort}
+*** lambda form -- {lam (pat file) grep pat file | wc -l |> string-trim |> string->number}
+**** equivalent to (λ (pat file) (rash «grep pat file | wc -l |> ...»))
+**** lambda form would be very useful for small embedding contexts
+*** a lot of people I talked to want a loop form...
+*** if form... again I could take it or leave it
+
+* I can probably avoid the hash for default-starter by using 3d syntax in the stx-parameterize.  Is that better?
+
 
 * a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
+** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible.
 ** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
 ** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro to be what they ought to be
 ** each level of pipeline operator unwrapping should check whether it got another pipeline operator or if it got a spec definition form, which will kill any runtime errors of not getting specs
