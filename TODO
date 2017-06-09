@@ -1,6 +1,8 @@
 Fully stable release blockers
 -----------------------------
 
+* option for shared stderr string capture or individual ones.  Per unix-y section, at least.
+
 * environment variable augment/replace per-member
 
 * process fd/temp-file redirects a la <() >() from bash
@@ -8,6 +10,8 @@ Fully stable release blockers
 * inspecting pipeline segments with correct compound member handling
 
 * reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
+
+* add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
 
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
 
