@@ -3,6 +3,10 @@ Main stable release blockers
 
 * decide what to do about reader for backslash escaping newlines
 
+* maybe unix pipeline should stringify 0-i as -i rather than having the reader change the meaning of #\-
+
+* are rash macros a (begin ...) or a (let () ...)?
+
 * alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
 
 * $_ implicit argument on pipelines
@@ -41,7 +45,26 @@ Main stable release blockers
 *** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) -- so is this a good idea?
 *** Maybe the efficient version requires no wrapping, but the convenient one allows wrapping.
 
+* obj-pipeline-members in same or different thread
+** I put them in separate threads because it seemed like a good idea at the time for swapping bg/fg stuff.  But I also had a manager thread for the same purpose.  I don't need both.
+** since the manager thread is already a separate thread, the others probably shouldn't be in further separated threads.
+** BUT things like cd that change parameters need to be in the original thread - not even in the manager thread.
+** but to be able to have object pipelines switch between being in the foreground and background I need them to be in a thread.
+** I either need to not have a manager thread, or I need a level of macros above pipelines to allow something like `cd` to set the value of parameters in the main thread.
+
+* maybe pipeline starters used as normal macros should work like (rash «starter-here arg ...»)
+** how would this interact with having two different versions - the wrapped convenient backgroundable version vs the non-bg-able non-wrapped version?
+*** this definitely would require more firm defaults, because you wouldn't be wrapping it in anything that could set defaults.
+*** maybe there are forms to change the defaults (IE syntax-parameterizing) that are available just as s-expressions to wrap these with.
+**** Maybe starter-operators have extra properties that say what they want the defaults to be, set by define-pipeline-operator?  Then every starter pipe is also a rash macro... (without a special reader)
+*** maybe the fast one is the default, and only certain macros bother with the wrapped way?
+** if an explicit pipe were always required, this would just mean than newlines act as parens, but allowing implicit pipes is more like newlines are parens but there is an implicit #%rash-line-macro there.  Plus rash has a modified readtable to provide various conveniences.
+*** a potentially useful idea is to have udelim string wrappers whose macro just changes the readtable inside.  This is similar to the option for that that already exists on list delimiters, but string delimiters won't have the issue of maybe not having that same delimiter inside.  You might just have a reader-changing macro that gives you the the rash reader.
+**** maybe defaults are set (for wrapped/unwrapped rash, implicit pipe operator, etc) by an implicit #%rash-default-something-or-other macro.  Different rash modules could export different ones.  Problem: if you import two, you have this annoying collision.  This is probably not a good idea.
+
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
+
+* make it a syntax error to have a normal racket expression [IE starting a line with an open paren] have a pipeline later on the same line.  This will clear up any issues with having the first segment of a pipeline open with parens.
 
 * review names -- pick good ones before doing any stable release
 
