@@ -23,7 +23,8 @@
   (flush-output (current-error-port))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
                                               #`(%%rash-racket-line (void)))])
-                       (rash-read-syntax #f (current-input-port)))]
+                       (rash-read-syntax (object-name (current-input-port))
+                                         (current-input-port)))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
@@ -62,17 +63,21 @@
                      #,@(rash-read-syntax-all (object-name rcfile)
                                               (open-input-file rcfile)))))))
 
-(for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
-  (with-handlers ([(λ _ #t) (λ (ex)
-                              (eprintf "error in rc file ~a: ~a"
-                                       rcfile (exn->string ex)))])
-    (eval-rashrc.rkt rcfile)))
-(for ([rcfile (list-config-files #:program "rash" "rashrc")])
-  (with-handlers ([(λ _ #t) (λ (ex)
-                              (eprintf "error in rc file ~a: ~a"
-                                       rcfile (exn->string ex)))])
-    (eval-rashrc rcfile)))
+(define (main)
+  (port-count-lines! (current-input-port))
+  (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
+    (with-handlers ([(λ _ #t) (λ (ex)
+                                (eprintf "error in rc file ~a: ~a"
+                                         rcfile (exn->string ex)))])
+      (eval-rashrc.rkt rcfile)))
+  (for ([rcfile (list-config-files #:program "rash" "rashrc")])
+    (with-handlers ([(λ _ #t) (λ (ex)
+                                (eprintf "error in rc file ~a: ~a"
+                                         rcfile (exn->string ex)))])
+      (eval-rashrc rcfile)))
 
-(rash-repl (void) 0)
+  (rash-repl (void) 0)
 
-(printf "and now exiting for some reason~n")
+  (printf "and now exiting for some reason~n"))
+
+(main)
