@@ -21,13 +21,14 @@
  =fors=
  =for/list=
 
- =non-quoting-basic-unix-pipe=
- =crappy-basic-unix-pipe=
+ =basic-unix-pipe=
+ =quoting-basic-unix-pipe=
  )
 
 (require
  racket/stxparam
  racket/port
+ racket/list
  shell/mixed-pipeline
  "pipeline-operator-transform.rkt"
  (for-syntax
@@ -261,19 +262,19 @@ re-appended).
 
 ;;;; unix-y pipes
 
-(define-pipeline-operator =non-quoting-basic-unix-pipe=
+(define-pipeline-operator =basic-unix-pipe=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...))])
+    [(_ arg ...+) #'(u-pipeline-member-spec (flatten (list arg ...)))])
   #:joint
   (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (list arg ...))]))
+    [(_ arg ...+) #'(u-pipeline-member-spec (flatten (list arg ...)))]))
 
-(define-pipeline-operator =crappy-basic-unix-pipe=
-  #:start
-  (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...))])
-  #:joint
-  (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec '(arg ...))]))
+(pipeop =quoting-basic-unix-pipe=
+        [(_ arg ...+)
+         #`(=basic-unix-pipe=
+            #,@(map (λ (s) (syntax-parse s
+                             [x:id #'(quote x)]
+                             [e #'e]))
+                    (syntax->list #'(arg ...))))])
 
