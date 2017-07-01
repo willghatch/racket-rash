@@ -23,6 +23,8 @@
 
  =basic-unix-pipe=
  =quoting-basic-unix-pipe=
+
+ =obj-if-def/unix-if-undef=
  )
 
 (require
@@ -278,3 +280,8 @@ re-appended).
                              [e #'e]))
                     (syntax->list #'(arg ...))))])
 
+(pipeop =obj-if-def/unix-if-undef=
+        [(_ cmd arg ...)
+         (if (and (identifier? #'cmd) (identifier-binding #'cmd))
+             #'(=object-pipe= cmd arg ...)
+             #'(=quoting-basic-unix-pipe= cmd arg ...))])
