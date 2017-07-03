@@ -5,6 +5,8 @@ Fully stable release blockers
 
 * environment variable augment/replace per-member
 
+* option for code to run in manager thread before running members in order to modify parameters - IE generalization of modifying env for all members.
+
 * process fd/temp-file redirects a la <() >() from bash
 
 * inspecting pipeline segments with correct compound member handling
