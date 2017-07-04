@@ -15,9 +15,8 @@
 
 
 (require
- "pipeline-operators.rkt"
+ rash
  racket/stream
- (submod "parse-funcs.rkt" for-public)
  file/glob
  shell/mixed-pipeline
  (for-syntax
