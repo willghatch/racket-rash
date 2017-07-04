@@ -145,3 +145,19 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 (pipeop >>= [(_ f) #'(=object-pipe= chain f current-pipeline-argument)])
 |#
 
+
+(require (for-syntax "rash-alias.rkt"))
+(require "define-rash-alias.rkt")
+(provide =aliasing-unix-pipe=)
+(pipeop =aliasing-unix-pipe=
+        [(_ cmd:rash-alias-id arg ...)
+         (let ([slv (syntax-local-value #'cmd)])
+           ({rash-alias-ref slv} slv #'(cmd arg ...)))]
+        [(_ arg ...)
+         #'(=quoting-basic-unix-pipe= arg ...)])
+(provide lsl)
+(define-rash-alias lsl
+  (syntax-parser [(_ arg ...)
+                  #'(=quoting-basic-unix-pipe= 'ls '-l '--color=auto arg ...)]))
+(provide ls)
+(define-simple-rash-alias ls 'ls '--color=auto)
