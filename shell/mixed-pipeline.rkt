@@ -12,6 +12,7 @@
  pipeline-start-ms
  pipeline-end-ms
  (rename-out [u-pipeline-default-option pipeline-default-option])
+ apply-output-transformer
  )
 
 
@@ -184,6 +185,20 @@
 
 (define (default-output-transformer p)
   (string-trim (port->string p)))
+
+(define (apply-output-transformer transformer out-port)
+  (match transformer
+    ['port out-port]
+    ['string (port->string out-port)]
+    ['trim (string-trim (port->string out-port))]
+    ['lines (string-split (port->string out-port) "\n")]
+    ['words (string-split (port->string out-port))]
+    [tx (if (procedure? tx)
+            ;; TODO - if this doesn't read the whole port there could be problems
+            (tx out-port)
+            (error 'apply-output-transformer
+                   (format "Neither a procedure nor a known transformer name: ~a"
+                           tx)))]))
 
 (define (run-pipeline specs
                       #:in [init-in-port (open-input-string "")]

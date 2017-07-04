@@ -79,8 +79,9 @@
           (->* ((listof any/c))
                (#:err (or/c output-port? false/c path-string-symbol?
                             (list/c path-string-symbol?
-                                    (or/c 'error 'append 'truncate)))
-                #:success (or/c false/c procedure? (listof any/c))
+                                    (or/c 'error 'append 'truncate))
+                            default-option?)
+                #:success (or/c false/c procedure? (listof any/c) default-option?)
                 )
                pipeline-member-spec?)]
   )
