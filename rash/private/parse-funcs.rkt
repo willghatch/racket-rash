@@ -35,6 +35,7 @@
   syntax/keyword
   racket/dict
   "pipeline-operator-detect.rkt"
+  "line-macro-detect.rkt"
   (for-syntax
    racket/base
    syntax/parse
@@ -90,28 +91,31 @@
                                 e)]))))
 
 (define-syntax (rash-line-parse stx)
-  (define-syntax-class not-newline
-    (pattern (~and (~not (~literal %%rash-newline-symbol))
-                   (~not ((~literal %%rash-racket-line) e ...)))))
-  (define-syntax-class rash-newline
-    (pattern (~or (~literal %%rash-newline-symbol)
-                  ((~literal %%rash-racket-line) e ...))))
   (syntax-parse stx
     [(rlp (in out err) arg ...)
      (with-syntax ([ioe #'(in out err)])
        (syntax-parse #'(arg ...)
-         #:datum-literals (%%rash-newline-symbol %%rash-racket-line %%rash-line-start)
+         #:datum-literals (%%rash-racket-line %%rash-line-start)
          [((%%rash-line-start arg ...) post ...+)
-          #'(begin (rash-pipeline-splitter ioe arg ...)
+          #'(begin (rash-line-parse+ ioe arg ...)
                    (rlp ioe post ...))]
          [((%%rash-line-start arg ...))
-          #'(rash-pipeline-splitter ioe arg ...)]
+          #'(rash-line-parse+ ioe arg ...)]
          [((%%rash-racket-line arg ...) post ...+)
           #'(begin arg ...
                    (rlp ioe post ...))]
          [((%%rash-racket-line arg ...))
           #'(begin arg ...)]
          [() #'(void)]))]))
+
+(define-syntax (rash-line-parse+ stx)
+  ;; detect line macros and apply them, or transform into pipeline
+  (syntax-parse stx
+    [(_ ioe arg1:line-macro arg ...)
+     (let ([slv (syntax-local-value #'arg1)])
+       ({rash-line-macro-ref slv} slv #'(arg1 arg ...)))]
+    [(_ ioe arg ...)
+     #'(rash-pipeline-splitter ioe arg ...)]))
 
 ;; To avoid passing more syntax through layers of macros
 (define rash-pipeline-opt-hash (make-parameter (hash)))
