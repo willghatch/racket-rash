@@ -21,6 +21,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  ;; treat the pipeline as an object pipe if the command is bound in racket,
  ;; otherwise treat it as a unix command.
  =obj-if-def/unix-if-undef=
+ =obj-if-def/globbing-unix-if-undef=
  )
 
 
@@ -33,35 +34,44 @@ These are essentially a bunch of proof-of-concept pipeline operators.
   racket/base
   syntax/parse
   racket/string
+  "../private/filter-keyword-args.rkt"
   ))
 
 
 
 (pipeop =globbing-basic-unix-pipe=
         [(_ arg ...+)
-         #`(=basic-unix-pipe=
-            #,@(map (λ (s) (syntax-parse s
-                             [(~and x (~or xi:id xs:str))
-                              (cond [(regexp-match #px"\\*|\\{|\\}|\\?"
-                                                   (format "~a" (syntax->datum #'x)))
-                                     #`(glob #,(datum->syntax
-                                                #'x
-                                                (format "~a" (syntax->datum #'x))
-                                                #'x #'x))]
-                                    [(string-prefix? (format "~a" (syntax->datum #'x))
-                                                     "~")
-                                     #'(with-handlers ([(λ _ #t) (λ _ 'x)])
-                                         (format "~a" (expand-user-path
-                                                       (format "~a" 'x))))]
-                                    [else #'(quote x)])]
-                             [e #'e]))
-                    (syntax->list #'(arg ...))))])
+         (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
+           #`(=basic-unix-pipe=
+              #,@kwargs
+              #,@(map (λ (s) (syntax-parse s
+                               [(~and x (~or xi:id xs:str))
+                                (cond [(regexp-match #px"\\*|\\{|\\}|\\?"
+                                                     (format "~a" (syntax->datum #'x)))
+                                       #`(glob #,(datum->syntax
+                                                  #'x
+                                                  (format "~a" (syntax->datum #'x))
+                                                  #'x #'x))]
+                                      [(string-prefix? (format "~a" (syntax->datum #'x))
+                                                       "~")
+                                       #'(with-handlers ([(λ _ #t) (λ _ 'x)])
+                                           (format "~a" (expand-user-path
+                                                         (format "~a" 'x))))]
+                                      [else #'(quote x)])]
+                               [e #'e]))
+                      pargs)))])
 
 (pipeop =obj-if-def/unix-if-undef=
         [(_ cmd arg ...)
          (if (and (identifier? #'cmd) (identifier-binding #'cmd))
              #'(=object-pipe= cmd arg ...)
              #'(=quoting-basic-unix-pipe= cmd arg ...))])
+
+(pipeop =obj-if-def/globbing-unix-if-undef=
+        [(_ cmd arg ...)
+         (if (and (identifier? #'cmd) (identifier-binding #'cmd))
+             #'(=object-pipe= cmd arg ...)
+             #'(=globbing-basic-unix-pipe= cmd arg ...))])
 
 (define-pipeline-operator =fors=
   #:joint
@@ -94,23 +104,28 @@ These are essentially a bunch of proof-of-concept pipeline operators.
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     (expand-pipeline-arguments
-      #'((quote-if-id-not-current-arg arg) ...)
-      #'for-iter
-      (syntax-parser
-        [(#t narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for/list ([for-iter prev-ret])
-                                         (rash-do-pipeline
-                                          (=basic-unix-pipe=
-                                           narg ...)))))]
-        [(#f narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for/list ([for-iter prev-ret])
-                                         (rash-do-pipeline
-                                          (=basic-unix-pipe=
-                                           narg ...
-                                           for-iter)))))]))]))
+     (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
+       (with-syntax ([(kwarg ...) (datum->syntax #f kwargs)]
+                     [(parg ...) (datum->syntax #f pargs)])
+         (expand-pipeline-arguments
+          #'((quote-if-id-not-current-arg parg) ...)
+          #'for-iter
+          (syntax-parser
+            [(#t narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret)
+                                           (for/list ([for-iter prev-ret])
+                                             (rash-do-pipeline
+                                              (=basic-unix-pipe=
+                                               kwarg ...
+                                               narg ...)))))]
+            [(#f narg ...)
+             #'(obj-pipeline-member-spec (λ (prev-ret)
+                                           (for/list ([for-iter prev-ret])
+                                             (rash-do-pipeline
+                                              (=basic-unix-pipe=
+                                               kwarg ...
+                                               narg ...
+                                               for-iter)))))]))))]))
 (define-pipeline-operator =for/list/unix-input=
   #:joint
   (syntax-parser
