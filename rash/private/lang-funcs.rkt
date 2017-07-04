@@ -7,6 +7,7 @@
  (all-from-out shell/mixed-pipeline)
 
  (all-from-out "pipeline-operators.rkt")
+ (all-from-out "more-pipeline-operators.rkt")
  (all-from-out "line-macros.rkt")
  (all-from-out (submod "pipeline-operator-implicit.rkt" for-public))
  (all-from-out (submod "parse-funcs.rkt" for-public))
@@ -33,6 +34,7 @@
  (submod "parse-funcs.rkt" for-public)
  "line-macros.rkt"
  "pipeline-operators.rkt"
+ "more-pipeline-operators.rkt"
 
  (for-syntax
   syntax/keyword

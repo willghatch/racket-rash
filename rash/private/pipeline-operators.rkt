@@ -18,26 +18,18 @@
  =object-pipe/left=
  =object-pipe/expression=
 
- =fors=
- =for/list=
-
  =basic-unix-pipe=
  =quoting-basic-unix-pipe=
- =globbing-basic-unix-pipe=
-
- =obj-if-def/unix-if-undef=
  )
 
 (require
  racket/stxparam
  racket/port
  racket/list
- file/glob
  shell/mixed-pipeline
  "pipeline-operator-transform.rkt"
  (for-syntax
   racket/base
-  racket/string
   syntax/parse
   "pipeline-operator-detect.rkt"
   racket/stxparam-exptime
@@ -246,25 +238,6 @@ re-appended).
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
 
-(define-pipeline-operator =fors=
-  #:joint
-  (syntax-parser
-    [( _ for-macro arg ...+)
-     (expand-pipeline-arguments
-      #'(arg ...)
-      #'for-iter
-      (syntax-parser
-        [(#t narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for-macro ([for-iter prev-ret])
-                                                  (narg ...))))]
-        [(#f narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for-macro ([for-iter prev-ret])
-                                                  (narg ... for-iter))))]))]))
-
-(pipeop =for/list= [(_ arg ...+) #'(=fors= for/list arg ...)])
-
 ;;;; unix-y pipes
 
 (define-pipeline-operator =basic-unix-pipe=
@@ -282,29 +255,3 @@ re-appended).
                              [x:id #'(quote x)]
                              [e #'e]))
                     (syntax->list #'(arg ...))))])
-
-(pipeop =globbing-basic-unix-pipe=
-        [(_ arg ...+)
-         #`(=basic-unix-pipe=
-            #,@(map (λ (s) (syntax-parse s
-                             [(~and x (~or xi:id xs:str))
-                              (cond [(regexp-match #px"\\*|\\{|\\}|\\?"
-                                                   (format "~a" (syntax->datum #'x)))
-                                     #`(glob #,(datum->syntax
-                                                #'x
-                                                (format "~a" (syntax->datum #'x))
-                                                #'x #'x))]
-                                    [(string-prefix? (format "~a" (syntax->datum #'x))
-                                                     "~")
-                                     #'(with-handlers ([(λ _ #t) (λ _ 'x)])
-                                         (format "~a" (expand-user-path
-                                                       (format "~a" 'x))))]
-                                    [else #'(quote x)])]
-                             [e #'e]))
-                    (syntax->list #'(arg ...))))])
-
-(pipeop =obj-if-def/unix-if-undef=
-        [(_ cmd arg ...)
-         (if (and (identifier? #'cmd) (identifier-binding #'cmd))
-             #'(=object-pipe= cmd arg ...)
-             #'(=quoting-basic-unix-pipe= cmd arg ...))])

@@ -339,6 +339,8 @@
                ;#:env env
                ;#:replace-env replace-env
                #:in input #:out output #:err err-output
+               #:strictness strictness
+               #:lazy-timeout lazy-timeout
                (rash-transform-starter-segment startop startarg ...)
                (rash-transform-joiner-segment joinop joinarg ...)
                ...)]))]))
