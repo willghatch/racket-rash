@@ -1,15 +1,25 @@
 #lang racket/base
 
+#|
+These are essentially a bunch of proof-of-concept pipeline operators.
+|#
+
 
 (provide
+ ;; for making for/whatever operators out of the various for/whatever forms
  =fors=
  =for/list=
  =for/stream=
+
+ ;; use each member of the input list as an argument in a unix command
  =for/list/unix-arg=
+ ;; use each member of the input list as the stdin to a unix command
  =for/list/unix-input=
 
  =globbing-basic-unix-pipe=
 
+ ;; treat the pipeline as an object pipe if the command is bound in racket,
+ ;; otherwise treat it as a unix command.
  =obj-if-def/unix-if-undef=
  )
 
@@ -111,3 +121,12 @@
                                       #:in (open-input-string (format "~a" for-iter))
                                       (=basic-unix-pipe=
                                        (quote-if-id-not-current-arg arg) ...)))))]))
+
+
+#|
+;; I don't want to add another package dependency, but here is another fine pipe operator.
+(require data/monad)
+(provide >>=)
+(pipeop >>= [(_ f) #'(=object-pipe= chain f current-pipeline-argument)])
+|#
+
