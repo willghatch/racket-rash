@@ -140,15 +140,17 @@
               (string-append (~a cmd) ".exe")))
         (error 'resolve-command-path "can't find executable for ~s" cmd))))
 
-(define (resolve-spec-defaults spec)
-  (mk-pipeline-member-spec
-   (pipeline-member-spec-argl spec)
-   #:err (let ([e (pipeline-member-spec-port-err spec)])
-           (if (default-option? e) (current-error-port) e))
-   #:success (let ([s (pipeline-member-spec-success-pred spec)])
-               (if (default-option? s) #f s))))
 
-(define (resolve-spec pm-spec)
+(define ((resolve-spec err-default) pm-spec)
+
+  (define (resolve-spec-defaults spec)
+    (mk-pipeline-member-spec
+     (pipeline-member-spec-argl spec)
+     #:err (let ([e (pipeline-member-spec-port-err spec)])
+             (if (default-option? e) err-default e))
+     #:success (let ([s (pipeline-member-spec-success-pred spec)])
+                 (if (default-option? s) #f s))))
+
   (let* ([argl (pipeline-member-spec-argl pm-spec)]
          [bad-argl? (when (or (not (list? argl))
                               (null? argl))
@@ -279,7 +281,7 @@
 (struct pipeline
   (port-to port-from members start-bg? strictness
            from-port-copier err-port-copiers lazy-timeout
-           start-ms end-ms-box cleaner)
+           start-ms end-ms-box cleaner default-err)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -403,15 +405,17 @@
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
                               m
-                              (mk-pipeline-member-spec m #:err default-err
+                              (mk-pipeline-member-spec m #:err (default-option)
                                                        #:success (default-option))))
                         members)])
     (pipeline in out
               members1
               bg? strictness
-              'from-port-copier 'err-port-copiers
+              'from-port-copier
+              'err-port-coper
               lazy-timeout
-              'start-ms 'end-ms-box 'cleaner)))
+              'start-ms 'end-ms-box 'cleaner
+              default-err)))
 
 (define (run-pipeline #:in [in (current-input-port)]
                       #:out [out (current-output-port)]
@@ -484,9 +488,11 @@
                      "pipeline unsuccessful with return ~a" err))))))
 
 
+(define stderr (current-error-port))
 (define (run-pipeline/spec pipeline-spec)
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
-         [members (map resolve-spec members-pre-resolve)]
+         [default-err (pipeline-default-err pipeline-spec)]
+         [members (map (resolve-spec default-err) members-pre-resolve)]
          [strictness (pipeline-strictness pipeline-spec)]
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
@@ -602,7 +608,7 @@
          [pline (pipeline to-ret from-ret run-members bg? strictness
                           from-port-copier err-port-copiers lazy-timeout
                           (current-inexact-milliseconds) end-time-box
-                          'cleaner-goes-here)]
+                          'cleaner-goes-here default-err)]
          [cleanup-thread
           (thread (λ ()
                     (pipeline-wait/internal pline)
