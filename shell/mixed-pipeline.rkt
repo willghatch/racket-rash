@@ -11,6 +11,7 @@
  pipeline-ret
  pipeline-start-ms
  pipeline-end-ms
+ (rename-out [u-pipeline-default-option pipeline-default-option])
  )
 
 

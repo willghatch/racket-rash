@@ -85,6 +85,8 @@
                pipeline-member-spec?)]
   )
 
+ (rename-out [default-option pipeline-default-option])
+
  prop:alias-func
  and/success
  or/success
