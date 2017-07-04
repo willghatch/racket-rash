@@ -155,6 +155,15 @@
      #\( #\) #:inside-readtable rash-inside-paren-readtable
      #:base-readtable
      (make-string-delim-readtable
-      #\｢ #\｣ #:wrapper '#%cjk-corner-quotes
+      #\◸ #\◹ #:wrapper '#%upper-triangles
       #:base-readtable
-      (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim))))))
+      (make-string-delim-readtable
+       #\◺ #\◿ #:wrapper '#%lower-triangles
+       #:base-readtable
+       (make-string-delim-readtable
+        #\◤ #\◥ #:wrapper '#%full-upper-triangles
+        #:base-readtable
+        (make-string-delim-readtable
+         #\◣ #\◢ #:wrapper '#%full-lower-triangles
+         #:base-readtable
+         (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
