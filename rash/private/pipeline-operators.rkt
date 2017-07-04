@@ -23,6 +23,7 @@
 
  =basic-unix-pipe=
  =quoting-basic-unix-pipe=
+ =globbing-basic-unix-pipe=
 
  =obj-if-def/unix-if-undef=
  )
@@ -31,10 +32,12 @@
  racket/stxparam
  racket/port
  racket/list
+ file/glob
  shell/mixed-pipeline
  "pipeline-operator-transform.rkt"
  (for-syntax
   racket/base
+  racket/string
   syntax/parse
   "pipeline-operator-detect.rkt"
   racket/stxparam-exptime
@@ -277,6 +280,26 @@ re-appended).
          #`(=basic-unix-pipe=
             #,@(map (λ (s) (syntax-parse s
                              [x:id #'(quote x)]
+                             [e #'e]))
+                    (syntax->list #'(arg ...))))])
+
+(pipeop =globbing-basic-unix-pipe=
+        [(_ arg ...+)
+         #`(=basic-unix-pipe=
+            #,@(map (λ (s) (syntax-parse s
+                             [(~and x (~or xi:id xs:str))
+                              (cond [(regexp-match #px"\\*|\\{|\\}|\\?"
+                                                   (format "~a" (syntax->datum #'x)))
+                                     #`(glob #,(datum->syntax
+                                                #'x
+                                                (format "~a" (syntax->datum #'x))
+                                                #'x #'x))]
+                                    [(string-prefix? (format "~a" (syntax->datum #'x))
+                                                     "~")
+                                     #'(with-handlers ([(λ _ #t) (λ _ 'x)])
+                                         (format "~a" (expand-user-path
+                                                       (format "~a" 'x))))]
+                                    [else #'(quote x)])]
                              [e #'e]))
                     (syntax->list #'(arg ...))))])
 
