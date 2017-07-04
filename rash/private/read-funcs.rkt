@@ -10,22 +10,6 @@
 (require udelim)
 (require syntax/parse)
 
-#;(define (rash-interactive-read-syntax-line src in)
-  (define (rec rlist)
-    (let ([output
-           (parameterize ([current-readtable line-readtable-interactive])
-             (read-syntax src in))])
-      (cond [(and (eof-object? output) (null? rlist))
-             output]
-            [(eof-object? output) (datum->syntax #f (reverse rlist))]
-            [else
-             (syntax-parse output
-               #:datum-literals (%%rash-newline-symbol %%rash-racket-line)
-               [%%rash-newline-symbol (datum->syntax output (reverse (cons output rlist)))]
-               [(%%rash-racket-line) (datum->syntax output (reverse (cons output rlist)))]
-               [else (rec (cons output rlist))])])))
-  (rec '()))
-
 (define (rash-read-line-syntax src in)
   (define (rec rlist)
     (let ([output
