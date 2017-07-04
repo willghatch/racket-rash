@@ -31,7 +31,10 @@
  (for-syntax
   racket/base
   syntax/parse
+  syntax/keyword
   "pipeline-operator-detect.rkt"
+  "misc-utils.rkt"
+  "filter-keyword-args.rkt"
   racket/stxparam-exptime
   racket/match
   ))
@@ -240,18 +243,68 @@ re-appended).
 
 ;;;; unix-y pipes
 
+(define-for-syntax unix-pipe-option-table
+  (list (list '#:as check-expression)
+        (list '#:e> check-expression)
+        (list '#:e>! check-expression)
+        (list '#:e>> check-expression)
+        (list '#:err check-expression)
+        (list '#:env check-expression)
+        ;; IE success predicate -- is returning 1 an error?
+        (list '#:success check-expression)
+        ))
+
+(define-for-syntax (basic-unix-pipe/ordered-args stx)
+  (syntax-parse stx
+    [(arg-maybe-opt ...+)
+     (define-values (opts rest-stx)
+       (parse-keyword-options #'(arg-maybe-opt ...)
+                              unix-pipe-option-table
+                              #:no-duplicates? #t
+                              #:incompatible '((#:e> #:e>! #:e>> #:err))))
+     (syntax-parse rest-stx
+       [(arg ...)
+        (let ([success-pred (opref opts '#:success #'(pipeline-default-option))]
+              ;; TODO - hook up env
+              [env-extend (opref opts '#:env #''())]
+              [err (cond [(opref opts '#:e> #f)
+                          => (syntax-parser [out #'(list (quote out) 'error)])]
+                         [(opref opts '#:e>> #f)
+                          => (syntax-parser [out #'(list (quote out) 'append)])]
+                         [(opref opts '#:e>! #f)
+                          => (syntax-parser [out #'(list (quote out) 'truncate)])]
+                         [(opref opts '#:err #f)]
+                         [else #'(pipeline-default-option)])]
+              [as (opref opts '#:as #f)])
+          (if as
+              #`(composite-pipeline-member-spec
+                 (list
+                  (u-pipeline-member-spec (flatten (list arg ...))
+                                          #:err #,err
+                                          #:success #,success-pred)
+                  (obj-pipeline-member-spec (λ (out-port)
+                                              (apply-output-transformer #,as out-port)))))
+              #`(u-pipeline-member-spec (flatten (list arg ...))
+                                           #:err #,err
+                                           #:success #,success-pred)))])]))
+
+(define-for-syntax (basic-unix-pipe stx)
+  (syntax-parse stx
+    [(_ arg ...+)
+     (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
+       (basic-unix-pipe/ordered-args
+        (datum->syntax #f (append kwargs pargs))))]))
+
 (define-pipeline-operator =basic-unix-pipe=
-  #:start
-  (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (flatten (list arg ...)))])
-  #:joint
-  (syntax-parser
-    [(_ arg ...+) #'(u-pipeline-member-spec (flatten (list arg ...)))]))
+  #:start basic-unix-pipe
+  #:joint basic-unix-pipe)
 
 (pipeop =quoting-basic-unix-pipe=
         [(_ arg ...+)
-         #`(=basic-unix-pipe=
-            #,@(map (λ (s) (syntax-parse s
-                             [x:id #'(quote x)]
-                             [e #'e]))
-                    (syntax->list #'(arg ...))))])
+         (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
+           #`(=basic-unix-pipe=
+              #,@kwargs
+              #,@(map (λ (s) (syntax-parse s
+                               [x:id #'(quote x)]
+                               [e #'e]))
+                      pargs)))])

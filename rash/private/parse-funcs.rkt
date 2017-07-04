@@ -5,7 +5,6 @@
  rash-read-and-line-parse
  default-output-port-transformer
  rash-pipeline-opt-hash
- (for-syntax opref)
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
 
@@ -36,6 +35,7 @@
   racket/dict
   "pipeline-operator-detect.rkt"
   "line-macro-detect.rkt"
+  "misc-utils.rkt"
   (for-syntax
    racket/base
    syntax/parse
@@ -282,12 +282,6 @@
         #:strictness (ropt 'strictness) #:lazy-timeout (ropt 'lazy-timeout)
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
-
-(define-for-syntax (opref table key default)
-  ;; For getting options with default out of a
-  ;; parses-keyword-options result hash
-  (with-handlers ([(λ _ #t) (λ (e) default)])
-    (cadr (dict-ref table key))))
 
 (define-syntax (rash-do-pipeline stx)
   (syntax-parse stx
