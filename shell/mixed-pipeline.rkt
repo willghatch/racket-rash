@@ -53,6 +53,25 @@
       (u-pipeline-status seg)
       (or (unbox (obj-pipeline-member-err-box seg))
           (unbox (obj-pipeline-member-ret-box seg)))))
+(define (pipeline-segment-error seg)
+  (pipeline-segment-wait seg)
+  (cond [(pipeline-segment-success? seg) #f]
+        [(u-pipeline? seg)
+         (let ([stderr (u-pipeline-error-captured-stderr seg)]
+               [argl (u-pipeline-error-argl seg)]
+               [status (u-pipeline-status seg)])
+           (with-handlers ([(λ _ #t) (λ (e) e)])
+             (if (and stderr (not (equal? stderr "")))
+                 (error 'run-pipeline
+                        (format
+                         "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
+                         argl
+                         status
+                         stderr))
+                 (error 'run-pipeline
+                        (format "unix pipeline-segment ~a terminated with code ~a~n"
+                                argl status)))))]
+        [else (unbox (obj-pipeline-member-err-box seg))]))
 
 (struct pipeline
   (manager-thread segment-box start-ms end-ms-box cleaner-thread)
@@ -71,10 +90,14 @@
   (pipeline-wait/internal pl)
   (thread-wait (pipeline-cleaner-thread pl)))
 (define (pipeline-success? pl)
-  ;; TODO - fix
-  (pipeline-segment-success? (car (unbox (pipeline-segment-box pl)))))
+  (pipeline-wait pl)
+  (for/and ([pm (unbox (pipeline-segment-box pl))])
+    (pipeline-segment-success? pm)))
 (define (pipeline-ret pl)
-  (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
+  (if (pipeline-success? pl)
+      (pipeline-segment-ret (car (unbox (pipeline-segment-box pl))))
+      (for/or ([pm (reverse (unbox (pipeline-segment-box pl)))])
+        (and (not (pipeline-segment-success? pm)) (pipeline-segment-error pm)))))
 (define (pipeline-ends-with-unix-seg? pl)
   (u-pipeline? (car (unbox (pipeline-segment-box pl)))))
 
@@ -177,24 +200,9 @@
       pline
       (let ([ret (pipeline-ret pline)]
             [last-seg (car (unbox (pipeline-segment-box pline)))])
-        ;; TODO - get the error correctly for different kinds of pipelines, including error text
         (cond
           [(pipeline-success? pline) ret]
-          [(exn? ret) (raise ret)]
-          [(pipeline-ends-with-unix-seg? pline)
-           (let ([stderr (u-pipeline-error-captured-stderr last-seg)]
-                 [argl (u-pipeline-error-argl last-seg)])
-             (if (and stderr (not (equal? stderr "")))
-                 (error 'run-pipeline
-                        (format
-                         "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
-                         argl
-                         ret
-                         stderr))
-                 (error 'run-pipeline
-                        (format "unix pipeline-segment ~a terminated with code ~a~n"
-                                argl ret))))]
-          [else (error 'run-pipeline "pipeline error - TODO - give real info")])
+          [else (raise ret)])
         )))
 
 (define (-run-pipeline specs init-in-port final-out-transformer
