@@ -1,3 +1,8 @@
+Note:  The current `master` branch is woefully outdated with respect to the development version.
+The current `master` version is essentially something like bash embeddable within racket, and with support for racket functions that act like processes (reading/writing byte streams).
+The newer version extends this to make an extensible line-based language that is useful for unix-style byte-stream pipelines (using external programs or racket functions), object pipelines (passing arbitrary racket values), and mixed pipelines.
+
+-------------------
 
 This is a shell language, library, and REPL for Racket.
 
