@@ -31,4 +31,5 @@
   (λ (stx)
     (syntax-parse stx
       [(_ (~and dir (~or ds:str di:id)))
-       #'(change-directory 'dir)])))
+       #'(change-directory 'dir)]
+      [(_) #'(change-directory (getenv "HOME"))])))
