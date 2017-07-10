@@ -34,13 +34,17 @@
 (define (rash-read-syntax src in)
   (read-and-ignore-hspace! in)
   ;; TODO - maybe an extensible table of things to do depending on the start of the line?
-  ;; TODO - this still fails for #||# comments, and generally seems brittle
+  #|
+  TODO - if a line starts with a #||# comment then `(` isn't the first
+  char, forcing it to be in line-mode and not racket-mode.  That's
+  weird.  Looking at the first character is brittle and crappy, but I'm
+  not sure a better way to do it right now.
+  |#
   (let ([peeked (peek-char in)])
     (cond [(equal? #\( peeked)
            (let ([s (parameterize ([current-readtable rash-inside-paren-readtable])
                       (read-syntax src in))])
-             (syntax-parse s
-               [(e ...) #'(%%rash-racket-line (e ...))]))]
+             #`(%%rash-racket-line #,s))]
           [(equal? #\; peeked)
            (begin (read-line-comment (read-char in) in)
                   (rash-read-syntax src in))]
