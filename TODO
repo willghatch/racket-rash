@@ -18,6 +18,7 @@ Fully stable release blockers
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
 
 * review names -- pick good ones before doing any stable release
+** *-pipeline-member-spec should be better -- eg. `object` instead of `obj`.
 ** 'string-port for errors -- I don't like this one
 
 * look through TODO comments

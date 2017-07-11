@@ -13,6 +13,8 @@
  pipeline-end-ms
  (rename-out [u-pipeline-default-option pipeline-default-option])
  apply-output-transformer
+
+ u-alias-func
  )
 
 

@@ -144,30 +144,31 @@
         (error 'resolve-command-path "can't find executable for ~s" cmd))))
 
 
-(define ((resolve-spec err-default) pm-spec)
+(define (resolve-spec err-default)
+  (define (resolve-spec* pm-spec)
+    (define (resolve-spec-defaults spec)
+      (mk-pipeline-member-spec
+       (pipeline-member-spec-argl spec)
+       #:err (let ([e (pipeline-member-spec-port-err spec)])
+               (if (default-option? e) err-default e))
+       #:success (let ([s (pipeline-member-spec-success-pred spec)])
+                   (if (default-option? s) #f s))))
 
-  (define (resolve-spec-defaults spec)
-    (mk-pipeline-member-spec
-     (pipeline-member-spec-argl spec)
-     #:err (let ([e (pipeline-member-spec-port-err spec)])
-             (if (default-option? e) err-default e))
-     #:success (let ([s (pipeline-member-spec-success-pred spec)])
-                 (if (default-option? s) #f s))))
-
-  (let* ([argl (pipeline-member-spec-argl pm-spec)]
-         [bad-argl? (when (or (not (list? argl))
-                              (null? argl))
-                      (error 'resolve-spec
-                             "pipeline spec had an empty command/argument list"))]
-         [cmd (first argl)])
-    (cond
-      [(pm-spec-alias? pm-spec) (resolve-spec (resolve-alias pm-spec))]
-      [(path-string-symbol? cmd)
-       (resolve-spec-defaults
-        (resolve-pipeline-member-spec-path pm-spec))]
-      ;; Note that paths are safe from further resolution -- an alias
-      ;; chain should always end with a path.
-      [else (resolve-spec-defaults pm-spec)])))
+    (let* ([argl (pipeline-member-spec-argl pm-spec)]
+           [bad-argl? (when (or (not (list? argl))
+                                (null? argl))
+                        (error 'resolve-spec
+                               "pipeline spec had an empty command/argument list"))]
+           [cmd (first argl)])
+      (cond
+        [(pm-spec-alias? pm-spec) (resolve-spec* (resolve-alias pm-spec))]
+        [(path-string-symbol? cmd)
+         (resolve-spec-defaults
+          (resolve-pipeline-member-spec-path pm-spec))]
+        ;; Note that paths are safe from further resolution -- an alias
+        ;; chain should always end with a path.
+        [else (resolve-spec-defaults pm-spec)])))
+  resolve-spec*)
 
 ;;;; Pipeline Members ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
