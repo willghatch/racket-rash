@@ -3,7 +3,17 @@
 (provide
  ;; TODO - names of these two pipe definers
  define-pipeline-operator
+
+ #|
+ Maybe defpipeop?  defop?  Or should this even exist?
+ My original idea with this was to have a quick and easy way to define new operators
+ even on the fly in an interactive repl, but maybe you don't care to define new
+ operators while in an interactive session.  But then again... I might want to.
+ But you need to be comfortable enough defining macros and understanding rash
+ to use it...
+ |#
  pipeop
+
 
  current-pipeline-argument
 

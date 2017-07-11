@@ -161,3 +161,37 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                   #'(=quoting-basic-unix-pipe= 'ls '-l '--color=auto arg ...)]))
 (provide ls)
 (define-simple-rash-alias ls 'ls '--color=auto)
+
+
+(provide =unix-with-xargs-behavior=)
+(require racket/port racket/list)
+#|
+This does various different things and needs to be simplified.  First of all
+it needs to do the alias checking itself rather than depending on =aliasing-unix-pipe=,
+then it needs to standardize the output...
+|#
+(define-pipeline-operator =unix-with-xargs-behavior=
+  #:start (syntax-parser [(_ arg ...+) #'(=aliasing-unix-pipe= arg ...)])
+  #:joint (syntax-parser
+            [(_ cmd arg ...)
+             (expand-pipeline-arguments
+              (map (syntax-parser
+                     [(~literal current-pipeline-argument)
+                      #'current-pipeline-argument]
+                     [x:id #'(quote x)]
+                     [e #'e])
+                   (syntax->list #'(arg ...)))
+              #'pipe-arg
+              (syntax-parser
+                [(#f narg ...) #'(=aliasing-unix-pipe= cmd narg ...)]
+                [(#t narg ...)
+                 #'(let ([pipe-arg #f])
+                     (composite-pipeline-member-spec
+                      (list
+                       (obj-pipeline-member-spec
+                        (λ (in)
+                          (begin (set! pipe-arg (if (input-port? in) (port->string in) in))
+                                 "")))
+                       (u-pipeline-member-spec
+                        (list (u-alias-func
+                               (λ () (flatten (list 'cmd narg ...)))))))))]))]))
