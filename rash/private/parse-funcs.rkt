@@ -112,8 +112,7 @@
   ;; detect line macros and apply them, or transform into pipeline
   (syntax-parse stx
     [(_ ioe arg1:line-macro arg ...)
-     (let ([slv (syntax-local-value #'arg1)])
-       ({rash-line-macro-ref slv} slv #'(arg1 arg ...)))]
+     (rash-line-macro-transform #'(arg1 arg ...))]
     [(_ ioe arg ...)
      #'(rash-pipeline-splitter ioe arg ...)]))
 
