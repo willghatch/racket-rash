@@ -13,6 +13,8 @@
 
  )
 
+(module+ experimental
+  (provide (for-syntax rash-template-escaper)))
 
 (module+ for-module-begin
   (provide rash-module-begin))
@@ -50,7 +52,13 @@
   udelim
   "read-funcs.rkt"
   "misc-utils.rkt"
-  ))
+
+  (for-syntax
+   racket/base
+   syntax/parse
+   "read-funcs.rkt"
+   "template-escape-detect.rkt"
+   )))
 
 
 
@@ -119,3 +127,15 @@
                    [err (opref tab '#:err #'(current-error-port))])
        #'(rash #:in in #:out out #:err err code-segs-hopefully ...))]))
 
+(begin-for-syntax
+  (define-syntax rash-template-escaper
+    (template-escape-struct
+     (λ (stx)
+       (syntax-parse stx
+         [(_ arg ...)
+          (with-syntax ([(parsed-rash-code ...) (rash-stx-strs->stx #'(arg ...))])
+            #'(rash-expressions-begin
+               ((open-input-string "")
+                default-output-port-transformer
+                'string-port)
+               parsed-rash-code ...))])))))
