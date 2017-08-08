@@ -10,22 +10,28 @@
  (all-from-out "line-macros.rkt")
  (all-from-out (submod "pipeline-operator-implicit.rkt" for-public))
  (all-from-out (submod "parse-funcs.rkt" for-public))
+
  )
 
 
 (module+ for-module-begin
-  (provide rash-line-parse
-           rash-read-and-line-parse
-           rash-pipeline-opt-hash
-           default-output-port-transformer
-           (for-syntax implicit-pipe-starter-hash)
-           implicit-pipe-starter-key
-           ))
+  (provide rash-module-begin))
+
+(module+ for-repl
+  (provide
+   rash-line-parse
+   rash-read-and-line-parse
+   rash-pipeline-opt-hash
+   default-output-port-transformer
+   (for-syntax implicit-pipe-starter-hash)
+   implicit-pipe-starter-key
+   ))
 
 
 (require
  shell/mixed-pipeline
  racket/stxparam
+ racket/splicing
  "read-funcs.rkt"
  "parse-funcs.rkt"
  "pipeline-operator-implicit.rkt"
@@ -53,6 +59,35 @@
         (list '#:out check-expression)
         (list '#:err check-expression)))
 
+(define-syntax (rash-expressions-begin stx)
+  (syntax-parse stx
+    [(_ (input output err-output) e ...+)
+     (let* ([implicit-key (gensym 'rash-implicit-starter-key-)]
+            [set (hash-set! implicit-pipe-starter-hash
+                            implicit-key
+                            (hash-ref implicit-pipe-starter-hash
+                                      {syntax-parameter-value
+                                       #'implicit-pipe-starter-key}))])
+       #`(splicing-let ([in-eval input]
+                        [out-eval output]
+                        [err-eval err-output])
+           (splicing-syntax-parameterize ([implicit-pipe-starter-key
+                                           (quote
+                                            #,(datum->syntax #'here implicit-key))])
+             (rash-line-parse (in-eval out-eval err-eval) e ...))))]))
+
+(define-syntax (rash-module-begin stx)
+  (syntax-parse stx
+    [(_ arg ...)
+     #'(#%module-begin
+        (module* configure-runtime #f
+          (current-read-interaction rash-read-and-line-parse))
+        (rash-expressions-begin ((open-input-string "")
+                                default-output-port-transformer
+                                'string-port)
+                               arg ...))]))
+
+
 (define-syntax (rash stx)
   (syntax-parse stx
     [(rash orig-arg ...)
@@ -61,31 +96,14 @@
                               rash-keyword-table
                               #:context stx
                               #:no-duplicates? #t))
-     (define code-str-stx
-       (syntax-parse rest-stx
-         [(rash-src:str) #'rash-src]
-         [(src-seg:str ...+) (scribble-strings->string #'(src-seg ...))]))
 
      (with-syntax ([(parsed-rash-code ...)
-                    (map (λ (s) (replace-context code-str-stx s))
-                         (syntax->list
-                          (rash-read-syntax-all (syntax-source code-str-stx)
-                                                (stx-string->port code-str-stx))))]
+                    (rash-stx-strs->stx rest-stx)]
                    [input (opref tab '#:in #'(open-input-string ""))]
                    [output (opref tab '#:out #'default-output-port-transformer)]
                    [err-output (opref tab '#:err #''string-port)])
-       (let* ([implicit-key (gensym 'rash-implicit-starter-key-)]
-              [set (hash-set! implicit-pipe-starter-hash
-                              implicit-key
-                              (hash-ref implicit-pipe-starter-hash
-                                        {syntax-parameter-value
-                                         #'implicit-pipe-starter-key}))])
-         #`(let ([in-eval input]
-                 [out-eval output]
-                 [err-eval err-output])
-             (syntax-parameterize ([implicit-pipe-starter-key
-                                    (quote #,(datum->syntax #'here implicit-key))])
-               (rash-line-parse (in-eval out-eval err-eval) parsed-rash-code ...)))))]))
+       #'(rash-expressions-begin (input output err-output) parsed-rash-code ...))]))
+
 
 (define-syntax (rash/wired stx)
   (syntax-parse stx

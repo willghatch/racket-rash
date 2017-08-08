@@ -2,7 +2,7 @@
 
 (require
  "main.rkt"
- (submod "private/lang-funcs.rkt" for-module-begin)
+ (submod "private/lang-funcs.rkt" for-repl)
  "private/repl-namespace.rkt"
  "private/read-funcs.rkt"
  "private/option-app.rkt"

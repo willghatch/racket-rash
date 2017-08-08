@@ -5,10 +5,14 @@
  rash-read-syntax-all
  rash-read
  rash-read-all
+ rash-stx-strs->stx
  )
 
-(require udelim)
-(require syntax/parse)
+(require
+ udelim
+ syntax/parse
+ syntax/strip-context
+ )
 
 (define (rash-read-line-syntax src in)
   (define (rec rlist)
@@ -171,3 +175,12 @@
          #\◣ #\◢ #:wrapper '#%full-lower-triangles
          #:base-readtable
          (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
+
+(define (rash-stx-strs->stx stx)
+  (let ([src (syntax-parse stx
+               [(rash-src:str) #'rash-src]
+               [(src-seg:str ...+) (scribble-strings->string #'(src-seg ...))])])
+    (map (λ (s) (replace-context src s))
+         (syntax->list
+          (rash-read-syntax-all (syntax-source src)
+                                (stx-string->port src))))))
