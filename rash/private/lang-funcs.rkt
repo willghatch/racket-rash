@@ -90,10 +90,10 @@
      #'(#%module-begin
         (module* configure-runtime #f
           (current-read-interaction rash-read-and-line-parse))
-        (rash-expressions-begin ((open-input-string "")
-                                default-output-port-transformer
-                                'string-port)
-                               arg ...))]))
+        (rash-expressions-begin ((current-input-port)
+                                 (current-output-port)
+                                 (current-error-port))
+                                arg ...))]))
 
 
 (define-syntax (rash stx)
