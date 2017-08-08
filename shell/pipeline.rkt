@@ -380,11 +380,14 @@
   (pipeline-wait pline)
   (define strictness (pipeline-strictness pline))
   (define strict? (equal? strictness 'strict))
-  (if (equal? 'permissive strictness)
-      (accessor (car (reverse (pipeline-members pline))))
-      (for/or ([m (pipeline-members pline)])
-        (and (not (pipeline-member-success? m #:strict? strict?))
-             (accessor m)))))
+  (let ([last-status (accessor (car (reverse (pipeline-members pline))))])
+    (if (equal? 'permissive strictness)
+        last-status
+        (let ([pre-status
+               (for/or ([m (pipeline-members pline)])
+                 (and (not (pipeline-member-success? m #:strict? strict?))
+                      (accessor m)))])
+          (or pre-status last-status)))))
 
 (define pipeline-status
   (pipeline-success-based-info-func pipeline-member-status))
