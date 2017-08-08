@@ -87,7 +87,7 @@
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx
     [(_ arg ...)
-     #'(#%module-begin
+     #'(#%plain-module-begin
         (module* configure-runtime #f
           (current-read-interaction rash-read-and-line-parse))
         (rash-expressions-begin ((current-input-port)
