@@ -14,20 +14,22 @@
   syntax/parse
   "pipeline-operator-detect.rkt"))
 
-(define-for-syntax (implicit-pipe-error stx)
+(define-for-syntax (implicit-pipeline-error stx)
   (raise-syntax-error
-   'erroring-implicit-pipe-starter
+   'erroring-implicit-pipeline-starter
    "No explicit pipeline starter given in a context with no default set."
    stx))
 
-(define-syntax default-pipe-starter
-  (rash-pipeline-operator implicit-pipe-error implicit-pipe-error implicit-pipe-error))
+(define-syntax default-pipeline-starter
+  (rash-pipeline-operator implicit-pipeline-error
+                          implicit-pipeline-error
+                          implicit-pipeline-error))
 
-(define-for-syntax implicit-pipe-starter-hash
+(define-for-syntax implicit-pipeline-starter-hash
   ;; TODO - what should the default really be?  I don't want to inherit from the top level in non-rash modules
-  (make-hash (list (cons 'top-level #'default-pipe-starter))))
+  (make-hash (list (cons 'top-level #'default-pipeline-starter))))
 ;; TODO - use a box!
-(define-syntax-parameter implicit-pipe-starter-key
+(define-syntax-parameter implicit-pipeline-starter-key
   'top-level)
 
 ;; TODO - if the macro to change the starter is in a stop-list of local-expand,
@@ -40,7 +42,7 @@
   (syntax-parse stx
     [(_ new-starter:pipe-starter-op)
      (begin
-       (hash-set! implicit-pipe-starter-hash
-                  {syntax-parameter-value #'implicit-pipe-starter-key}
+       (hash-set! implicit-pipeline-starter-hash
+                  {syntax-parameter-value #'implicit-pipeline-starter-key}
                   #'new-starter)
        #'(void))]))

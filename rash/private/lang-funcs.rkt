@@ -27,8 +27,8 @@
    rash-read-and-line-parse
    rash-pipeline-opt-hash
    default-output-port-transformer
-   (for-syntax implicit-pipe-starter-hash)
-   implicit-pipe-starter-key
+   (for-syntax implicit-pipeline-starter-hash)
+   implicit-pipeline-starter-key
    ))
 
 
@@ -73,15 +73,15 @@
   (syntax-parse stx
     [(_ (input output err-output) e ...+)
      (let* ([implicit-key (gensym 'rash-implicit-starter-key-)]
-            [set (hash-set! implicit-pipe-starter-hash
+            [set (hash-set! implicit-pipeline-starter-hash
                             implicit-key
-                            (hash-ref implicit-pipe-starter-hash
+                            (hash-ref implicit-pipeline-starter-hash
                                       {syntax-parameter-value
-                                       #'implicit-pipe-starter-key}))])
+                                       #'implicit-pipeline-starter-key}))])
        #`(splicing-let ([in-eval input]
                         [out-eval output]
                         [err-eval err-output])
-           (splicing-syntax-parameterize ([implicit-pipe-starter-key
+           (splicing-syntax-parameterize ([implicit-pipeline-starter-key
                                            (quote
                                             #,(datum->syntax #'here implicit-key))])
              (rash-set-defaults

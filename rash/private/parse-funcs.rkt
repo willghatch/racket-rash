@@ -280,8 +280,8 @@
      #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
     [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
      #`(rps done-macro
-            #,(hash-ref implicit-pipe-starter-hash
-                        {syntax-parameter-value #'implicit-pipe-starter-key})
+            #,(hash-ref implicit-pipeline-starter-hash
+                        {syntax-parameter-value #'implicit-pipeline-starter-key})
             iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
