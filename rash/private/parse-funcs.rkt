@@ -3,6 +3,7 @@
 (provide
  rash-line-parse
  rash-read-and-line-parse
+ rash-set-defaults
  default-output-port-transformer
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
@@ -21,6 +22,7 @@
  "read-funcs.rkt"
  syntax/parse
  racket/stxparam
+ racket/splicing
  racket/string
  racket/port
  shell/mixed-pipeline
@@ -80,41 +82,59 @@
                         &in &out &err &< &> &>! &>>
                         &strict &permissive &lazy &lazy-timeout)))))
 
+(define-syntax-parameter rash-default-in
+  (λ (stx) (raise-syntax-error 'rash-default-in
+                               "Internal error - default used where none is set")))
+(define-syntax-parameter rash-default-out
+  (λ (stx) (raise-syntax-error 'rash-default-out
+                               "Internal error - default used where none is set")))
+(define-syntax-parameter rash-default-err-out
+  (λ (stx) (raise-syntax-error 'rash-default-err-out
+                               "Internal error - default used where none is set")))
+
+(define-syntax (rash-set-defaults stx)
+  (syntax-parse stx
+    [(_ (in out err) body ...)
+     #'(splicing-syntax-parameterize
+           ([rash-default-in (λ (stx) #'in)]
+            [rash-default-out (λ (stx) #'out)]
+            [rash-default-err-out (λ (stx) #'err)])
+         body ...)]))
+
 (define (rash-read-and-line-parse src in)
   (let ([stx (rash-read-syntax src in)])
     (if (eof-object? stx)
         stx
         (syntax-parse stx
-          [e #'(rash-line-parse ((current-input-port)
-                                 (current-output-port)
-                                 (current-error-port))
-                                e)]))))
+          [e #'(rash-set-defaults ((current-input-port)
+                                   (current-output-port)
+                                   (current-error-port))
+                                  (rash-line-parse e))]))))
 
 (define-syntax (rash-line-parse stx)
   (syntax-parse stx
-    [(rlp (in out err) arg ...)
-     (with-syntax ([ioe #'(in out err)])
-       (syntax-parse #'(arg ...)
-         #:datum-literals (%%rash-racket-line %%rash-line-start)
-         [((%%rash-line-start arg ...) post ...+)
-          #'(begin (rash-line-parse+ ioe arg ...)
-                   (rlp ioe post ...))]
-         [((%%rash-line-start arg ...))
-          #'(rash-line-parse+ ioe arg ...)]
-         [((%%rash-racket-line arg ...) post ...+)
-          #'(begin arg ...
-                   (rlp ioe post ...))]
-         [((%%rash-racket-line arg ...))
-          #'(begin arg ...)]
-         [() #'(void)]))]))
+    [(rlp arg ...)
+     (syntax-parse #'(arg ...)
+       #:datum-literals (%%rash-racket-line %%rash-line-start)
+       [((%%rash-line-start arg ...) post ...+)
+        #'(begin (rash-line-parse/line-macro-detect arg ...)
+                 (rlp post ...))]
+       [((%%rash-line-start arg ...))
+        #'(rash-line-parse/line-macro-detect arg ...)]
+       [((%%rash-racket-line arg ...) post ...+)
+        #'(begin arg ...
+                 (rlp post ...))]
+       [((%%rash-racket-line arg ...))
+        #'(begin arg ...)]
+       [() #'(void)])]))
 
-(define-syntax (rash-line-parse+ stx)
+(define-syntax (rash-line-parse/line-macro-detect stx)
   ;; detect line macros and apply them, or transform into pipeline
   (syntax-parse stx
-    [(_ ioe arg1:line-macro arg ...)
+    [(_ arg1:line-macro arg ...)
      (rash-line-macro-transform #'(arg1 arg ...))]
-    [(_ ioe arg ...)
-     #'(rash-pipeline-splitter ioe arg ...)]))
+    [(_ arg ...)
+     #'(rash-pipeline-splitter arg ...)]))
 
 ;; To avoid passing more syntax through layers of macros
 (define rash-pipeline-opt-hash (make-parameter (hash)))
@@ -125,7 +145,7 @@
   ;; Parse out the beginning/ending whole-pipeline options, then
   ;; pass the pipeline specs to other macros to deal with.
   (syntax-parse stx
-    [(_ (outer-in outer-out outer-err) rash-arg ...)
+    [(_ rash-arg ...)
      (syntax-parse #'(rash-arg ...)
        #:literal-sets (pipeline-opts)
        [((~or (~optional (~and s-bg &bg) #:name "&bg option")
@@ -229,7 +249,7 @@
                                                   [(attribute s-<) #`(quote #,(attribute s-<))]
                                                   [(attribute e-<) #`(quote #,(attribute e-<))]
                                                   ;; TODO - respect outer macro default
-                                                  [else #'outer-in])
+                                                  [else #'rash-default-in])
                                       'out #,(cond [(attribute s-out)]
                                                    [(attribute e-out)]
                                                    [(attribute s->) #`(list (quote #,(attribute s->))
@@ -245,11 +265,11 @@
                                                    [(attribute e->>) #`(list (quote #,(attribute e->>))
                                                                              'append)]
                                                    ;; TODO - respect outer macro default
-                                                   [else  #'outer-out])
+                                                   [else  #'rash-default-out])
                                       'err #,(cond [(attribute s-err)]
                                                    [(attribute s-err)]
                                                    ;; TODO - respect outer macro default
-                                                   [else #'outer-err])
+                                                   [else #'rash-default-err-out])
                                       )])
                   (rash-pipeline-splitter/start rash-pipeline-splitter/done/do arg ...))])])])]))
 

@@ -21,6 +21,7 @@
 
 (module+ for-repl
   (provide
+   rash-set-defaults
    rash-line-parse
    rash-read-and-line-parse
    rash-pipeline-opt-hash
@@ -82,7 +83,9 @@
            (splicing-syntax-parameterize ([implicit-pipe-starter-key
                                            (quote
                                             #,(datum->syntax #'here implicit-key))])
-             (rash-line-parse (in-eval out-eval err-eval) e ...))))]))
+             (rash-set-defaults
+              (in-eval out-eval err-eval)
+              (rash-line-parse e ...)))))]))
 
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx

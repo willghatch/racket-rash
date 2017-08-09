@@ -30,11 +30,12 @@
             (call-with-values
              (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
                      (eval-syntax (parameterize ([current-namespace repl-namespace])
-                                    (namespace-syntax-introduce #`(rash-line-parse
-                                                                   ((current-input-port)
-                                                                    (current-output-port)
-                                                                    (current-error-port))
-                                                                   #,next-input))))))
+                                    (namespace-syntax-introduce
+                                     #`(rash-set-defaults
+                                        ((current-input-port)
+                                         (current-output-port)
+                                         (current-error-port))
+                                        (rash-line-parse #,next-input)))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -56,12 +57,13 @@
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
-                  #`(rash-line-parse
+                  #`(rash-set-defaults
                      ((current-input-port)
                       (current-output-port)
                       (current-error-port))
-                     #,@(rash-read-syntax-all (object-name rcfile)
-                                              (open-input-file rcfile)))))))
+                     (rash-line-parse
+                      #,@(rash-read-syntax-all (object-name rcfile)
+                                               (open-input-file rcfile))))))))
 
 (define (main)
   (port-count-lines! (current-input-port))
