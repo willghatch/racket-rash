@@ -1,38 +1,25 @@
 Main stable release blockers
 ----------------------------
 
-* decide what to do about reader for backslash escaping newlines
+* standardize `run-pipeline` style function interfaces
+** in shell/pipeline
+*** currently (run-pipeline (spec1) (spec2) ...)
+** in mixed-pipeline
+*** currently (run-pipeline (list (spec1) (spec2) ...))
+** the parenthesised way to run rash code
+*** There is currently a version for rash where you have to put the parens around the pipe operator segments, I also want one that is flat and will find the structure based on the operators, for eg. def foo () ls | grep aoeu | wc
+*** currently (do-pipeline (=u= ls) (=u= grep foo))
 
-* maybe unix pipeline should stringify 0-i as -i rather than having the reader change the meaning of #\-
+* unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
-* are rash macros a (begin ...) or a (let () ...)?
-
-* alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
-
-* $_ implicit argument on pipelines
-** for unix ones, detect it, use compound member to turn the input into an empty port and use $_ as a shell argument.  This may require rethinking the eager evaluation of arg list members...
-
-* unix pipeline member arguments #:e>, #:as, #:how-to-determine-success etc
-** success determination should allow a predicate on the return value OR a list of good statuses
-** some sort of alias-like thing to set an alternative default for success, so eg. grep can use this alias-like thing to save writing #:success '(0 1)
-
-* unix pipeline operator that has a higher level alias functionality like the old rash had
-** actually, there should probably be both a unixy operator AND an object operator that recognize aliases - these aliases can basically just make the operator resolution recur.  So you could have =u= grep foo, where grep is an alias to =u= #:success (list 1) "grep" foo.  You could have this alias checking and recursive lookup on any pipeline type, so maybe several of them should have it.  But then again, if an alias just causes a recursive operator resolution... what is the difference between having an alias and having another operator?
-
-* pipeline that acts as an object pipe unless the function part is undefined as syntax, in which case it acts as a unixy pipe instead.
-
-* unix pipeline operator that does globbing
+* have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 
-* some level of macros above pipelines - eg for define forms, maybe loops, etc.
-** examples of macros I want
-*** definition form -- {def files find . -type f |> sort}, {def (get-files d) find $d -type f |> sort}
-*** lambda form -- {lam (pat file) grep pat file | wc -l |> string-trim |> string->number}
-**** equivalent to (λ (pat file) (rash «grep pat file | wc -l |> ...»))
-**** lambda form would be very useful for small embedding contexts
-*** a lot of people I talked to want a loop form...
-*** if form... again I could take it or leave it
+* alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
+
+* object operator that uses aliases as well
+** be sure `detect alias` works in new prop:procedure-like way
 
 * I can probably avoid the hash for default-starter by using 3d syntax in the stx-parameterize.  Is that better?
 
@@ -45,13 +32,6 @@ Main stable release blockers
 *** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) -- so is this a good idea?
 *** Maybe the efficient version requires no wrapping, but the convenient one allows wrapping.
 
-* obj-pipeline-members in same or different thread
-** I put them in separate threads because it seemed like a good idea at the time for swapping bg/fg stuff.  But I also had a manager thread for the same purpose.  I don't need both.
-** since the manager thread is already a separate thread, the others probably shouldn't be in further separated threads.
-** BUT things like cd that change parameters need to be in the original thread - not even in the manager thread.
-** but to be able to have object pipelines switch between being in the foreground and background I need them to be in a thread.
-** I either need to not have a manager thread, or I need a level of macros above pipelines to allow something like `cd` to set the value of parameters in the main thread.
-
 * maybe pipeline starters used as normal macros should work like (rash «starter-here arg ...»)
 ** how would this interact with having two different versions - the wrapped convenient backgroundable version vs the non-bg-able non-wrapped version?
 *** this definitely would require more firm defaults, because you wouldn't be wrapping it in anything that could set defaults.
@@ -61,8 +41,6 @@ Main stable release blockers
 ** if an explicit pipe were always required, this would just mean than newlines act as parens, but allowing implicit pipes is more like newlines are parens but there is an implicit #%rash-line-macro there.  Plus rash has a modified readtable to provide various conveniences.
 *** a potentially useful idea is to have udelim string wrappers whose macro just changes the readtable inside.  This is similar to the option for that that already exists on list delimiters, but string delimiters won't have the issue of maybe not having that same delimiter inside.  You might just have a reader-changing macro that gives you the the rash reader.
 **** maybe defaults are set (for wrapped/unwrapped rash, implicit pipe operator, etc) by an implicit #%rash-default-something-or-other macro.  Different rash modules could export different ones.  Problem: if you import two, you have this annoying collision.  This is probably not a good idea.
-
-* have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 
 * make it a syntax error to have a normal racket expression [IE starting a line with an open paren] have a pipeline later on the same line.  This will clear up any issues with having the first segment of a pipeline open with parens.
 
