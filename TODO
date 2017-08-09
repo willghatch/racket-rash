@@ -8,12 +8,14 @@ Main stable release blockers
 ** in mixed-pipeline
 *** now like shell/pipeline, but no bare lists
 ** the parenthesised way to run rash code
-*** There is currently a version for rash where you have to put the parens around the pipe operator segments, I also want one that is flat and will find the structure based on the operators, for eg. def foo () ls | grep aoeu | wc
 *** currently (do-pipeline (=u= ls) (=u= grep foo))
+*** and currently (rash-line-or-line-macro =u= ls =u= grep foo)
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
+** they should also have setter functions -- this way you can change the default for the rest of the context (eg. switch defaults in the repl, for the second half of a module, etc)
+** There should be a form to (splicingly, hopefully) set a new block for defaults, so you can change the default for the block (either with the block-creating form directly or by mutating it within) and have it revert when leaving the block.  Obviously this form is the rash macro itself.
 
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 

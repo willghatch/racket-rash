@@ -97,6 +97,21 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
                (current-directory pstr)
                (system* (find-executable-path (getenv "EDITOR")) pstr)))])))
 
+(define-line-macro def
+  (λ (stx)
+    (syntax-parse stx
+      [(_ name:id line-arg ...+)
+       #'(define name (rash-line-or-line-macro line-arg ...))]
+      [(_ (name:id fp:id ...) line-arg ...+)
+       #'(define (name fp ...) (rash-line-or-line-macro line-arg ...))]
+      ;; let's be generous, but not good at catching errors
+      [(_ name-or-func-form line-arg ...+)
+       #'(define name-or-func-form (rash-line-or-line-macro line-arg ...))])))
+(define-line-macro rash-lambda
+  (syntax-parser
+    [(_ (fp ...) line-arg ...+)
+     #'(lambda (fp ...) (rash-line-or-line-macro line-arg ...))]))
+
 
 (define-simple-rash-alias d 'ls '--color=auto)
 (define-simple-rash-alias di 'ls '-l '--color=auto)

@@ -3,6 +3,7 @@
 (provide
  rash
  rash/wired
+
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
 

@@ -16,6 +16,7 @@
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
    rash-do-pipeline
+   rash-line-or-line-macro
    ))
 
 (require
@@ -117,10 +118,10 @@
      (syntax-parse #'(arg ...)
        #:datum-literals (%%rash-racket-line %%rash-line-start)
        [((%%rash-line-start arg ...) post ...+)
-        #'(begin (rash-line-parse/line-macro-detect arg ...)
+        #'(begin (rash-line-or-line-macro arg ...)
                  (rlp post ...))]
        [((%%rash-line-start arg ...))
-        #'(rash-line-parse/line-macro-detect arg ...)]
+        #'(rash-line-or-line-macro arg ...)]
        [((%%rash-racket-line arg ...) post ...+)
         #'(begin arg ...
                  (rlp post ...))]
@@ -128,7 +129,7 @@
         #'(begin arg ...)]
        [() #'(void)])]))
 
-(define-syntax (rash-line-parse/line-macro-detect stx)
+(define-syntax (rash-line-or-line-macro stx)
   ;; detect line macros and apply them, or transform into pipeline
   (syntax-parse stx
     [(_ arg1:line-macro arg ...)
