@@ -4,8 +4,9 @@ Main stable release blockers
 * standardize `run-pipeline` style function interfaces
 ** in shell/pipeline
 *** currently (run-pipeline (spec1) (spec2) ...)
+*** currently allows lists in place of specs (makes unix segments, the only kind supported)
 ** in mixed-pipeline
-*** currently (run-pipeline (list (spec1) (spec2) ...))
+*** now like shell/pipeline, but no bare lists
 ** the parenthesised way to run rash code
 *** There is currently a version for rash where you have to put the parens around the pipe operator segments, I also want one that is flat and will find the structure based on the operators, for eg. def foo () ls | grep aoeu | wc
 *** currently (do-pipeline (=u= ls) (=u= grep foo))

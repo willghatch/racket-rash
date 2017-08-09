@@ -349,6 +349,7 @@
                                       #:lazy-timeout lazy-timeout
                                       . args)
   ;; TODO - environment extension/replacement
-  (run-pipeline args #:bg bg #:return-pipeline-object return-pipeline-object
-                #:in in #:out out #:err err
-                #:strictness strictness #:lazy-timeout lazy-timeout))
+  (apply run-pipeline #:bg bg #:return-pipeline-object return-pipeline-object
+         #:in in #:out out #:err err
+         #:strictness strictness #:lazy-timeout lazy-timeout
+         args))
