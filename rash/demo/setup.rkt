@@ -37,6 +37,9 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
   syntax/parse
   ))
 
+;; convenient short name for identity function
+(define (id x) x)
+
 (define-syntax #%upper-triangles (make-rename-transformer #'rash))
 (define-syntax #%lower-triangles (make-rename-transformer #'rash/wired))
 
