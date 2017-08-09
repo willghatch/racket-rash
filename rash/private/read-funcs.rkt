@@ -106,6 +106,22 @@
 (define rash-inside-paren-readtable
   (udelimify #f))
 
+(define read-dash
+  ;; don't read as a number for things like `-i`
+  (case-lambda
+    [(ch port)
+     (syntax->datum (read-dash ch port #f #f #f #f))]
+    [(ch port src line col pos)
+     (cond
+       [(regexp-match-peek #px"^\\d+" port)
+        (parameterize ([current-readtable (make-readtable line-readtable
+                                                          #\- #\- #f)])
+          (read-syntax/recursive (object-name port) port ch))]
+       [else
+        (parameterize ([current-readtable (make-readtable line-readtable
+                                                          #\- #\a #f)])
+          (read-syntax/recursive (object-name port) port ch))])]))
+
 (define line-readtable/pre-delim
   (make-readtable #f
                   ;; newline and comment (which ends with newline) need
@@ -139,13 +155,7 @@
                   ;; need to strip it of any.
                   ;#\@ #\a #f
 
-                  ;; -i is a common flag, but -i is a number constant in racket,
-                  ;; so I need to take away the meaning of - in the reader (or
-                  ;; make -i flags *really* annoying to use)!
-                  ;; TODO - I can use -i if syntax objects carry their literal original
-                  ;; string representation inside them, because I could then pull out
-                  ;; the original string for these sort of quoted things.
-                  #\- #\a #f
+                  #\- 'non-terminating-macro read-dash
 
                   ;; I want # to have its normal meaning to allow #||# comments,
                   ;; #t and #f, #(vectors, maybe), etc.
