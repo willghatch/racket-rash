@@ -202,16 +202,18 @@
                    (format "Neither a procedure nor a known transformer name: ~a"
                            tx)))]))
 
-(define (run-pipeline specs
-                      #:in [init-in-port (open-input-string "")]
-                      #:out [final-output-port-or-transformer
-                             default-output-transformer]
-                      #:err [default-err 'string-port]
-                      #:strictness [strictness 'lazy]
-                      #:lazy-timeout [lazy-timeout 1]
-                      #:bg [bg #f]
-                      ;; TODO - better name
-                      #:return-pipeline-object [return-pipeline-object #f])
+(define (run-pipeline
+         #:in [init-in-port (open-input-string "")]
+         #:out [final-output-port-or-transformer
+                default-output-transformer]
+         #:err [default-err 'string-port]
+         #:strictness [strictness 'lazy]
+         #:lazy-timeout [lazy-timeout 1]
+         #:bg [bg #f]
+         ;; TODO - better name
+         #:return-pipeline-object [return-pipeline-object #f]
+         .
+         specs)
   (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err strictness lazy-timeout))
   (when (not bg) (pipeline-wait pline))
   (if (or bg return-pipeline-object)
