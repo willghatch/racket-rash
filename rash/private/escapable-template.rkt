@@ -21,6 +21,7 @@
            (do-rec))]
       [_ (do-rec)])))
 
+;; TODO - these should probably recur on the output of the transformations as well.
 (define-syntax (escapable-template stx)
   (syntax-parse stx
     [(_ template-form)
