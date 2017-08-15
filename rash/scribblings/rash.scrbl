@@ -6,6 +6,8 @@
 @defmodule[rash]
 @(require rash)
 
+@bold{Rash}, @italic{adj} 1.  Hurrying into action or assertion without due caution and regardless of prudence, hasty, reckless, precipitate.  “@italic{A rash programmer is likely to produce shell scripts.}”
+
 @section{RASH Guide}
 
 THIS IS ALL ALPHA AND UNSTABLE
