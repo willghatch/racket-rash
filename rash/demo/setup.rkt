@@ -138,3 +138,19 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 ;; note that grep returns 1 when it finds nothing, which is normally considered an error
 (define-simple-rash-alias grep "grep" #:success (list 1))
+
+(define-syntax envar
+  (syntax-parser
+    [(rec x:id)
+     #'(rec x #:default
+            (error 'envar
+                   "unset environment variable with no default: ~a"
+                   (symbol->string 'x)))]
+    [(_ x:id #:default def:expr)
+     #'(or (getenv (symbol->string 'x)) def)]
+    [(_ x:id ve:expr)
+     #'(let ([v ve])
+         (and (or (putenv (symbol->string 'x) v)
+                  (error 'envar "setting environment variable failed"))
+              v))]))
+
