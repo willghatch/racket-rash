@@ -1,6 +1,8 @@
 Main stable release blockers
 ----------------------------
 
+* clean up prompt helpers so they don't crash things when they go wrong (eg. no upstream...)
+
 * standardize `run-pipeline` style function interfaces
 ** in shell/pipeline
 *** currently (run-pipeline (spec1) (spec2) ...)
@@ -55,6 +57,21 @@ Main stable release blockers
 
 * look through TODO comments
 
+
+demo todo
+---------
+
+* wrapper functions to pass objects for common commands
+* nice table formatting for output
+** probably a line macro for auto-tabling output of objects that can act like tables
+** rash has a default output transformer for unix segments, but should there maybe be a transformer for other things for eg. tabling?  Better would probably be special handling eg. with the prompt function to display things nicely for interactive use.
+* what sort of objects should be passed around for these common commands?  I could just use hash tables for a lot of tabular data things, but I want them to also provide info for how to display a table -- maybe just a hash table wrapper with extra metadata that implements gen:dict?
+
+* unix pipeline with $var unquoting and $VAR environment variable reference
+
+* better drracket integration
+** fix whatever causes pipes to need to be balanced
+** hopefully figure out how to make the interactions window start with the default-pipeline-starter that the module has
 
 
 misc
