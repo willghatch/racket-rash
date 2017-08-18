@@ -14,13 +14,10 @@
    ))
 
 (require
- racket/stxparam
- racket/splicing
  "pipeline-operators.rkt"
  "settable-lexical-default.rkt"
  (for-syntax
   racket/base
-  syntax/parse
   "pipeline-operator-detect.rkt"))
 
 (define-for-syntax (default-pipeline-error stx)

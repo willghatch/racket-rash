@@ -2,7 +2,7 @@
 
 (module+ for-public
   (provide
-   rash-line-or-line-macro
+   do-line-macro
    ))
 
 (provide
@@ -23,6 +23,7 @@
  "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
  "pipeline-operator-transform.rkt"
+ "line-macro-default.rkt"
  (for-syntax
   racket/base
   syntax/parse
@@ -55,10 +56,10 @@
      (syntax-parse #'(arg ...)
        #:datum-literals (%%rash-racket-line %%rash-line-start)
        [((%%rash-line-start arg ...) post ...+)
-        #'(begin (rash-line-or-line-macro arg ...)
+        #'(begin (do-line-macro arg ...)
                  (rlp post ...))]
        [((%%rash-line-start arg ...))
-        #'(rash-line-or-line-macro arg ...)]
+        #'(do-line-macro arg ...)]
        [((%%rash-racket-line arg ...) post ...+)
         #'(begin arg ...
                  (rlp post ...))]
@@ -66,11 +67,11 @@
         #'(begin arg ...)]
        [() #'(void)])]))
 
-(define-syntax (rash-line-or-line-macro stx)
+(define-syntax (do-line-macro stx)
   ;; detect line macros and apply them, or transform into pipeline
   (syntax-parse stx
     [(_ arg1:line-macro arg ...)
      (rash-line-macro-transform #'(arg1 arg ...))]
     [(_ arg ...)
-     #'(rash-run-pipeline arg ...)]))
+     (rash-line-macro-transform #`(#,(get-default-line-macro) arg ...))]))
 

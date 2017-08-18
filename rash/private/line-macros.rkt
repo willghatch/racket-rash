@@ -3,10 +3,12 @@
 (provide
  define-line-macro
  cd
+ pipeline-line-macro
  )
 
 (require
  "line-macro-detect.rkt"
+ "pipeline-macro-parse.rkt"
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
  (for-syntax
@@ -33,3 +35,9 @@
       [(_ (~and dir (~or ds:str di:id)))
        #'(change-directory 'dir)]
       [(_) #'(change-directory (getenv "HOME"))])))
+
+(define-line-macro pipeline-line-macro
+  (λ (stx)
+    (syntax-parse stx
+      [(_ arg ...)
+       #'(rash-run-pipeline arg ...)])))
