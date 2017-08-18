@@ -10,7 +10,7 @@
  (all-from-out "pipeline-operators.rkt")
  (all-from-out "line-macros.rkt")
  (all-from-out (submod "pipeline-operator-default.rkt" for-public))
- (all-from-out (submod "parse-funcs.rkt" for-public))
+ (all-from-out (submod "line-parse.rkt" for-public))
  (all-from-out (submod "pipeline-macro-parse.rkt" for-public))
 
  )
@@ -38,12 +38,12 @@
  racket/stxparam
  racket/splicing
  "read-funcs.rkt"
- "parse-funcs.rkt"
+ "line-parse.rkt"
  "pipeline-macro-parse.rkt"
  (submod "pipeline-macro-parse.rkt" for-public)
  "pipeline-operator-default.rkt"
  (submod "pipeline-operator-default.rkt" for-public)
- (submod "parse-funcs.rkt" for-public)
+ (submod "line-parse.rkt" for-public)
  "line-macros.rkt"
  "pipeline-operators.rkt"
 
