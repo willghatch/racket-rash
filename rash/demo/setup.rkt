@@ -5,7 +5,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 |#
 
 ;; be sure to put something like this in your file!
-;(default-pipeline-starter! \|)
+;(set-default-pipeline-starter! \|)
 
 
 (provide

@@ -75,7 +75,7 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (default-pipeline-starter-bound #,(get-default-pipeline-starter)
+         (splicing-with-default-pipeline-starter #,(get-default-pipeline-starter)
            (rash-set-defaults
             (in-eval out-eval err-eval)
             (rash-line-parse e ...))))]))
