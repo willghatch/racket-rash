@@ -27,8 +27,8 @@
    rash-read-and-line-parse
    rash-pipeline-opt-hash
    default-output-port-transformer
-   (for-syntax default-pipeline-starter-hash)
-   default-pipeline-starter-key
+   ;(for-syntax default-pipeline-starter-hash)
+   ;default-pipeline-starter-key
    ))
 
 
@@ -72,21 +72,13 @@
 (define-syntax (rash-expressions-begin stx)
   (syntax-parse stx
     [(_ (input output err-output) e ...+)
-     (let* ([default-key (gensym 'rash-default-starter-key-)]
-            [set (hash-set! default-pipeline-starter-hash
-                            default-key
-                            (hash-ref default-pipeline-starter-hash
-                                      {syntax-parameter-value
-                                       #'default-pipeline-starter-key}))])
-       #`(splicing-let ([in-eval input]
-                        [out-eval output]
-                        [err-eval err-output])
-           (splicing-syntax-parameterize ([default-pipeline-starter-key
-                                           (quote
-                                            #,(datum->syntax #'here default-key))])
-             (rash-set-defaults
-              (in-eval out-eval err-eval)
-              (rash-line-parse e ...)))))]))
+     #`(splicing-let ([in-eval input]
+                      [out-eval output]
+                      [err-eval err-output])
+         (default-pipeline-starter-bound #,(get-default-pipeline-starter)
+           (rash-set-defaults
+            (in-eval out-eval err-eval)
+            (rash-line-parse e ...))))]))
 
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx

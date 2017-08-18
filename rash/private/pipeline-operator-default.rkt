@@ -8,11 +8,17 @@
 
 (require
  racket/stxparam
+ racket/splicing
  "pipeline-operators.rkt"
  (for-syntax
   racket/base
   syntax/parse
   "pipeline-operator-detect.rkt"))
+
+(begin-for-syntax
+  ;; define mybox, because boxes are turned into immutable boxes (rather than
+  ;; 3d syntax) when turned into syntax.
+  (struct mybox ([v #:mutable])))
 
 (define-for-syntax (default-pipeline-error stx)
   (raise-syntax-error
@@ -25,24 +31,34 @@
                           default-pipeline-error
                           default-pipeline-error))
 
-(define-for-syntax default-pipeline-starter-hash
+(define-for-syntax (get-default-pipeline-starter)
+  (mybox-v
+   (syntax->datum
+    (syntax-parameter-value #'default-pipeline-starter-param))))
+
+(define-for-syntax default-pipeline-starter-box
+  (mybox #'default-pipeline-starter))
+
+(define-syntax-parameter default-pipeline-starter-param
   ;; TODO - what should the default really be?  I don't want to inherit from the top level in non-rash modules
-  (make-hash (list (cons 'top-level #'default-pipeline-starter))))
-;; TODO - use a box!
-(define-syntax-parameter default-pipeline-starter-key
-  'top-level)
+  (datum->syntax #'here default-pipeline-starter-box))
 
 ;; TODO - if the macro to change the starter is in a stop-list of local-expand,
 ;; it can cause the default to be wrong because it works via side-effect!
 ;; How can this be fixed?
-;; Maybe instead of letting it run as a macro, the outer rash macro can detect
-;; it and eagerly do all side-effect-y things.  This would also require eagerly
-;; splitting pipelines.
 (define-syntax (default-pipeline-starter! stx)
   (syntax-parse stx
     [(_ new-starter:pipe-starter-op)
      (begin
-       (hash-set! default-pipeline-starter-hash
-                  {syntax-parameter-value #'default-pipeline-starter-key}
-                  #'new-starter)
+       (set-mybox-v!
+        (syntax->datum (syntax-parameter-value #'default-pipeline-starter-param))
+        #'new-starter)
        #'(void))]))
+
+(define-syntax (default-pipeline-starter-bound stx)
+  (syntax-parse stx
+    [(_ starting-default:id body ...+)
+     #`(splicing-syntax-parameterize
+           ([default-pipeline-starter-param
+              #,(datum->syntax #'starting-default (mybox #'starting-default))])
+         body ...)]))
