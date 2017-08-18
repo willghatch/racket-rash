@@ -28,6 +28,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 (require
  rash
  racket/stream
+ racket/string
  file/glob
  shell/mixed-pipeline
  (for-syntax
@@ -100,6 +101,8 @@ These are essentially a bunch of proof-of-concept pipeline operators.
     [(_ x:id) #'(quote x)]
     [(_ e) #'e]))
 
+(define out-transformer (λ (o) (string-trim (port->string o))))
+
 (define-pipeline-operator =for/list/unix-arg=
   #:joint
   (syntax-parser
@@ -114,28 +117,31 @@ These are essentially a bunch of proof-of-concept pipeline operators.
             [(#t narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret)
                                            (for/list ([for-iter prev-ret])
-                                             (rash-do-pipeline
-                                              (=basic-unix-pipe=
-                                               kwarg ...
-                                               narg ...)))))]
+                                             (rash-run-pipeline
+                                              &out out-transformer
+                                              =basic-unix-pipe=
+                                              kwarg ...
+                                              narg ...))))]
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret)
                                            (for/list ([for-iter prev-ret])
-                                             (rash-do-pipeline
-                                              (=basic-unix-pipe=
-                                               kwarg ...
-                                               narg ...
-                                               for-iter)))))]))))]))
+                                             (rash-run-pipeline
+                                              &out out-transformer
+                                              =basic-unix-pipe=
+                                              kwarg ...
+                                              narg ...
+                                              for-iter))))]))))]))
 (define-pipeline-operator =for/list/unix-input=
   #:joint
   (syntax-parser
     [(_ arg ...+)
      #'(obj-pipeline-member-spec (λ (prev-ret)
                                    (for/list ([for-iter prev-ret])
-                                     (rash-do-pipeline
-                                      #:in (open-input-string (format "~a" for-iter))
-                                      (=basic-unix-pipe=
-                                       (quote-if-id-not-current-arg arg) ...)))))]))
+                                     (rash-run-pipeline
+                                      &in (open-input-string (format "~a" for-iter))
+                                      &out out-transformer
+                                      =basic-unix-pipe=
+                                      (quote-if-id-not-current-arg arg) ...))))]))
 
 
 #|

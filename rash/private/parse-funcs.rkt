@@ -15,8 +15,8 @@
    ;&env-replace
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
-   rash-do-pipeline
    rash-line-or-line-macro
+   rash-run-pipeline
    ))
 
 (require
@@ -134,6 +134,11 @@
   (syntax-parse stx
     [(_ arg1:line-macro arg ...)
      (rash-line-macro-transform #'(arg1 arg ...))]
+    [(_ arg ...)
+     #'(rash-pipeline-splitter arg ...)]))
+
+(define-syntax (rash-run-pipeline stx)
+  (syntax-parse stx
     [(_ arg ...)
      #'(rash-pipeline-splitter arg ...)]))
 
@@ -303,61 +308,6 @@
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
 
-(define-syntax (rash-do-pipeline stx)
-  (syntax-parse stx
-    [(_ arg ...+)
-     (define-values (tab rest-stx)
-       (parse-keyword-options #'(arg ...)
-                              (list (list '#:in check-expression)
-                                    (list '#:< check-expression)
-                                    (list '#:out check-expression)
-                                    (list '#:> check-expression)
-                                    (list '#:>! check-expression)
-                                    (list '#:>> check-expression)
-                                    (list '#:err check-expression)
-                                    ;; TODO - name?
-                                    (list '#:return-pipeline-object check-expression)
-                                    (list '#:bg check-expression)
-                                    (list '#:env check-expression)
-                                    (list '#:env-replace check-expression)
-                                    (list '#:strictness check-expression)
-                                    (list '#:lazy-timeout check-expression)
-                                    )
-                              #:no-duplicates? #t
-                              #:incompatible '((#:in #:<) (#:out #:> #:>! #:>>))))
-     (with-syntax ([input (cond [(opref tab '#:< #f)
-                                 => (λ (s) (syntax-case s () [in #'(quote in)]))]
-                                [(opref tab '#:in #'(open-input-string ""))])]
-                   [output (cond [(opref tab '#:> #f)
-                                  => (λ (s) (syntax-case s ()
-                                              [out #'(list (quote out) 'error)]))]
-                                 [(opref tab '#:>! #f)
-                                  => (λ (s) (syntax-case s ()
-                                              [out #'(list (quote out) 'truncate)]))]
-                                 [(opref tab '#:>> #f)
-                                  => (λ (s) (syntax-case s ()
-                                              [out #'(list (quote out) 'append)]))]
-                                 [(opref tab '#:out #'default-output-port-transformer)])]
-                   [err-output (opref tab '#:err #''string-port)]
-                   [bg (opref tab '#:bg #'#f)]
-                   [return-pipeline-object (opref tab '#:return-pipeline-object #'#f)]
-                   [env (opref tab '#:env #'#f)]
-                   [replace-env (opref tab '#:env-replace #'#f)]
-                   [strictness (opref tab '#:strictness #''lazy)]
-                   [lazy-timeout (opref tab '#:lazy-timeout #'1)]
-                   )
-       (syntax-parse rest-stx
-         [([startop:pipe-starter-op startarg ...] [joinop:pipe-joiner-op joinarg ...] ...)
-          #'(rash-do-transformed-pipeline
-               #:bg bg #:return-pipeline-object return-pipeline-object
-               ;#:env env
-               ;#:replace-env replace-env
-               #:in input #:out output #:err err-output
-               #:strictness strictness
-               #:lazy-timeout lazy-timeout
-               (rash-transform-starter-segment startop startarg ...)
-               (rash-transform-joiner-segment joinop joinarg ...)
-               ...)]))]))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
