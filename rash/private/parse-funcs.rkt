@@ -27,7 +27,7 @@
  racket/string
  racket/port
  shell/mixed-pipeline
- "pipeline-operator-implicit.rkt"
+ "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
  "pipeline-operator-transform.rkt"
  (for-syntax
@@ -285,8 +285,8 @@
      #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
     [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
      #`(rps done-macro
-            #,(hash-ref implicit-pipeline-starter-hash
-                        {syntax-parameter-value #'implicit-pipeline-starter-key})
+            #,(hash-ref default-pipeline-starter-hash
+                        {syntax-parameter-value #'default-pipeline-starter-key})
             iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)

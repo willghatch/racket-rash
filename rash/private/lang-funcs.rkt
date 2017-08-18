@@ -9,7 +9,7 @@
 
  (all-from-out "pipeline-operators.rkt")
  (all-from-out "line-macros.rkt")
- (all-from-out (submod "pipeline-operator-implicit.rkt" for-public))
+ (all-from-out (submod "pipeline-operator-default.rkt" for-public))
  (all-from-out (submod "parse-funcs.rkt" for-public))
 
  )
@@ -27,8 +27,8 @@
    rash-read-and-line-parse
    rash-pipeline-opt-hash
    default-output-port-transformer
-   (for-syntax implicit-pipeline-starter-hash)
-   implicit-pipeline-starter-key
+   (for-syntax default-pipeline-starter-hash)
+   default-pipeline-starter-key
    ))
 
 
@@ -38,8 +38,8 @@
  racket/splicing
  "read-funcs.rkt"
  "parse-funcs.rkt"
- "pipeline-operator-implicit.rkt"
- (submod "pipeline-operator-implicit.rkt" for-public)
+ "pipeline-operator-default.rkt"
+ (submod "pipeline-operator-default.rkt" for-public)
  (submod "parse-funcs.rkt" for-public)
  "line-macros.rkt"
  "pipeline-operators.rkt"
@@ -72,18 +72,18 @@
 (define-syntax (rash-expressions-begin stx)
   (syntax-parse stx
     [(_ (input output err-output) e ...+)
-     (let* ([implicit-key (gensym 'rash-implicit-starter-key-)]
-            [set (hash-set! implicit-pipeline-starter-hash
-                            implicit-key
-                            (hash-ref implicit-pipeline-starter-hash
+     (let* ([default-key (gensym 'rash-default-starter-key-)]
+            [set (hash-set! default-pipeline-starter-hash
+                            default-key
+                            (hash-ref default-pipeline-starter-hash
                                       {syntax-parameter-value
-                                       #'implicit-pipeline-starter-key}))])
+                                       #'default-pipeline-starter-key}))])
        #`(splicing-let ([in-eval input]
                         [out-eval output]
                         [err-eval err-output])
-           (splicing-syntax-parameterize ([implicit-pipeline-starter-key
+           (splicing-syntax-parameterize ([default-pipeline-starter-key
                                            (quote
-                                            #,(datum->syntax #'here implicit-key))])
+                                            #,(datum->syntax #'here default-key))])
              (rash-set-defaults
               (in-eval out-eval err-eval)
               (rash-line-parse e ...)))))]))

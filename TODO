@@ -3,6 +3,11 @@ Main stable release blockers
 
 * clean up prompt helpers so they don't crash things when they go wrong (eg. no upstream...)
 
+* separate shell-pipeline, linea, rash
+** all rash pipeline stuff into shell-pipeline
+** all reading/line-macro stuff into linea
+** rash combines and configures the two
+
 * standardize `run-pipeline` style function interfaces
 ** in shell/pipeline
 *** currently (run-pipeline (spec1) (spec2) ...)
