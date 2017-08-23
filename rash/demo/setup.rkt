@@ -10,8 +10,8 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 (provide
  (all-defined-out)
- (all-from-out rash/demo/define-rash-alias)
- (all-from-out rash/demo/more-pipeline-operators)
+ (all-from-out shell/demo/define-rash-alias)
+ (all-from-out shell/demo/more-pipeline-operators)
  (all-from-out racket/string)
  (all-from-out racket/port)
  (all-from-out racket/function)
@@ -25,8 +25,8 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 (require
  rash
- rash/demo/define-rash-alias
- rash/demo/more-pipeline-operators
+ shell/demo/define-rash-alias
+ shell/demo/more-pipeline-operators
  racket/string
  racket/port
  racket/function
