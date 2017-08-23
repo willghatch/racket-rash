@@ -26,7 +26,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 
 
 (require
- rash
+ "../pipeline-macro.rkt"
  racket/stream
  racket/string
  file/glob

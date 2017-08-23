@@ -6,7 +6,7 @@
  )
 
 (require
- rash
+ "../pipeline-macro.rkt"
  (for-syntax
   racket/base
   syntax/parse
