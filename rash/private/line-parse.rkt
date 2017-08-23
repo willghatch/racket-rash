@@ -12,7 +12,7 @@
 
 
 (require
- "pipeline-macro-parse.rkt"
+ (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  "read-funcs.rkt"
  syntax/parse
  racket/stxparam
@@ -20,9 +20,6 @@
  racket/string
  racket/port
  shell/mixed-pipeline
- "pipeline-operator-default.rkt"
- "pipeline-operators.rkt"
- "pipeline-operator-transform.rkt"
  "line-macro-default.rkt"
  (for-syntax
   racket/base
@@ -30,9 +27,8 @@
   racket/stxparam-exptime
   syntax/keyword
   racket/dict
-  "pipeline-operator-detect.rkt"
   "line-macro-detect.rkt"
-  "misc-utils.rkt"
+  shell/private/misc-utils
   (for-syntax
    racket/base
    syntax/parse

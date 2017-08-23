@@ -35,7 +35,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
   racket/base
   syntax/parse
   racket/string
-  "../private/filter-keyword-args.rkt"
+  shell/private/filter-keyword-args
   ))
 
 

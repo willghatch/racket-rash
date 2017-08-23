@@ -8,7 +8,7 @@
 
 (require
  "line-macro-detect.rkt"
- "pipeline-macro-parse.rkt"
+ shell/pipeline-macro
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
  (for-syntax

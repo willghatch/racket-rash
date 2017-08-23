@@ -14,7 +14,7 @@
    ))
 
 (require
- "settable-lexical-default.rkt"
+ shell/private/settable-lexical-default
  "line-macros.rkt"
  )
 

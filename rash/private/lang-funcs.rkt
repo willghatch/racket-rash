@@ -7,11 +7,9 @@
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
 
- (all-from-out "pipeline-operators.rkt")
+ (all-from-out shell/pipeline-macro)
  (all-from-out "line-macros.rkt")
- (all-from-out (submod "pipeline-operator-default.rkt" for-public))
  (all-from-out (submod "line-parse.rkt" for-public))
- (all-from-out (submod "pipeline-macro-parse.rkt" for-public))
 
  )
 
@@ -26,10 +24,6 @@
    rash-set-defaults
    rash-line-parse
    rash-read-and-line-parse
-   rash-pipeline-opt-hash
-   default-output-port-transformer
-   ;(for-syntax default-pipeline-starter-hash)
-   ;default-pipeline-starter-key
    ))
 
 
@@ -37,15 +31,14 @@
  shell/mixed-pipeline
  racket/stxparam
  racket/splicing
+ racket/string
+ racket/port
  "read-funcs.rkt"
  "line-parse.rkt"
- "pipeline-macro-parse.rkt"
- (submod "pipeline-macro-parse.rkt" for-public)
- "pipeline-operator-default.rkt"
- (submod "pipeline-operator-default.rkt" for-public)
+ shell/pipeline-macro
  (submod "line-parse.rkt" for-public)
  "line-macros.rkt"
- "pipeline-operators.rkt"
+ (only-in shell/private/pipeline-macro-parse rash-set-defaults)
 
  (for-syntax
   syntax/keyword
@@ -56,7 +49,7 @@
   syntax/strip-context
   udelim
   "read-funcs.rkt"
-  "misc-utils.rkt"
+  shell/private/misc-utils
 
   (for-syntax
    racket/base
@@ -65,7 +58,7 @@
    "template-escape-detect.rkt"
    )))
 
-
+(define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
 (define-for-syntax rash-keyword-table
   (list (list '#:in check-expression)
