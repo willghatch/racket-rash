@@ -3,6 +3,10 @@ Main stable release blockers
 
 * clean up prompt helpers so they don't crash things when they go wrong (eg. no upstream...)
 
+* figure out what to do with settable-lexical-defaults
+** I want them for interactive shells, but they are broken for definition contexts (due to the partial expansion to find definitions -- if you set the default in a definition context it is evaluated before previous things are fully expanded)
+** probably they should actually be normal syntax parameters, and for interactive shells and configure-runtime they should be parameterized to check some runtime state (maybe a parameter)  So `set-default----!` will be available ONLY for interactive shells.  This is a little disappointing.
+
 * separate shell-pipeline, linea, rash
 ** all rash pipeline stuff into shell-pipeline
 ** all reading/line-macro stuff into linea
