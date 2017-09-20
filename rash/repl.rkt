@@ -16,9 +16,10 @@
 
 
 (define (rash-repl last-ret-val n)
-  (option-app (current-prompt-function)
-              #:last-return-value last-ret-val
-              #:last-return-index n)
+  (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a~n" e))])
+    (option-app (current-prompt-function)
+                #:last-return-value last-ret-val
+                #:last-return-index n))
   (flush-output (current-output-port))
   (flush-output (current-error-port))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)

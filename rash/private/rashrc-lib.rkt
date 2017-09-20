@@ -76,7 +76,8 @@
          [ret-show (green (format-ret last-ret))])
     (printf "~a:~a ~a~a~a~n~a "
             (cyan chour) padded-min
-            (git-info-with-style)
+            (with-handlers ([(λ _ #t) (λ (e) (default-style "[git-info-error] "))])
+              (git-info-with-style))
             (bblue (path->string (current-directory)))
             (if (< 0 last-ret-n)
                 (format " ~a~a ~a~a"
