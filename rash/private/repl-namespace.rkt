@@ -1,6 +1,11 @@
 #lang racket/base
-(require "../main.rkt")
-(require (submod "lang-funcs.rkt" for-module-begin))
+(require
+ "../main.rkt"
+ (submod "lang-funcs.rkt" for-module-begin)
+ (for-syntax
+  racket/base
+  syntax/parse
+  ))
 
 (define interactive-return-values (make-hash))
 (define (result-n n)
@@ -10,6 +15,16 @@
     (if (pipeline? pline)
         (pipeline-ret pline)
         pline)))
+(define-for-syntax repl-default-pipeline-starter-variable #'=quoting-basic-unix-pipe=)
+(define-line-macro set-default-pipeline-starter!
+  (syntax-parser [(_ starter)
+                  (set! repl-default-pipeline-starter-variable #'starter)
+                  #'(void)]))
+
+(define-pipeline-operator
+  repl-default-pipeline-starter
+  #:start (syntax-parser [(_ arg ...)
+                          #`(#,repl-default-pipeline-starter-variable arg ...)]))
 #|
 TODO --
 Probably the hash table should only be modifiable via auto-update
@@ -37,3 +52,4 @@ numbering schemes...
 (define-namespace-anchor ns-a)
 (define repl-namespace (namespace-anchor->namespace ns-a))
 (provide repl-namespace)
+(provide repl-default-pipeline-starter)

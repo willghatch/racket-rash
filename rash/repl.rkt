@@ -44,7 +44,8 @@
                                         (splicing-syntax-parameterize
                                             ([default-line-macro #'pipeline-line-macro]
                                              ;; TODO - make configurable
-                                             [default-pipeline-starter #'=quoting-basic-unix-pipe=])
+                                             [default-pipeline-starter
+                                               #'repl-default-pipeline-starter])
                                           (linea-line-parse #,next-input))))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)

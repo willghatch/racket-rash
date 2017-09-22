@@ -6,6 +6,7 @@ This is a demo file that could be required by `rashrc` or `rashrc.rkt`.
 To use it, put the following in `~/.config/rash/rashrc`:
 
 (require rash/demo/demo-rc.rkt)
+set-default-pipeilen-starter! |
 
 |#
 
