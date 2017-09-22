@@ -4,9 +4,6 @@
 Stuff to give quick demos.  Eventually most of this should be cleaned up and some set of good things should be provided by default.
 |#
 
-;; be sure to put something like this in your file!
-;(set-default-pipeline-starter! \|)
-
 
 (provide
  (all-defined-out)

@@ -42,7 +42,9 @@
                                          (current-output-port)
                                          (current-error-port))
                                         (splicing-syntax-parameterize
-                                            ([default-line-macro #'pipeline-line-macro])
+                                            ([default-line-macro #'pipeline-line-macro]
+                                             ;; TODO - make configurable
+                                             [default-pipeline-starter #'=quoting-basic-unix-pipe=])
                                           (linea-line-parse #,next-input))))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)

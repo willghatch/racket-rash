@@ -64,19 +64,20 @@
 (define-for-syntax rash-keyword-table
   (list (list '#:in check-expression)
         (list '#:out check-expression)
-        (list '#:err check-expression)))
+        (list '#:err check-expression)
+        (list '#:default-starter check-expression)))
 
 (define-syntax (rash-expressions-begin stx)
   (syntax-parse stx
-    [(_ (input output err-output) e ...+)
+    [(_ (input output err-output default-starter) e ...+)
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-syntax-parameterize ([default-line-macro #'pipeline-line-macro])
-           (splicing-with-default-pipeline-starter #,(get-default-pipeline-starter)
-                                                   (rash-set-defaults
-                                                    (in-eval out-eval err-eval)
-                                                    (linea-line-parse e ...)))))]))
+         (splicing-syntax-parameterize ([default-line-macro #'pipeline-line-macro]
+                                        [default-pipeline-starter default-starter])
+           (rash-set-defaults
+            (in-eval out-eval err-eval)
+            (linea-line-parse e ...))))]))
 
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx
@@ -86,7 +87,9 @@
           (current-read-interaction rash-read-and-line-parse))
         (rash-expressions-begin ((current-input-port)
                                  (current-output-port)
-                                 (current-error-port))
+                                 (current-error-port)
+                                 ;; TODO - make configurable
+                                 #'=basic-unix-pipe=)
                                 arg ...))]))
 
 
@@ -103,8 +106,11 @@
                     (linea-stx-strs->stx rest-stx)]
                    [input (opref tab '#:in #'(open-input-string ""))]
                    [output (opref tab '#:out #'default-output-port-transformer)]
-                   [err-output (opref tab '#:err #''string-port)])
-       #'(rash-expressions-begin (input output err-output) parsed-rash-code ...))]))
+                   [err-output (opref tab '#:err #''string-port)]
+                   [default-starter (opref tab '#:default-starter
+                                           #'#'default-pipeline-starter)])
+       #'(rash-expressions-begin (input output err-output default-starter)
+                                 parsed-rash-code ...))]))
 
 
 (define-syntax (rash/wired stx)
