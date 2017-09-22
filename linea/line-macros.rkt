@@ -36,6 +36,7 @@
        #'(change-directory 'dir)]
       [(_) #'(change-directory (getenv "HOME"))])))
 
+;; TODO - move this
 (define-line-macro pipeline-line-macro
   (λ (stx)
     (syntax-parse stx

@@ -1,7 +1,7 @@
 #lang s-exp syntax/module-reader
 rash/lang/module-begin
-#:read-syntax rash-read-syntax
-#:read rash-read
+#:read-syntax linea-read-syntax
+#:read linea-read
 ;;#:whole-body-readers? #t
 
-(require "../private/read-funcs.rkt")
+(require linea/read-funcs)

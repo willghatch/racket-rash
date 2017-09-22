@@ -8,7 +8,7 @@
  (all-from-out shell/mixed-pipeline)
 
  (all-from-out shell/pipeline-macro)
- (all-from-out "line-macros.rkt")
+ (all-from-out linea/line-macros)
  (all-from-out (submod "line-parse.rkt" for-public))
 
  )
@@ -22,7 +22,7 @@
 (module+ for-repl
   (provide
    rash-set-defaults
-   rash-line-parse
+   linea-line-parse
    rash-read-and-line-parse
    ))
 
@@ -33,11 +33,11 @@
  racket/splicing
  racket/string
  racket/port
- "read-funcs.rkt"
  "line-parse.rkt"
+ linea/line-macros
+ linea/line-parse
  shell/pipeline-macro
  (submod "line-parse.rkt" for-public)
- "line-macros.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
 
  (for-syntax
@@ -48,13 +48,12 @@
   syntax/parse
   syntax/strip-context
   udelim
-  "read-funcs.rkt"
+  linea/read-funcs
   shell/private/misc-utils
 
   (for-syntax
    racket/base
    syntax/parse
-   "read-funcs.rkt"
    "template-escape-detect.rkt"
    )))
 
@@ -74,7 +73,7 @@
          (splicing-with-default-pipeline-starter #,(get-default-pipeline-starter)
            (rash-set-defaults
             (in-eval out-eval err-eval)
-            (rash-line-parse e ...))))]))
+            (linea-line-parse e ...))))]))
 
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx
@@ -98,7 +97,7 @@
                               #:no-duplicates? #t))
 
      (with-syntax ([(parsed-rash-code ...)
-                    (rash-stx-strs->stx rest-stx)]
+                    (linea-stx-strs->stx rest-stx)]
                    [input (opref tab '#:in #'(open-input-string ""))]
                    [output (opref tab '#:out #'default-output-port-transformer)]
                    [err-output (opref tab '#:err #''string-port)])

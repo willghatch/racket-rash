@@ -4,7 +4,7 @@
  "main.rkt"
  (submod "private/lang-funcs.rkt" for-repl)
  "private/repl-namespace.rkt"
- "private/read-funcs.rkt"
+ linea/read-funcs
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
 
@@ -24,8 +24,8 @@
   (flush-output (current-error-port))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
                                               #`(%%rash-racket-line (void)))])
-                       (rash-read-syntax (object-name (current-input-port))
-                                         (current-input-port)))]
+                       (linea-read-syntax (object-name (current-input-port))
+                                          (current-input-port)))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
@@ -36,7 +36,7 @@
                                         ((current-input-port)
                                          (current-output-port)
                                          (current-error-port))
-                                        (rash-line-parse #,next-input)))))))
+                                        (linea-line-parse #,next-input)))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -62,9 +62,9 @@
                      ((current-input-port)
                       (current-output-port)
                       (current-error-port))
-                     (rash-line-parse
-                      #,@(rash-read-syntax-all (object-name rcfile)
-                                               (open-input-file rcfile))))))))
+                     (linea-line-parse
+                      #,@(linea-read-syntax-all (object-name rcfile)
+                                                (open-input-file rcfile))))))))
 
 (define (main)
   (port-count-lines! (current-input-port))

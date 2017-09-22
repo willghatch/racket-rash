@@ -1,11 +1,11 @@
 #lang racket/base
 
 (provide
- rash-read-syntax
- rash-read-syntax-all
- rash-read
- rash-read-all
- rash-stx-strs->stx
+ linea-read-syntax
+ linea-read-syntax-all
+ linea-read
+ linea-read-all
+ linea-stx-strs->stx
  )
 
 (require
@@ -14,7 +14,7 @@
  syntax/strip-context
  )
 
-(define (rash-read-line-syntax src in)
+(define (linea-read-line-syntax src in)
   (define (rec rlist)
     (let ([output
            (parameterize ([current-readtable line-readtable])
@@ -22,20 +22,20 @@
       (cond [(and (eof-object? output) (null? rlist))
              output]
             [(eof-object? output)
-             (datum->syntax #f (cons #'%%rash-line-start
+             (datum->syntax #f (cons #'%%linea-line-start
                                      (reverse rlist)))]
             [else
              (syntax-parse output
-               #:datum-literals (%%rash-newline-symbol)
-               [%%rash-newline-symbol
+               #:datum-literals (%%linea-newline-symbol)
+               [%%linea-newline-symbol
                 (if (null? rlist)
-                    (rash-read-syntax src in)
-                    (datum->syntax output (cons #'%%rash-line-start
+                    (linea-read-syntax src in)
+                    (datum->syntax output (cons #'%%linea-line-start
                                                 (reverse rlist))))]
                [else (rec (cons output rlist))])])))
   (rec '()))
 
-(define (rash-read-syntax src in)
+(define (linea-read-syntax src in)
   (read-and-ignore-hspace! in)
   ;; TODO - maybe an extensible table of things to do depending on the start of the line?
   #|
@@ -46,29 +46,29 @@
   |#
   (let ([peeked (peek-char in)])
     (cond [(equal? #\( peeked)
-           (let ([s (parameterize ([current-readtable rash-inside-paren-readtable])
+           (let ([s (parameterize ([current-readtable linea-inside-paren-readtable])
                       (read-syntax src in))])
-             #`(%%rash-racket-line #,s))]
+             #`(%%linea-racket-line #,s))]
           [(equal? #\; peeked)
            (begin (read-line-comment (read-char in) in)
-                  (rash-read-syntax src in))]
-          [else (rash-read-line-syntax src in)])))
+                  (linea-read-syntax src in))]
+          [else (linea-read-line-syntax src in)])))
 
-(define (rash-read in)
-  (let ([out (rash-read-syntax #f in)])
+(define (linea-read in)
+  (let ([out (linea-read-syntax #f in)])
     (if (eof-object? out)
         out
         (syntax->datum out))))
 
-(define (rash-read-syntax-all src in)
+(define (linea-read-syntax-all src in)
   (define (rec rlist)
-    (let ([part (rash-read-syntax src in)])
+    (let ([part (linea-read-syntax src in)])
       (if (eof-object? part)
           (datum->syntax #f (reverse rlist))
           (rec (cons part rlist)))))
   (rec '()))
-(define (rash-read-all in)
-  (syntax->datum (rash-read-syntax-all #f in)))
+(define (linea-read-all in)
+  (syntax->datum (linea-read-syntax-all #f in)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -85,7 +85,7 @@
     [(ch port)
      (syntax->datum (read-newline ch port #f #f #f #f))]
     [(ch port src line col pos)
-     #'%%rash-newline-symbol]))
+     #'%%linea-newline-symbol]))
 
 (define read-line-comment
   (case-lambda
@@ -93,7 +93,7 @@
      (syntax->datum (read-line-comment ch port #f #f #f #f))]
     [(ch port src line col pos)
      (ignore-to-newline! port)
-     #'%%rash-newline-symbol]))
+     #'%%linea-newline-symbol]))
 
 (define (read-and-ignore-hspace! port)
   (let ([nchar (peek-char port)])
@@ -103,7 +103,7 @@
                (read-and-ignore-hspace! port))
         (void))))
 
-(define rash-inside-paren-readtable
+(define linea-inside-paren-readtable
   (udelimify #f))
 
 (define read-dash
@@ -164,13 +164,13 @@
 
 (define line-readtable
   (make-list-delim-readtable
-   #\[ #\] #:inside-readtable rash-inside-paren-readtable
+   #\[ #\] #:inside-readtable linea-inside-paren-readtable
    #:base-readtable
    (make-list-delim-readtable
-    #\{ #\} #:inside-readtable rash-inside-paren-readtable
+    #\{ #\} #:inside-readtable linea-inside-paren-readtable
     #:base-readtable
     (make-list-delim-readtable
-     #\( #\) #:inside-readtable rash-inside-paren-readtable
+     #\( #\) #:inside-readtable linea-inside-paren-readtable
      #:base-readtable
      (make-string-delim-readtable
       #\◸ #\◹ #:wrapper '#%upper-triangles
@@ -186,11 +186,11 @@
          #:base-readtable
          (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
 
-(define (rash-stx-strs->stx stx)
+(define (linea-stx-strs->stx stx)
   (let ([src (syntax-parse stx
-               [(rash-src:str) #'rash-src]
+               [(linea-src:str) #'linea-src]
                [(src-seg:str ...+) (scribble-strings->string #'(src-seg ...))])])
     (map (λ (s) (replace-context src s))
          (syntax->list
-          (rash-read-syntax-all (syntax-source src)
-                                (stx-string->port src))))))
+          (linea-read-syntax-all (syntax-source src)
+                                 (stx-string->port src))))))
