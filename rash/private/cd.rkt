@@ -1,25 +1,17 @@
 #lang racket/base
 
 (provide
- define-line-macro
  cd
  )
 
 (require
- "line-macro-detect.rkt"
- shell/pipeline-macro
+ linea/line-macro
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
  (for-syntax
   racket/base
   syntax/parse
-  "line-macro-detect.rkt"
   ))
-
-(define-syntax (define-line-macro stx)
-  (syntax-case stx ()
-    [(_ name transformer)
-     #'(define-syntax name (line-macro-struct transformer))]))
 
 (define/contract (change-directory dir)
   (-> path-string-symbol? void?)

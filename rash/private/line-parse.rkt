@@ -1,10 +1,5 @@
 #lang racket/base
 
-(module+ for-public
-  (provide
-   do-line-macro
-   ))
-
 (provide
  rash-read-and-line-parse
  )
@@ -12,7 +7,7 @@
 
 (require
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
- linea
+ linea/read
  syntax/parse
  racket/stxparam
  racket/splicing
@@ -25,14 +20,12 @@
   racket/stxparam-exptime
   syntax/keyword
   racket/dict
-  linea
+  linea/read
   shell/private/misc-utils
   (for-syntax
    racket/base
    syntax/parse
    )))
-
-
 
 (define (rash-read-and-line-parse src in)
   (let ([stx (linea-read-syntax src in)])

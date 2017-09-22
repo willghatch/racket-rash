@@ -9,6 +9,11 @@
  line-macro
  line-macro-struct
  )
+(module+ for-public
+  (provide
+   prop:linea-line-macro
+   linea-line-macro?
+   ))
 
 (require syntax/parse)
 

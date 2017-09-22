@@ -4,13 +4,13 @@
  rash
  rash/wired
  pipeline-line-macro
+ cd
 
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
 
  (all-from-out shell/pipeline-macro)
- (all-from-out linea)
- (all-from-out (submod "line-parse.rkt" for-public))
+ (all-from-out linea/line-macro)
 
  )
 
@@ -36,9 +36,10 @@
  racket/string
  racket/port
  "line-parse.rkt"
- linea
+ "cd.rkt"
+ linea/line-macro
+ linea/read
  shell/pipeline-macro
- (submod "line-parse.rkt" for-public)
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
 
  (for-syntax
@@ -49,7 +50,7 @@
   syntax/parse
   syntax/strip-context
   udelim
-  linea
+  linea/read
   shell/private/misc-utils
 
   (for-syntax
