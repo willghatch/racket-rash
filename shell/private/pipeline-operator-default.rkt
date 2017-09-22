@@ -1,16 +1,12 @@
 #lang racket/base
 
 (provide
- set-default-pipeline-starter!
- with-default-pipeline-starter
- splicing-with-default-pipeline-starter
- (for-syntax
-  get-default-pipeline-starter
-  ))
+ default-pipeline-starter
+ )
 
 (require
  "pipeline-operators.rkt"
- "settable-lexical-default.rkt"
+ racket/stxparam
  (for-syntax
   racket/base
   "pipeline-operator-detect.rkt"))
@@ -26,6 +22,4 @@
                           default-pipeline-error
                           default-pipeline-error))
 
-(define-settable-lexical-default
-  default-pipeline-starter
-  default-pipeline-starter-macro)
+(define-syntax-parameter default-pipeline-starter #'default-pipeline-starter-macro)

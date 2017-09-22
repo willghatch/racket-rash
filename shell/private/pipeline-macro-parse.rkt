@@ -7,12 +7,13 @@
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
    rash-run-pipeline
-   ;; TODO rash-set-defaults should be switched to use settable-lexical-defaults, and then be made public
+   default-pipeline-starter
    ))
 
 (provide
  rash-run-pipeline
  rash-set-defaults
+ default-pipeline-starter
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
@@ -246,7 +247,7 @@
      #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
     [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
      #`(rps done-macro
-            #,(get-default-pipeline-starter)
+            #,(syntax-parameter-value #'default-pipeline-starter)
             iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
