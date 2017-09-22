@@ -9,7 +9,6 @@
  )
 
 (require
- syntax/parse
  racket/stxparam
  (for-syntax
   "private/line-macro-detect.rkt"

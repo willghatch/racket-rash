@@ -30,7 +30,6 @@
 
 (require
  shell/mixed-pipeline
- racket/stxparam
  racket/splicing
  racket/string
  racket/port
@@ -43,12 +42,8 @@
 
  (for-syntax
   syntax/keyword
-  racket/dict
   racket/base
-  racket/stxparam-exptime
   syntax/parse
-  syntax/strip-context
-  udelim
   linea/read
   shell/private/misc-utils
 

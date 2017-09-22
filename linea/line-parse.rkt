@@ -6,7 +6,6 @@
 
 (require
  "line-macro.rkt"
- syntax/parse
  (for-syntax
   racket/base
   syntax/parse
