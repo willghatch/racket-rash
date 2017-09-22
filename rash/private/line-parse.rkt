@@ -6,26 +6,13 @@
 
 
 (require
- (only-in shell/private/pipeline-macro-parse rash-set-defaults)
- linea/read
  syntax/parse
- racket/stxparam
- racket/splicing
- racket/string
- racket/port
- shell/mixed-pipeline
- (for-syntax
-  racket/base
-  syntax/parse
-  racket/stxparam-exptime
-  syntax/keyword
-  racket/dict
-  linea/read
-  shell/private/misc-utils
-  (for-syntax
-   racket/base
-   syntax/parse
-   )))
+ linea/read
+ (for-template
+  linea/line-parse
+  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
+  ))
+
 
 (define (rash-read-and-line-parse src in)
   (let ([stx (linea-read-syntax src in)])

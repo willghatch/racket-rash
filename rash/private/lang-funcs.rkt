@@ -23,7 +23,6 @@
 (module+ for-repl
   (provide
    rash-set-defaults
-   linea-line-parse
    rash-read-and-line-parse
    pipeline-line-macro
    ))
@@ -38,7 +37,7 @@
  "line-parse.rkt"
  "cd.rkt"
  linea/line-macro
- linea/read
+ linea/line-parse
  shell/pipeline-macro
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
 

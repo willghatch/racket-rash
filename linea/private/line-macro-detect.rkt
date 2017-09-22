@@ -3,29 +3,29 @@
 ;; struct properties and syntax classes for defining and detecting line macros
 
 (provide
- prop:linea-line-macro
- linea-line-macro?
+ prop:line-macro
+ line-macro?
  linea-line-macro-transform
  line-macro
  line-macro-struct
  )
 (module+ for-public
   (provide
-   prop:linea-line-macro
-   linea-line-macro?
+   prop:line-macro
+   line-macro?
    ))
 
 (require syntax/parse)
 
 
-(define-values (prop:linea-line-macro
-                linea-line-macro?
+(define-values (prop:line-macro
+                line-macro?
                 linea-line-macro-ref)
   (make-struct-type-property 'linea-line-macro))
 
 (define-syntax-class line-macro
   (pattern op:id
-           #:when (linea-line-macro? (syntax-local-value #'op (λ () #f)))))
+           #:when (line-macro? (syntax-local-value #'op (λ () #f)))))
 
 (define (linea-line-macro-transform stx)
   (syntax-parse stx
@@ -39,7 +39,7 @@
 
 (struct line-macro-struct
   (transformer)
-  #:property prop:linea-line-macro (λ (inst . args)
+  #:property prop:line-macro (λ (inst . args)
                                (apply
                                 {line-macro-struct-transformer inst}
                                 args))

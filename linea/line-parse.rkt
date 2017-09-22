@@ -5,7 +5,7 @@
  )
 
 (require
- "../line-macro.rkt"
+ "line-macro.rkt"
  syntax/parse
  (for-syntax
   racket/base
@@ -14,17 +14,17 @@
 
 (define-syntax (linea-line-parse stx)
   (syntax-parse stx
-    [(rlp arg ...)
+    [(rec arg ...)
      (syntax-parse #'(arg ...)
        #:datum-literals (%%linea-racket-line %%linea-line-start)
        [((%%linea-line-start arg ...) post ...+)
         #'(begin (do-line-macro arg ...)
-                 (rlp post ...))]
+                 (rec post ...))]
        [((%%linea-line-start arg ...))
         #'(do-line-macro arg ...)]
        [((%%linea-racket-line arg ...) post ...+)
         #'(begin arg ...
-                 (rlp post ...))]
+                 (rec post ...))]
        [((%%linea-racket-line arg ...))
         #'(begin arg ...)]
        [() #'(void)])]))

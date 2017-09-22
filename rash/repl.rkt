@@ -6,6 +6,7 @@
  "private/repl-namespace.rkt"
  linea/line-macro
  linea/read
+ linea/line-parse
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing
