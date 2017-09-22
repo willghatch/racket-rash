@@ -23,7 +23,6 @@
 (module+ for-repl
   (provide
    rash-set-defaults
-   rash-read-and-line-parse
    pipeline-line-macro
    ))
 
@@ -37,8 +36,10 @@
  "cd.rkt"
  linea/line-macro
  linea/line-parse
+ linea/read
  shell/pipeline-macro
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
+ syntax/parse
 
  (for-syntax
   syntax/keyword
@@ -79,17 +80,31 @@
             (in-eval out-eval err-eval)
             (linea-line-parse e ...))))]))
 
+(define (rash-read-interaction src in)
+  ;; TODO - This really should be as close as using repl.rkt as possible
+  (let ([stx (linea-read-syntax src in)])
+    (if (eof-object? stx)
+        stx
+        (syntax-parse stx
+          [e #'(rash-expressions-begin
+                ((current-input-port)
+                 (current-output-port)
+                 (current-error-port)
+                 ;; TODO - make this configurable along with the one in the #lang body
+                 #'=quoting-basic-unix-pipe=)
+                e)]))))
+
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx
     [(_ arg ...)
      #'(#%plain-module-begin
         (module* configure-runtime #f
-          (current-read-interaction rash-read-and-line-parse))
+          (current-read-interaction rash-read-interaction))
         (rash-expressions-begin ((current-input-port)
                                  (current-output-port)
                                  (current-error-port)
                                  ;; TODO - make configurable
-                                 #'=basic-unix-pipe=)
+                                 #'=quoting-basic-unix-pipe=)
                                 arg ...))]))
 
 
