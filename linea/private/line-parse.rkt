@@ -50,4 +50,5 @@
     [(_ arg1:line-macro arg ...)
      (linea-line-macro-transform #'(arg1 arg ...))]
     [(_ arg ...)
-     (linea-line-macro-transform #`(#,(get-default-line-macro) arg ...))]))
+     (let ([default-macro (syntax-parameter-value #'default-line-macro)])
+       (linea-line-macro-transform #`(#,default-macro arg ...)))]))

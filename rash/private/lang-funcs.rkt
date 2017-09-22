@@ -3,12 +3,13 @@
 (provide
  rash
  rash/wired
+ pipeline-line-macro
 
  ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
 
  (all-from-out shell/pipeline-macro)
- (all-from-out linea/line-macros)
+ (all-from-out linea)
  (all-from-out (submod "line-parse.rkt" for-public))
 
  )
@@ -24,6 +25,7 @@
    rash-set-defaults
    linea-line-parse
    rash-read-and-line-parse
+   pipeline-line-macro
    ))
 
 
@@ -34,8 +36,7 @@
  racket/string
  racket/port
  "line-parse.rkt"
- linea/line-macros
- linea/line-parse
+ linea
  shell/pipeline-macro
  (submod "line-parse.rkt" for-public)
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
@@ -48,7 +49,7 @@
   syntax/parse
   syntax/strip-context
   udelim
-  linea/read-funcs
+  linea
   shell/private/misc-utils
 
   (for-syntax
@@ -56,6 +57,12 @@
    syntax/parse
    "template-escape-detect.rkt"
    )))
+
+(define-line-macro pipeline-line-macro
+  (λ (stx)
+    (syntax-parse stx
+      [(_ arg ...)
+       #'(rash-run-pipeline arg ...)])))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
@@ -70,10 +77,11 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-with-default-pipeline-starter #,(get-default-pipeline-starter)
-           (rash-set-defaults
-            (in-eval out-eval err-eval)
-            (linea-line-parse e ...))))]))
+         (splicing-syntax-parameterize ([default-line-macro #'pipeline-line-macro])
+           (splicing-with-default-pipeline-starter #,(get-default-pipeline-starter)
+                                                   (rash-set-defaults
+                                                    (in-eval out-eval err-eval)
+                                                    (linea-line-parse e ...)))))]))
 
 (define-syntax (rash-module-begin stx)
   (syntax-parse stx
@@ -130,3 +138,4 @@
                 default-output-port-transformer
                 'string-port)
                parsed-rash-code ...))])))))
+

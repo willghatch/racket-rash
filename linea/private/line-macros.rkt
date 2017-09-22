@@ -3,7 +3,6 @@
 (provide
  define-line-macro
  cd
- pipeline-line-macro
  )
 
 (require
@@ -36,9 +35,3 @@
        #'(change-directory 'dir)]
       [(_) #'(change-directory (getenv "HOME"))])))
 
-;; TODO - move this
-(define-line-macro pipeline-line-macro
-  (λ (stx)
-    (syntax-parse stx
-      [(_ arg ...)
-       #'(rash-run-pipeline arg ...)])))

@@ -4,15 +4,18 @@
  "main.rkt"
  (submod "private/lang-funcs.rkt" for-repl)
  "private/repl-namespace.rkt"
- linea/read-funcs
+ linea
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
+ racket/splicing
 
  basedir
  racket/exn
 
- (for-syntax syntax/parse
-             racket/base))
+ (for-syntax
+  racket/base
+  syntax/parse
+  ))
 
 
 (define (rash-repl last-ret-val n)
@@ -36,7 +39,9 @@
                                         ((current-input-port)
                                          (current-output-port)
                                          (current-error-port))
-                                        (linea-line-parse #,next-input)))))))
+                                        (splicing-syntax-parameterize
+                                            ([default-line-macro #'pipeline-line-macro])
+                                          (linea-line-parse #,next-input))))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -62,9 +67,11 @@
                      ((current-input-port)
                       (current-output-port)
                       (current-error-port))
-                     (linea-line-parse
-                      #,@(linea-read-syntax-all (object-name rcfile)
-                                                (open-input-file rcfile))))))))
+                     (splicing-syntax-parameterize
+                         ([default-line-macro #'pipeline-line-macro])
+                       (linea-line-parse
+                        #,@(linea-read-syntax-all (object-name rcfile)
+                                                  (open-input-file rcfile)))))))))
 
 (define (main)
   (port-count-lines! (current-input-port))

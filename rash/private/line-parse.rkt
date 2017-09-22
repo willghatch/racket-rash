@@ -12,22 +12,20 @@
 
 (require
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
- linea/line-parse
- linea/read-funcs
+ linea
  syntax/parse
  racket/stxparam
  racket/splicing
  racket/string
  racket/port
  shell/mixed-pipeline
- linea/line-macro-default
  (for-syntax
   racket/base
   syntax/parse
   racket/stxparam-exptime
   syntax/keyword
   racket/dict
-  linea/line-macro-detect
+  linea
   shell/private/misc-utils
   (for-syntax
    racket/base

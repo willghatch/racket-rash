@@ -4,4 +4,4 @@ rash/lang/module-begin
 #:read linea-read
 ;;#:whole-body-readers? #t
 
-(require linea/read-funcs)
+(require linea)
