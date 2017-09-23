@@ -27,9 +27,9 @@
   (syntax-parse stx
     [(_ arg1:line-macro arg ...)
      (linea-line-macro-transform #'(arg1 arg ...))]
-    [(_ arg ...)
+    [(rec arg ...)
      (let ([default-macro (syntax-parameter-value #'default-line-macro)])
-       (linea-line-macro-transform #`(#,default-macro arg ...)))]))
+       #`(rec #,default-macro arg ...))]))
 
 (define-line-macro erroring-default-line-macro
   (λ (stx)

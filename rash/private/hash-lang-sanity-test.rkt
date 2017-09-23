@@ -9,3 +9,5 @@
       (define z 7)»)
 
 (printf "adding: ~a~n" (+ x y z))
+
+ls
