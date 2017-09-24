@@ -3,7 +3,6 @@
 (module+ for-public
   (provide
    &bg &pipeline-ret &env
-   ;&env-replace
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
    rash-run-pipeline

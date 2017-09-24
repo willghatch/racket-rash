@@ -1,2 +1,2 @@
 #lang info
-(define scribblings '(("shell-pipeline.scrbl" () (library))))
+(define scribblings '(["scribblings/shell-pipeline.scrbl" (multi-page) (library)]))

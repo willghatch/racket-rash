@@ -4,29 +4,27 @@
                      racket/contract
                      shell/pipeline))
 
-@title[#:tag "shell-pipeline"]{Shell Pipeline Library}
-@author+email["William Hatch" "william@hatch.uno"]
+@title[#:tag "pipeline"]{Basic Unix-style Pipelines}
 
 @defmodule[shell/pipeline]
 
-@section{Stability}
+@section{shell/pipeline stability}
 
-This library is currently @emph{mostly} stable.  The part that is likely to still change is the @racket[current-shell-functions] parameter and the functions supporting it, because I think a parameter is probably not actually the best way to do that.  Additionally, I plan to add support for redirections similar to <() and >() in bash, and functions to support them (IE OS pipe functions, temporary file handling...).
+This library is not entirely stable.
 
-@section{Guide}
+Forthcoming features include features such as process redirection (similar to @bold{<()} and @bold{>()} in Bash).
 
-This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return 0.  To get the output as a string, use @racket[run-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
+@section{shell/pipeline guide}
 
-Symbols in pipelines are turned into strings before they are passed in as arguments to subprocesses.  Arguments to racket functions are not transformed in any way, but my intention is that they should usually treat symbols as strings when reasonable.
+@; TODO - I should probably just rewrite this, but at least I should make sure it all makes sense within the tower of libraries to Rash.  And I should maybe explain better the types of return values you get from functions, or the defaults they have...
+This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return a pipeline object.  To get the output as a string, use @racket[run-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
 
-Now go and write your shell scripts in Racket instead of the bourne shell, bash, zsh, ksh, csh, tcsh, ash, dash, fish, ...
+Symbols in pipelines are turned into strings before they are passed in as arguments to subprocesses.  Arguments to racket functions are not transformed in any way.
 
 This library DOES work on MS Windows, and if it can't find a program it retries the name with a .exe at the end.  But Microsoft doesn't seem to believe in having useful shell utilities, or in putting program executables on the PATH, or adding program locations to the PATH.  So it will probably still be more useful on Unix than on Windows.
 
-This library is also intended to support other libraries providing different surface syntax for running pipelines, such as #lang rash, or scsh like frontend macros.
 
-
-@section{Reference}
+@section{shell/pipeline reference}
 
 @defproc[(run-pipeline [member (or/c list? pipeline-member-spec?)] ...
 [#:in in (or/c input-port? false/c) (current-input-port)]
@@ -139,13 +137,3 @@ Like @racket[and], but only treats pipeline objects as truthy if they pass @rack
 @defform[(or/success e ...)]{
 Like @racket[or], but only treats pipeline objects as truthy if they pass @racket[pipeline-success?].
 }
-
-
-@section{Code and License}
-
-The code is available
-@hyperlink["https://github.com/willghatch/racket-shell-pipeline"]{on github}.
-
-This library is licensed under the terms of the LGPL version 3, or (at
-your option) any later version published by the Free Software
-Foundation (IE LGPL3+).
