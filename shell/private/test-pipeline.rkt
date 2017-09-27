@@ -23,6 +23,11 @@
      "\n")))
 (define my-grep (shellify grep-func))
 
+(define (my-grep2 regex)
+  (for ([line (port->lines (current-input-port))])
+    (when (regexp-match regex line)
+      (displayln line))))
+
 (define my-echo (λ args (displayln (string-join (map ~a args) " "))))
 
 (module+ test
@@ -131,7 +136,7 @@
                  (string-trim
                   (run-pipeline/out `(cat ,pipeline.rkt)
                                     '(grep define)
-                                    `(,my-grep current-shell-functions)
+                                    `(,my-grep shellify)
                                     '(wc -l))))
                 1)
 
