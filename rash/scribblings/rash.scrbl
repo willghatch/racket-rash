@@ -14,6 +14,32 @@ THIS IS ALL ALPHA AND UNSTABLE
 
 Rash is in the middle of a major overhaul taking place in the `newrash` branch after redesigning it.  Some time soon there will be real documentation for it.
 
+@section{RASH Reference}
+
+things to document:
+
+rash
+rash/wired
+mk-rash-macro
+mk-rash-module-begin
+pipeline-line-macro
+cd
+
+define-line-macro
+do-line-macro
+default-line-macro
+
+docs about reader
+how to change the inside/outside readtable
+
+link to docs about pipeline macros
+
+extra things to document for repl:
+how to refer to old repl results
+how to change the default pipe in the repl
+rashrc stuff
+
+
 @;
 @;@section{Code and License}
 @;
