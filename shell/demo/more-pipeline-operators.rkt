@@ -24,6 +24,11 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  =obj-if-def/globbing-unix-if-undef=
  )
 
+(provide =aliasing-unix-pipe=)
+(provide lsl)
+(provide ls)
+(provide =unix-with-xargs-behavior=)
+
 
 (require
  "../pipeline-macro.rkt"
@@ -154,22 +159,18 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 
 (require (for-syntax "rash-alias.rkt"))
 (require "define-rash-alias.rkt")
-(provide =aliasing-unix-pipe=)
 (pipeop =aliasing-unix-pipe=
         [(_ cmd:rash-alias-id arg ...)
          (let ([slv (syntax-local-value #'cmd)])
            ({rash-alias-ref slv} slv #'(cmd arg ...)))]
         [(_ arg ...)
          #'(=quoting-basic-unix-pipe= arg ...)])
-(provide lsl)
 (define-rash-alias lsl
   (syntax-parser [(_ arg ...)
                   #'(=quoting-basic-unix-pipe= 'ls '-l '--color=auto arg ...)]))
-(provide ls)
 (define-simple-rash-alias ls 'ls '--color=auto)
 
 
-(provide =unix-with-xargs-behavior=)
 (require racket/port racket/list)
 #|
 This does various different things and needs to be simplified.  First of all
