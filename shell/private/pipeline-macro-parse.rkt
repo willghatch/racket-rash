@@ -238,27 +238,25 @@
                                                    ;; TODO - respect outer macro default
                                                    [else #'rash-default-err-out])
                                       )])
-                  (rash-pipeline-splitter/start rash-pipeline-splitter/done/do arg ...))])])])]))
+                  (rash-pipeline-splitter/start arg ...))])])])]))
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
-    [(_ done-macro starter:pipe-starter-op args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/rest done-macro ([starter args ...]) (rest ...))]
-    [(rps done-macro iargs:not-pipeline-op ...+ rest ...)
-     #`(rps done-macro
-            #,(syntax-parameter-value #'default-pipeline-starter)
+    [(_ starter:pipe-starter-op args:not-pipeline-op ... rest ...)
+     #'(rash-pipeline-splitter/rest ([starter args ...]) (rest ...))]
+    [(rps iargs:not-pipeline-op ...+ rest ...)
+     #`(rps #,(syntax-parameter-value #'default-pipeline-starter)
             iargs ... rest ...)]))
 
 (define-syntax (rash-pipeline-splitter/rest stx)
   (syntax-parse stx
-    [(rpsr done-macro (done-parts ...) ())
-     #'(done-macro done-parts ...)]
-    [(rpsr done-macro
-           (done-parts ...)
+    [(rpsr (done-parts ...) ())
+     #'(rash-pipeline-splitter/done done-parts ...)]
+    [(rpsr (done-parts ...)
            (op:pipe-joiner-op arg:not-pipeline-op ... rest ...))
-     #'(rpsr done-macro (done-parts ... [op arg ...]) (rest ...))]))
+     #'(rpsr (done-parts ... [op arg ...]) (rest ...))]))
 
-(define-syntax (rash-pipeline-splitter/done/do stx)
+(define-syntax (rash-pipeline-splitter/done stx)
   (syntax-parse stx
     [(_ (starter startarg ...) (joiner joinarg ...) ...)
      #'(rash-do-transformed-pipeline
