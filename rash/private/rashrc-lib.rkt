@@ -1,26 +1,42 @@
 #lang racket/base
 
 (provide current-prompt-function)
+(provide current-result-print-default-function)
 
 (require racket/date)
-(require shell/pipeline)
+(require shell/mixed-pipeline)
+(require (prefix-in sp- shell/pipeline))
 (require "rashrc-git-stuff.rkt")
+(require racket/exn)
 
 
-(define (format-ret last-ret)
+(define (print-ret-maybe last-ret ret-number)
+  (define (pre)
+    (printf "Result ~a:~n" ret-number))
   (cond [(exn? last-ret)
-         (begin (eprintf "~a~n" last-ret)
+         (begin (pre)
+                (eprintf "~a~n" last-ret)
                 ;; let any filtering output finish
-                (sleep 0.01)
-                (red "exn!"))]
+                (sleep 0.01))]
+        [(and (pipeline? last-ret)
+              (not (pipeline-success? last-ret)))
+         (pre)
+         (let ([err (pipeline-ret last-ret)])
+           (eprintf "~a~n" (format "~a" (if (exn? err)
+                                            (exn->string err)
+                                            err)))
+           (sleep 0.01))]
+        [(and (pipeline? last-ret)
+              (pipeline-ends-with-unix-segment? last-ret))
+         ;; successful unix pipes just have a boring status code
+         (void)]
         [(pipeline? last-ret)
-         ({if (pipeline-success? last-ret)
-              green
-              red}
-          ;(format-ret (pipeline-status last-ret))
-          (format "~s" last-ret)
-          )]
-        [else (format "~s" last-ret)]))
+         (print-ret-maybe (pipeline-ret last-ret) ret-number)]
+        [(void? last-ret)
+         (void)]
+        [else (pre)
+              ({current-result-print-default-function} last-ret)]))
+
 
 ;; TODO - use a library for these functions?
 ;;        Or do I not want another dependency?
@@ -66,34 +82,29 @@
 ;; max length a prompt string should be and adjusting all parts to it...
 
 (define (basic-prompt #:last-return-value [last-ret #f]
-                      #:last-return-index [last-ret-n #f])
+                      #:last-return-index [last-ret-n 0])
+  (when (> last-ret-n 0)
+    (print-ret-maybe last-ret last-ret-n))
   (let* ([cdate (current-date)]
          [chour (date-hour cdate)]
          [cmin (date-minute cdate)]
          [padded-min (if (< cmin 10)
                          (string-append "0" (number->string cmin))
-                         cmin)]
-         [ret-show (green (format-ret last-ret))])
-    (printf "~a:~a ~a~a~a~n~a "
+                         cmin)])
+    (printf "~a:~a ~a~a~n~a "
             (cyan chour) padded-min
             (with-handlers ([(λ _ #t) (λ (e) (default-style "[git-info-error] "))])
               (git-info-with-style))
             (bblue (path->string (current-directory)))
-            (if (< 0 last-ret-n)
-                (format " ~a~a ~a~a"
-                        (default-style "｢R")
-                        last-ret-n
-                        ret-show
-                        (default-style "｣"))
-                "")
             (default-style "➤"))))
 
 (define (lame-prompt #:last-return-value [last-ret #f]
                      #:last-return-index [last-ret-n #f])
-  (when (and last-ret (< 0 last-ret-n))
-    (printf "[~a ~a~a~n" last-ret-n (format-ret last-ret) (default-style "]")))
+  (print-ret-maybe last-ret last-ret-n)
   (printf ">"))
 
 (define current-prompt-function (make-parameter (if windows?
                                                     lame-prompt
                                                     basic-prompt)))
+(define current-result-print-default-function
+  (make-parameter (λ (result) (eprintf "~a~n" result))))

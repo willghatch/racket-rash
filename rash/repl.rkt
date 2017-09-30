@@ -10,6 +10,7 @@
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing
+ shell/pipeline-macro
 
  basedir
  racket/exn
@@ -19,6 +20,8 @@
   syntax/parse
   ))
 
+(define-line-macro run-pipeline/ret-obj
+  (syntax-parser [(_ arg ...) #'(rash-run-pipeline &pipeline-ret arg ...)]))
 
 (define (rash-repl last-ret-val n)
   (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a~n" e))])
@@ -42,7 +45,7 @@
                                          (current-output-port)
                                          (current-error-port))
                                         (splicing-syntax-parameterize
-                                            ([default-line-macro #'pipeline-line-macro]
+                                            ([default-line-macro #'run-pipeline/ret-obj]
                                              ;; TODO - make configurable
                                              [default-pipeline-starter
                                                #'repl-default-pipeline-starter])
@@ -73,7 +76,7 @@
                       (current-output-port)
                       (current-error-port))
                      (splicing-syntax-parameterize
-                         ([default-line-macro #'pipeline-line-macro])
+                         ([default-line-macro #'run-pipeline/ret-obj])
                        (linea-line-parse
                         #,@(linea-read-syntax-all (object-name rcfile)
                                                   (open-input-file rcfile)))))))))

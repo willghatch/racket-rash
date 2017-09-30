@@ -1,24 +1,7 @@
 Main stable release blockers
 ----------------------------
 
-* figure out what to do with settable-lexical-defaults
-** I want them for interactive shells, but they are broken for definition contexts (due to the partial expansion to find definitions -- if you set the default in a definition context it is evaluated before previous things are fully expanded)
-** probably they should actually be normal syntax parameters, and for interactive shells and configure-runtime they should be parameterized to check some runtime state (maybe a parameter)  So `set-default----!` will be available ONLY for interactive shells.  This is a little disappointing.
-** maybe just a #%default-foo identifier that will be put on with the hygiene info of the given identifiers?  This allows a definition at the top level, let-syntax instead of parameterize, and redefinition at the interactive level.  But redifinition at the top level means that if you define a macro that uses a default, then redefine the default, you've redefined the other macro as well!
-
-* separate shell-pipeline, linea, rash
-** all rash pipeline stuff into shell-pipeline
-** all reading/line-macro stuff into linea
-** rash combines and configures the two
-
-* standardize `run-pipeline` style function interfaces
-** in shell/pipeline
-*** currently (run-pipeline (spec1) (spec2) ...)
-*** currently allows lists in place of specs (makes unix segments, the only kind supported)
-** in mixed-pipeline
-*** now like shell/pipeline, but no bare lists
-** in pipeline-macro-parse
-*** (rash-run-pipeline =u= ls =u= grep foo)
+* The local-expanding of object-pipelines breaks keyword arguments.  Handle this better, or don't use local-expand.
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
