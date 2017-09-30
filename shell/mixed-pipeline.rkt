@@ -11,6 +11,7 @@
  pipeline-ret
  pipeline-start-ms
  pipeline-end-ms
+ pipeline-ends-with-unix-segment?
  (rename-out [u-pipeline-default-option pipeline-default-option])
  apply-output-transformer
 
@@ -102,8 +103,10 @@
       (pipeline-segment-ret (car (unbox (pipeline-segment-box pl))))
       (for/or ([pm (reverse (unbox (pipeline-segment-box pl)))])
         (and (not (pipeline-segment-success? pm)) (pipeline-segment-error pm)))))
-(define (pipeline-ends-with-unix-seg? pl)
-  (u-pipeline? (car (unbox (pipeline-segment-box pl)))))
+
+(define (pipeline-ends-with-unix-segment? pl)
+  (and (pipeline? pl)
+       (u-pipeline? (car (unbox (pipeline-segment-box pl))))))
 
 (define (pipeline-end-ms pl)
   (pipeline-wait pl)
