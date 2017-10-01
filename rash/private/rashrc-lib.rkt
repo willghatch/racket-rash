@@ -107,4 +107,4 @@
                                                     lame-prompt
                                                     basic-prompt)))
 (define current-result-print-default-function
-  (make-parameter (λ (result) (eprintf "~a~n" result))))
+  (make-parameter (λ (result) (printf "~s~n" result))))
