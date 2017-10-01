@@ -22,6 +22,8 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  ;; otherwise treat it as a unix command.
  =obj-if-def/unix-if-undef=
  =obj-if-def/globbing-unix-if-undef=
+
+ =filter=
  )
 
 (provide =aliasing-unix-pipe=)
@@ -202,3 +204,18 @@ then it needs to standardize the output...
                        (u-pipeline-member-spec
                         (list (u-alias-func
                                (λ () (flatten (list 'cmd narg ...)))))))))]))]))
+(define-pipeline-operator =filter=
+  #:joint (syntax-parser
+            [(_ arg ...)
+             (expand-pipeline-arguments
+              #'(arg ...)
+              #'iter-arg
+              (syntax-parser
+                [(#t narg ...)
+                 #'(obj-pipeline-member-spec (λ (prev-ret)
+                                               (filter (λ (iter-arg) (narg ...))
+                                                       prev-ret)))]
+                [(#f narg ...)
+                 #'(obj-pipeline-member-spec (λ (prev-ret)
+                                               (filter (λ (iter-arg) (narg ... iter-arg))
+                                                       prev-ret)))]))]))
