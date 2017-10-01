@@ -144,16 +144,20 @@ re-appended).
   (syntax-parse stx
     [(arg ...+)
      (with-syntax ([prev-arg arg-replacement])
-       (with-syntax ([(e-arg ...) (map (λ (s) (local-expand
-                                          #`(syntax-parameterize
-                                                ([current-pipeline-argument
-                                                  (make-set!-transformer
-                                                   (λ (id)
-                                                     (syntax-case id ()
-                                                       [_ #'prev-arg])))])
-                                              #,s)
-                                          'expression '()))
-                                  (syntax->list #'(arg ...)))])
+       (with-syntax ([(e-arg ...)
+                      (map (λ (s) (syntax-parse s
+                                    [(~or (form-arg ...) x:id)
+                                     (local-expand
+                                      #`(syntax-parameterize
+                                            ([current-pipeline-argument
+                                              (make-set!-transformer
+                                               (λ (id)
+                                                 (syntax-case id ()
+                                                   [_ #'prev-arg])))])
+                                          #,s)
+                                      'expression '())]
+                                    [else s]))
+                           (syntax->list #'(arg ...)))])
          (with-syntax ([explicit-ref-exists?
                         (datum->syntax #'here
                                        (stx-contains-id? #'(e-arg ...)
