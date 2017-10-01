@@ -104,19 +104,21 @@
       (printf "~a~n" (format-table-list result))
       (fallback-printer result)))
 
-(define (tablesort rows #:key [key-sym'pid] #:rev [rev #t])
+(define (tablesort rows #:key [key-sym'pid] #:rev [rev #f])
   (define (getkey elem)
     (let* ([val (dict-ref(table-elem-alist elem) key-sym)]
            [num (string->number val)])
       (if num num val)))
   (define (lt l r)
-    (if (string? l)
-        string<?
-        <))
+    ({if (string? l)
+         string<?
+         <}
+     l r))
   (define (gt l r)
-    (if (string? l)
-        string>?
-        >))
+    ({if (string? l)
+         string>?
+         >}
+     l r))
   (sort rows (if rev gt lt) #:key getkey))
 
 #;(printf "~a~n" (format-table-list (sort (my-ps) < #:key (λ (x) (string->number
