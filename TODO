@@ -74,6 +74,10 @@ About interactive shells
 ------------------------
 
 * job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
+** importantly, currently the repl is still the foreground process of the terminal when you press control c or control z, so it gets sigint or sigstop even when you have launched eg. vim
+** I need to set a pipeline to all have the same process group ID that is different than the pgid of the host shell.  Right now I can either let them all keep the pgid of the shell or give each of them a different pgid.  Anything else would require changes to the subprocess API in the C code of Racket.
+** I need to use `tcsetpgrp` to set the foreground process group on a terminal, to control which processes get sigint/sigstop signals from C-c and C-z.
+** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
 
 * discoverability
 ** the default prompt should help with discoverability -- maybe say the command to get help, look up docs, etc.  Something like «type HELP START» in LoE.
