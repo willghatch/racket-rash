@@ -19,6 +19,10 @@
                 ;; let any filtering output finish
                 (sleep 0.01))]
         [(and (pipeline? last-ret)
+              (pipeline-running? last-ret))
+         (pre)
+         (printf "~a~n" last-ret)]
+        [(and (pipeline? last-ret)
               (not (pipeline-success? last-ret)))
          (pre)
          (let ([err (pipeline-ret last-ret)])
