@@ -7,6 +7,7 @@
  u-pipeline-member-spec
  pipeline?
  pipeline-success?
+ pipeline-running?
  pipeline-wait
  pipeline-ret
  pipeline-start-ms
@@ -86,6 +87,9 @@
                                     (pipeline-wait pline)
                                     (semaphore-post sema)))
                           (wrap-evt sema (λ _ pline)))))
+
+(define (pipeline-running? pl)
+  (thread-running? (pipeline-manager-thread pl)))
 
 (define (pipeline-wait/internal pl)
   (thread-wait (pipeline-manager-thread pl))
