@@ -276,9 +276,9 @@
                                   (segment-get-arg last-seg)
                                   #f)])
                (set-box! seg-box (cons new-seg (unbox seg-box)))
-               ;; Done.
-               (void))]
-            [(null? specs) (void)]
+               ;; Done, but make the manager thread wait until the last segment is done.
+               (pipeline-segment-wait new-seg))]
+            [(null? specs) (pipeline-segment-wait last-seg)]
             [(obj-pipeline-member? last-seg)
              (begin
                (thread-wait (obj-pipeline-member-thread last-seg))
@@ -289,7 +289,7 @@
                                         (not last-seg))])
                      (set-box! seg-box (cons new-seg (unbox seg-box)))
                      (rec new-seg specs-rest))
-                   ;; Done.
+                   ;; Done -- no need to wait since there was an error.
                    (void)))]
             [else
              (let-values ([(new-seg specs-rest)
