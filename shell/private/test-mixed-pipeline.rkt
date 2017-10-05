@@ -13,8 +13,8 @@
   (check-equal?
    (run-pipeline
     (list
-     (obj-pipeline-member-spec (λ () "testing\nhello\nrunning"))
-     (obj-pipeline-member-spec (λ (arg) (string-upcase arg)))
+     (object-pipeline-member-spec (λ () "testing\nhello\nrunning"))
+     (object-pipeline-member-spec (λ (arg) (string-upcase arg)))
      ;(u-pipeline-member-spec (list "grep" "-i" "ing") 'null)
      (composite-pipeline-member-spec
       (list

@@ -73,9 +73,9 @@
                                 #'s-impl
                                 #'(λ (stx)
                                     (raise-syntax-error
-                                    (syntax->datum #'name)
-                                    "Can't be used as a pipeline starter operator"
-                                    stx)))]
+                                     (syntax->datum #'name)
+                                     "Can't be used as a pipeline starter operator"
+                                     stx)))]
                    [joiner (if (attribute j-impl)
                                #'j-impl
                                #'(λ (stx)
@@ -189,58 +189,58 @@ re-appended).
 (define-pipeline-operator =basic-object-pipe=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
   #:joint
   (syntax-parser
     [(_ arg ...+)
      (expand-pipeline-arguments
-        #'(arg ...)
-        #'prev-ret
-        (λ (expanded-stx)
-          (syntax-parse expanded-stx
-            [(#t narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
-            [(#f narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
+      #'(arg ...)
+      #'prev-ret
+      (λ (expanded-stx)
+        (syntax-parse expanded-stx
+          [(#t narg ...)
+           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
+          [(#f narg ...)
+           #'(object-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
 (define-pipeline-operator =basic-object-pipe/left=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(obj-pipeline-member-spec (λ () (arg ...)))])
+    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
   #:joint
   (syntax-parser
     [(_ arg ...+)
      (expand-pipeline-arguments
-        #'(arg ...)
-        #'prev-ret
-        (λ (expanded-stx)
-          (syntax-parse expanded-stx
-            [(#t narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret) (narg ...)))]
-            [(#f narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
+      #'(arg ...)
+      #'prev-ret
+      (λ (expanded-stx)
+        (syntax-parse expanded-stx
+          [(#t narg ...)
+           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
+          [(#f narg ...)
+           #'(object-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
 
 (define-pipeline-operator =basic-object-pipe/expression=
   #:start
   (syntax-parser
-    [(_ e) #'(obj-pipeline-member-spec (λ () e))])
+    [(_ e) #'(object-pipeline-member-spec (λ () e))])
   #:joint
   (syntax-parser
     [(_ e)
      (expand-pipeline-arguments
-        #'(e)
-        #'prev-ret
-        (λ (expanded-stx)
-          (syntax-parse expanded-stx
-            ;; Ignore the possibility of throwing away the pipe argument
-            [(_ ne)
-             #'(obj-pipeline-member-spec (λ (prev-ret) ne))])))]))
+      #'(e)
+      #'prev-ret
+      (λ (expanded-stx)
+        (syntax-parse expanded-stx
+          ;; Ignore the possibility of throwing away the pipe argument
+          [(_ ne)
+           #'(object-pipeline-member-spec (λ (prev-ret) ne))])))]))
 
 
 (define-for-syntax (with-port-sugar pipe-stx)
   #`(=composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
-                                                           (port->string x)
-                                                           x)))
-                           #,pipe-stx))
+                                                      (port->string x)
+                                                      x)))
+                      #,pipe-stx))
 
 (define-pipeline-operator =object-pipe=
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
@@ -296,11 +296,11 @@ re-appended).
                   (u-pipeline-member-spec (flatten (list arg ...))
                                           #:err #,err
                                           #:success #,success-pred)
-                  (obj-pipeline-member-spec (λ (out-port)
-                                              (apply-output-transformer #,as out-port)))))
+                  (object-pipeline-member-spec (λ (out-port)
+                                                 (apply-output-transformer #,as out-port)))))
               #`(u-pipeline-member-spec (flatten (list arg ...))
-                                           #:err #,err
-                                           #:success #,success-pred)))])]))
+                                        #:err #,err
+                                        #:success #,success-pred)))])]))
 
 (define-for-syntax (basic-unix-pipe stx)
   (syntax-parse stx

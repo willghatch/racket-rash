@@ -89,13 +89,13 @@ These are essentially a bunch of proof-of-concept pipeline operators.
       #'for-iter
       (syntax-parser
         [(#t narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for-macro ([for-iter prev-ret])
-                                                  (narg ...))))]
+         #'(object-pipeline-member-spec (λ (prev-ret)
+                                          (for-macro ([for-iter prev-ret])
+                                                     (narg ...))))]
         [(#f narg ...)
-         #'(obj-pipeline-member-spec (λ (prev-ret)
-                                       (for-macro ([for-iter prev-ret])
-                                                  (narg ... for-iter))))]))]))
+         #'(object-pipeline-member-spec (λ (prev-ret)
+                                          (for-macro ([for-iter prev-ret])
+                                                     (narg ... for-iter))))]))]))
 
 (pipeop =for/list= [(_ arg ...+) #'(=fors= for/list arg ...)])
 (pipeop =for/stream= [(_ arg ...+) #'(=fors= for/list arg ...)])
@@ -121,33 +121,33 @@ These are essentially a bunch of proof-of-concept pipeline operators.
           #'for-iter
           (syntax-parser
             [(#t narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret)
-                                           (for/list ([for-iter prev-ret])
-                                             (run-pipeline
-                                              &out out-transformer
-                                              =basic-unix-pipe=
-                                              kwarg ...
-                                              narg ...))))]
+             #'(object-pipeline-member-spec (λ (prev-ret)
+                                              (for/list ([for-iter prev-ret])
+                                                (run-pipeline
+                                                 &out out-transformer
+                                                 =basic-unix-pipe=
+                                                 kwarg ...
+                                                 narg ...))))]
             [(#f narg ...)
-             #'(obj-pipeline-member-spec (λ (prev-ret)
-                                           (for/list ([for-iter prev-ret])
-                                             (run-pipeline
-                                              &out out-transformer
-                                              =basic-unix-pipe=
-                                              kwarg ...
-                                              narg ...
-                                              for-iter))))]))))]))
+             #'(object-pipeline-member-spec (λ (prev-ret)
+                                              (for/list ([for-iter prev-ret])
+                                                (run-pipeline
+                                                 &out out-transformer
+                                                 =basic-unix-pipe=
+                                                 kwarg ...
+                                                 narg ...
+                                                 for-iter))))]))))]))
 (define-pipeline-operator =for/list/unix-input=
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     #'(obj-pipeline-member-spec (λ (prev-ret)
-                                   (for/list ([for-iter prev-ret])
-                                     (run-pipeline
-                                      &in (open-input-string (format "~a" for-iter))
-                                      &out out-transformer
-                                      =basic-unix-pipe=
-                                      (quote-if-id-not-current-arg arg) ...))))]))
+     #'(object-pipeline-member-spec (λ (prev-ret)
+                                      (for/list ([for-iter prev-ret])
+                                        (run-pipeline
+                                         &in (open-input-string (format "~a" for-iter))
+                                         &out out-transformer
+                                         =basic-unix-pipe=
+                                         (quote-if-id-not-current-arg arg) ...))))]))
 
 
 #|
@@ -196,7 +196,7 @@ then it needs to standardize the output...
                  #'(let ([pipe-arg #f])
                      (composite-pipeline-member-spec
                       (list
-                       (obj-pipeline-member-spec
+                       (object-pipeline-member-spec
                         (λ (in)
                           (begin (set! pipe-arg (if (input-port? in) (port->string in) in))
                                  "")))
@@ -211,10 +211,10 @@ then it needs to standardize the output...
               #'iter-arg
               (syntax-parser
                 [(#t narg ...)
-                 #'(obj-pipeline-member-spec (λ (prev-ret)
-                                               (filter (λ (iter-arg) (narg ...))
-                                                       prev-ret)))]
+                 #'(object-pipeline-member-spec (λ (prev-ret)
+                                                  (filter (λ (iter-arg) (narg ...))
+                                                          prev-ret)))]
                 [(#f narg ...)
-                 #'(obj-pipeline-member-spec (λ (prev-ret)
-                                               (filter (λ (iter-arg) (narg ... iter-arg))
-                                                       prev-ret)))]))]))
+                 #'(object-pipeline-member-spec (λ (prev-ret)
+                                                  (filter (λ (iter-arg) (narg ... iter-arg))
+                                                          prev-ret)))]))]))

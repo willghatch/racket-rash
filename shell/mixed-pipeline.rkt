@@ -2,18 +2,26 @@
 
 (provide
  run-pipeline
- (struct-out obj-pipeline-member-spec)
- (struct-out composite-pipeline-member-spec)
+
+ object-pipeline-member-spec
+ object-pipeline-member-spec?
+
+ composite-pipeline-member-spec
+ composite-pipeline-member-spec?
+
  u-pipeline-member-spec
 
  pipeline?
  pipeline-success?
  pipeline-running?
  pipeline-wait
- pipeline-ret
+ pipeline-return
  pipeline-start-ms
  pipeline-end-ms
  pipeline-ends-with-unix-segment?
+
+
+ ;; TODO - I don't think these need to be provided...
  (rename-out [u-pipeline-default-option pipeline-default-option])
  apply-output-transformer
 
@@ -29,37 +37,37 @@
          racket/match
          )
 
-(struct obj-pipeline-member-spec
+(struct object-pipeline-member-spec
   (func)
   #:transparent)
 (struct composite-pipeline-member-spec
   (members)
   #:transparent)
 
-(struct obj-pipeline-member
+(struct object-pipeline-member
   (thread ret-box err-box)
   #:transparent)
-(define (obj-pipeline-member-wait m)
-  (thread-wait (obj-pipeline-member-thread m)))
-(define (obj-pipeline-member-success? m)
-  (obj-pipeline-member-wait m)
-  (not (unbox (obj-pipeline-member-err-box m))))
+(define (object-pipeline-member-wait m)
+  (thread-wait (object-pipeline-member-thread m)))
+(define (object-pipeline-member-success? m)
+  (object-pipeline-member-wait m)
+  (not (unbox (object-pipeline-member-err-box m))))
 
 (define (pipeline-segment-wait seg)
   (if (u-pipeline? seg)
       (u-pipeline-wait seg)
-      (obj-pipeline-member-wait seg)))
+      (object-pipeline-member-wait seg)))
 (define (pipeline-segment-success? seg)
   (pipeline-segment-wait seg)
   (if (u-pipeline? seg)
       (u-pipeline-success? seg)
-      (obj-pipeline-member-success? seg)))
+      (object-pipeline-member-success? seg)))
 (define (pipeline-segment-ret seg)
   (pipeline-segment-wait seg)
   (if (u-pipeline? seg)
       (u-pipeline-status seg)
-      (or (unbox (obj-pipeline-member-err-box seg))
-          (unbox (obj-pipeline-member-ret-box seg)))))
+      (or (unbox (object-pipeline-member-err-box seg))
+          (unbox (object-pipeline-member-ret-box seg)))))
 (define (pipeline-segment-error seg)
   (pipeline-segment-wait seg)
   (cond [(pipeline-segment-success? seg) #f]
@@ -78,7 +86,7 @@
                  (error 'run-pipeline
                         (format "unix pipeline-segment ~a terminated with code ~a~n"
                                 argl status)))))]
-        [else (unbox (obj-pipeline-member-err-box seg))]))
+        [else (unbox (object-pipeline-member-err-box seg))]))
 
 (struct pipeline
   (manager-thread segment-box start-ms end-ms-box cleaner-thread)
@@ -103,7 +111,7 @@
   (pipeline-wait pl)
   (for/and ([pm (unbox (pipeline-segment-box pl))])
     (pipeline-segment-success? pm)))
-(define (pipeline-ret pl)
+(define (pipeline-return pl)
   (if (pipeline-success? pl)
       (pipeline-segment-ret (car (unbox (pipeline-segment-box pl))))
       (for/or ([pm (reverse (unbox (pipeline-segment-box pl)))])
@@ -123,7 +131,7 @@
 
 
 (define (member-spec? x)
-  (or (obj-pipeline-member-spec? x)
+  (or (object-pipeline-member-spec? x)
       (u-pipeline-member-spec? x)
       (composite-pipeline-member-spec? x)))
 
@@ -161,9 +169,9 @@
   ;;        Aliases should ideally be resolved before this, and executables
   ;;        checked, but there could always be a race condition if an
   ;;        executable is removed after an initial check is made.
-  (with-handlers ([(λ _ #t) (λ (e) (values (obj-pipeline-member (thread (λ () (void)))
-                                                                (box #f)
-                                                                (box e))
+  (with-handlers ([(λ _ #t) (λ (e) (values (object-pipeline-member (thread (λ () (void)))
+                                                                   (box #f)
+                                                                   (box e))
                                            '()))])
     (define-values (u-specs specs-rest) (splitf-at specs u-pipeline-member-spec?))
     (define use-out (if (null? specs-rest)
@@ -189,9 +197,9 @@
                     (set-box!
                      rbox
                      (if starter?
-                         ({obj-pipeline-member-spec-func (car specs)})
-                         ({obj-pipeline-member-spec-func (car specs)} arg)))))))
-  (values (obj-pipeline-member driver-thread rbox ebox) (cdr specs)))
+                         ({object-pipeline-member-spec-func (car specs)})
+                         ({object-pipeline-member-spec-func (car specs)} arg)))))))
+  (values (object-pipeline-member driver-thread rbox ebox) (cdr specs)))
 
 (define (default-output-transformer p)
   (string-trim (port->string p)))
@@ -222,11 +230,13 @@
          #:return-pipeline-object [return-pipeline-object #f]
          .
          specs)
-  (define pline (-run-pipeline specs init-in-port final-output-port-or-transformer default-err strictness lazy-timeout))
+  (define pline (-run-pipeline specs init-in-port
+                               final-output-port-or-transformer
+                               default-err strictness lazy-timeout))
   (when (not bg) (pipeline-wait pline))
   (if (or bg return-pipeline-object)
       pline
-      (let ([ret (pipeline-ret pline)]
+      (let ([ret (pipeline-return pline)]
             [last-seg (car (unbox (pipeline-segment-box pline)))])
         (cond
           [(pipeline-success? pline) ret]
@@ -253,7 +263,7 @@
 
   (define (segment-get-arg s)
     (cond [(u-pipeline? s) (u-pipeline-port-from s)]
-          [(obj-pipeline-member? s) (unbox (obj-pipeline-member-ret-box s))]
+          [(object-pipeline-member? s) (unbox (object-pipeline-member-ret-box s))]
           [else #f]))
 
   (define (drive specs arg starter?)
@@ -273,17 +283,17 @@
       (cond [(and (null? specs) (u-pipeline? last-seg) out-transform)
              ;; add implicit transformer pipe segment
              (let-values ([(new-seg specs-rest)
-                           (drive (list (obj-pipeline-member-spec out-transform))
+                           (drive (list (object-pipeline-member-spec out-transform))
                                   (segment-get-arg last-seg)
                                   #f)])
                (set-box! seg-box (cons new-seg (unbox seg-box)))
                ;; Done, but make the manager thread wait until the last segment is done.
                (pipeline-segment-wait new-seg))]
             [(null? specs) (pipeline-segment-wait last-seg)]
-            [(obj-pipeline-member? last-seg)
+            [(object-pipeline-member? last-seg)
              (begin
-               (thread-wait (obj-pipeline-member-thread last-seg))
-               (if (obj-pipeline-member-success? last-seg)
+               (thread-wait (object-pipeline-member-thread last-seg))
+               (if (object-pipeline-member-success? last-seg)
                    (let-values ([(new-seg specs-rest)
                                  (drive specs
                                         (segment-get-arg last-seg)

@@ -19,8 +19,10 @@ This library is not entirely stable.
 @; Functions in (current) public interface:
 @; run-pipeline
 @; TODO - these should not be full struct-out, just the necessary parts in case I want to make them macros to support a fast path for macro pipelines
-@; (struct-out obj-pipeline-member-spec)
-@; (struct-out composite-pipeline-member-spec)
+@; object-pipeline-member-spec
+@; object-pipeline-member-spec?
+@; composite-pipeline-member-spec
+@; composite-pipeline-member-spec?
 @; u-pipeline-member-spec
 @; pipeline?
 @; pipeline-success?
