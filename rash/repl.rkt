@@ -21,7 +21,7 @@
   ))
 
 (define-line-macro run-pipeline/ret-obj
-  (syntax-parser [(_ arg ...) #'(rash-run-pipeline &pipeline-ret arg ...)]))
+  (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
 
 (define (rash-repl last-ret-val n)
   (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a~n" e))])
@@ -31,7 +31,7 @@
   (flush-output (current-output-port))
   (flush-output (current-error-port))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
-                                              #`(%%rash-racket-line (void)))])
+                                              #`(%%linea-racket-line (void)))])
                        (linea-read-syntax (object-name (current-input-port))
                                           (current-input-port)))]
          [exit? (if (equal? next-input eof) (exit) #f)])

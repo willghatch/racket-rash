@@ -6,7 +6,6 @@
  pipeline-line-macro
  cd
 
- ;; TODO - what should be provided from the pipeline libraries?
  (all-from-out shell/mixed-pipeline)
 
  (all-from-out shell/pipeline-macro)
@@ -30,7 +29,8 @@
 
 
 (require
- shell/mixed-pipeline
+ (except-in shell/mixed-pipeline
+            run-pipeline)
  racket/splicing
  racket/string
  racket/port
@@ -61,7 +61,7 @@
   (λ (stx)
     (syntax-parse stx
       [(_ arg ...)
-       #'(rash-run-pipeline arg ...)])))
+       #'(run-pipeline arg ...)])))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
