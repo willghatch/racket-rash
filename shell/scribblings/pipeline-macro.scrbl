@@ -27,6 +27,7 @@ This library is not entirely stable.
 @;
 @;pipeline-operators
 @;
+@;   TODO - some of these do more than they ought -- some of the basic ones do too much, maybe some should be split into a second file with more adveturous operators...
 @;   define-pipeline-operator
 @;   pipeop
 @;   

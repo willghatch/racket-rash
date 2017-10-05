@@ -14,6 +14,9 @@
  |#
  pipeop
 
+ ;; TODO - what should be in the basic set exported by this file?
+ ;;        Should I make this mostly just how to define them and
+ ;;        a bare-bones one for each of unix, object, and composite?
 
  current-pipeline-argument
 
