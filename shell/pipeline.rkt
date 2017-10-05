@@ -6,6 +6,9 @@
 (require racket/format)
 (require racket/contract)
 (require syntax/parse/define)
+(require "private/mostly-structs.rkt")
+(require (submod "private/mostly-structs.rkt" internals))
+
 
 (provide
  (contract-out
@@ -49,13 +52,6 @@
                              )
                             #:rest (listof (or/c list? pipeline-member-spec?))
                             any/c)]
-  #;[struct pipeline-member-spec ([argl (listof any/c)]
-                                [port-err
-                                 (or/c output-port? false/c
-                                       path-string-symbol?
-                                       (list/c path-string-symbol?
-                                               (or/c 'error 'append 'truncate)))])]
-
   [pipeline? (-> any/c boolean?)]
   [pipeline-port-to (-> pipeline? (or/c false/c output-port?))]
   [pipeline-port-from (-> pipeline? (or/c false/c input-port?))]
@@ -72,27 +68,27 @@
   [pipeline-error-captured-stderr (-> pipeline? (or/c #f string?))]
   [pipeline-error-argl (-> pipeline? (listof any/c))]
 
-  [path-string-symbol? (-> any/c boolean?)]
 
-  [pipeline-member-spec? (-> any/c boolean?)]
-  [rename mk-pipeline-member-spec pipeline-member-spec
-          (->* ((listof any/c))
-               (#:err (or/c output-port? false/c path-string-symbol?
-                            (list/c path-string-symbol?
-                                    (or/c 'error 'append 'truncate))
-                            default-option?)
-                #:success (or/c false/c procedure? (listof any/c) default-option?)
-                )
-               pipeline-member-spec?)]
   )
 
  (rename-out [default-option pipeline-default-option])
+
+ (rename-out [unix-pipeline-member-spec pipeline-member-spec])
+ (rename-out [unix-pipeline-member-spec? pipeline-member-spec?])
+ path-string-symbol?
 
  prop:alias-func
  and/success
  or/success
  )
 
+(define mk-pipeline-member-spec unix-pipeline-member-spec)
+(define pipeline-member-spec? unix-pipeline-member-spec?)
+(define (cp-spec base
+                 #:argl [argl (pipeline-member-spec-argl base)]
+                 #:err [err (pipeline-member-spec-port-err base)]
+                 #:success [success (pipeline-member-spec-success-pred base)])
+  (unix-pipeline-member-spec argl #:err err #:success success))
 
 ;;;; Command Resolution ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -129,8 +125,7 @@
          [cmd (car argl)]
          [cmdpath (resolve-command-path cmd)])
     (if cmdpath
-        (struct-copy pipeline-member-spec pm-spec
-                     [argl (cons cmdpath (cdr argl))])
+        (cp-spec pm-spec #:argl (cons cmdpath (cdr argl)))
         (error 'resolve-pipeline-member-spec-path
                "Command not found: ~a" cmd))))
 
@@ -182,15 +177,6 @@
                                     (pipeline-member-wait pm)
                                     (semaphore-post sema)))
                           (wrap-evt sema (λ _ pm)))))
-(struct default-option ())
-
-(struct pipeline-member-spec
-  (argl port-err success-pred)
-  #:transparent)
-(define (mk-pipeline-member-spec argl
-                                 #:err [port-err (default-option)]
-                                 #:success [success-pred (default-option)])
-  (pipeline-member-spec argl port-err success-pred))
 
 (define-values (prop:alias-func
                 prop:alias-func?
@@ -584,8 +570,7 @@
                           #f))
                err-ports-mapped)]
          [members-with-m-err
-          (map (λ (m p) (struct-copy pipeline-member-spec m
-                                     [port-err p]))
+          (map (λ (m p) (cp-spec m #:err p))
                members
                err-ports-mapped)]
          [run-members/ports (run-pipeline-members members-with-m-err to-use from-use)]
@@ -806,9 +791,7 @@
       (display out-str)
       (flush-output))))
 
-(define (path-string-symbol? pss)
-  (or (path-string? pss)
-      (and (symbol? pss) (path-string? (symbol->string pss)))))
+
 (define (path-string-sym->path pss)
   (cond [(symbol? pss) (string->path (symbol->string pss))]
         [(string? pss) (string->path pss)]

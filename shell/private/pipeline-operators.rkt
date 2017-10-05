@@ -293,12 +293,12 @@ re-appended).
           (if as
               #`(composite-pipeline-member-spec
                  (list
-                  (u-pipeline-member-spec (flatten (list arg ...))
+                  (unix-pipeline-member-spec (flatten (list arg ...))
                                           #:err #,err
                                           #:success #,success-pred)
                   (object-pipeline-member-spec (λ (out-port)
                                                  (apply-output-transformer #,as out-port)))))
-              #`(u-pipeline-member-spec (flatten (list arg ...))
+              #`(unix-pipeline-member-spec (flatten (list arg ...))
                                         #:err #,err
                                         #:success #,success-pred)))])]))
 

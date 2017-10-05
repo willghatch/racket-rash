@@ -9,7 +9,8 @@
  composite-pipeline-member-spec
  composite-pipeline-member-spec?
 
- u-pipeline-member-spec
+ unix-pipeline-member-spec
+ unix-pipeline-member-spec?
 
  pipeline?
  pipeline-success?
@@ -35,14 +36,10 @@
          racket/string
          racket/port
          racket/match
+         "private/mostly-structs.rkt"
+         (submod "private/mostly-structs.rkt" internals)
          )
 
-(struct object-pipeline-member-spec
-  (func)
-  #:transparent)
-(struct composite-pipeline-member-spec
-  (members)
-  #:transparent)
 
 (struct object-pipeline-member
   (thread ret-box err-box)
@@ -132,7 +129,7 @@
 
 (define (member-spec? x)
   (or (object-pipeline-member-spec? x)
-      (u-pipeline-member-spec? x)
+      (unix-pipeline-member-spec? x)
       (composite-pipeline-member-spec? x)))
 
 (define (flatten-specs specs)
@@ -152,7 +149,7 @@
 
 (define (pipeline-drive-segment specs arg starter? init-in-port final-out-port
                                 default-err strictness lazy-timeout)
-  (cond [(u-pipeline-member-spec? (car specs))
+  (cond [(unix-pipeline-member-spec? (car specs))
          (drive-unix-segment specs
                              (if starter? init-in-port (->iport arg))
                              final-out-port
@@ -173,7 +170,7 @@
                                                                    (box #f)
                                                                    (box e))
                                            '()))])
-    (define-values (u-specs specs-rest) (splitf-at specs u-pipeline-member-spec?))
+    (define-values (u-specs specs-rest) (splitf-at specs unix-pipeline-member-spec?))
     (define use-out (if (null? specs-rest)
                         final-out-port
                         #f))
