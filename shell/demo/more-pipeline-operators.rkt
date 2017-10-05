@@ -37,7 +37,6 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  racket/stream
  racket/string
  file/glob
- shell/mixed-pipeline
  (for-syntax
   racket/base
   syntax/parse
@@ -124,7 +123,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
             [(#t narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret)
                                            (for/list ([for-iter prev-ret])
-                                             (rash-run-pipeline
+                                             (run-pipeline
                                               &out out-transformer
                                               =basic-unix-pipe=
                                               kwarg ...
@@ -132,7 +131,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
             [(#f narg ...)
              #'(obj-pipeline-member-spec (λ (prev-ret)
                                            (for/list ([for-iter prev-ret])
-                                             (rash-run-pipeline
+                                             (run-pipeline
                                               &out out-transformer
                                               =basic-unix-pipe=
                                               kwarg ...
@@ -144,7 +143,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
     [(_ arg ...+)
      #'(obj-pipeline-member-spec (λ (prev-ret)
                                    (for/list ([for-iter prev-ret])
-                                     (rash-run-pipeline
+                                     (run-pipeline
                                       &in (open-input-string (format "~a" for-iter))
                                       &out out-transformer
                                       =basic-unix-pipe=

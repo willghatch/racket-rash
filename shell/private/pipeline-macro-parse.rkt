@@ -5,12 +5,12 @@
    &bg &pipeline-ret &env
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
-   rash-run-pipeline
+   run-pipeline
    default-pipeline-starter
    ))
 
 (provide
- rash-run-pipeline
+ run-pipeline
  rash-set-defaults
  default-pipeline-starter
  rash-pipeline-opt-hash
@@ -23,7 +23,7 @@
  racket/splicing
  racket/string
  racket/port
- shell/mixed-pipeline
+ (prefix-in mp: shell/mixed-pipeline)
  "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
  "pipeline-operator-transform.rkt"
@@ -98,7 +98,7 @@
          body ...)]))
 
 
-(define-syntax (rash-run-pipeline stx)
+(define-syntax (run-pipeline stx)
   (syntax-parse stx
     [(_ arg ...)
      #'(rash-pipeline-splitter arg ...)]))
@@ -276,7 +276,7 @@
                                       #:lazy-timeout lazy-timeout
                                       . args)
   ;; TODO - environment extension/replacement
-  (apply run-pipeline #:bg bg #:return-pipeline-object return-pipeline-object
+  (apply mp:run-pipeline #:bg bg #:return-pipeline-object return-pipeline-object
          #:in in #:out out #:err err
          #:strictness strictness #:lazy-timeout lazy-timeout
          args))

@@ -19,7 +19,7 @@ This library is not entirely stable.
 @;   &bg &pipeline-ret &env
 @;   &in &< &out &> &>! &>> &err
 @;   &strict &permissive &lazy &lazy-timeout
-@;   rash-run-pipeline
+@;   run-pipeline
 @;   default-pipeline-starter
 @;
 @;pipeline-operator-default

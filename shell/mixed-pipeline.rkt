@@ -5,6 +5,7 @@
  (struct-out obj-pipeline-member-spec)
  (struct-out composite-pipeline-member-spec)
  u-pipeline-member-spec
+
  pipeline?
  pipeline-success?
  pipeline-running?
@@ -16,7 +17,7 @@
  (rename-out [u-pipeline-default-option pipeline-default-option])
  apply-output-transformer
 
- u-alias-func
+ ;u-alias-func
  )
 
 
