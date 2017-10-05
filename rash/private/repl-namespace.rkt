@@ -13,7 +13,7 @@
 (define (return-n n)
   (let ([pline (result-n n)])
     (if (pipeline? pline)
-        (pipeline-ret pline)
+        (pipeline-return pline)
         pline)))
 (define-for-syntax repl-default-pipeline-starter-variable #'=quoting-basic-unix-pipe=)
 (define-line-macro set-default-pipeline-starter!

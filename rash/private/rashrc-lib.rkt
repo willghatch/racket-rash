@@ -25,7 +25,7 @@
         [(and (pipeline? last-ret)
               (not (pipeline-success? last-ret)))
          (pre)
-         (let ([err (pipeline-ret last-ret)])
+         (let ([err (pipeline-return last-ret)])
            (eprintf "~a~n" (format "~a" (if (exn? err)
                                             (exn->string err)
                                             err)))
@@ -35,7 +35,7 @@
          ;; successful unix pipes just have a boring status code
          (void)]
         [(pipeline? last-ret)
-         (print-ret-maybe (pipeline-ret last-ret) ret-number)]
+         (print-ret-maybe (pipeline-return last-ret) ret-number)]
         [(void? last-ret)
          (void)]
         [else (pre)
