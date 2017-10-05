@@ -4,7 +4,6 @@
 
 (provide
  (contract-out
-
   [path-string-symbol? (-> any/c boolean?)]
   [unix-pipeline-member-spec? (-> any/c boolean?)]
   [object-pipeline-member-spec? (-> any/c boolean?)]
@@ -15,19 +14,24 @@
                (#:err (or/c output-port? false/c path-string-symbol?
                             (list/c path-string-symbol?
                                     (or/c 'error 'append 'truncate))
-                            default-option?)
-                #:success (or/c false/c procedure? (listof any/c) default-option?)
+                            pipeline-default-option?)
+                #:success (or/c false/c
+                                procedure?
+                                (listof any/c)
+                                pipeline-default-option?)
                 )
                unix-pipeline-member-spec?)]
+  [object-pipeline-member-spec (-> procedure? object-pipeline-member-spec?)]
+  [composite-pipeline-member-spec (-> (listof (or/c unix-pipeline-member-spec?
+                                                    object-pipeline-member-spec?
+                                                    composite-pipeline-member-spec?))
+                                      composite-pipeline-member-spec?)]
   )
 
- ;; TODO - add contracts
- object-pipeline-member-spec
- composite-pipeline-member-spec
 
-
- default-option
- default-option?
+ ;; These ones are not really for public consumption.
+ pipeline-default-option
+ pipeline-default-option?
 
  )
 
@@ -55,11 +59,11 @@
   (argl port-err success-pred)
   #:transparent)
 (define (mk-unix-pipeline-member-spec argl
-                                      #:err [port-err (default-option)]
-                                      #:success [success-pred (default-option)])
+                                      #:err [port-err (pipeline-default-option)]
+                                      #:success [success-pred (pipeline-default-option)])
   (unix-pipeline-member-spec argl port-err success-pred))
 
-(struct default-option ())
+(struct pipeline-default-option ())
 
 (define (path-string-symbol? pss)
   (or (path-string? pss)

@@ -71,8 +71,6 @@
 
   )
 
- (rename-out [default-option pipeline-default-option])
-
  (rename-out [unix-pipeline-member-spec pipeline-member-spec])
  (rename-out [unix-pipeline-member-spec? pipeline-member-spec?])
  path-string-symbol?
@@ -108,11 +106,11 @@
                                'resolve-alias
                                "pipeline alias did not produce an argument list")])]
              [old-err (pipeline-member-spec-port-err pm-spec)]
-             [use-err (if (default-option? old-err)
+             [use-err (if (pipeline-default-option? old-err)
                           (pipeline-member-spec-port-err new-spec)
                           old-err)]
              [old-success (pipeline-member-spec-success-pred pm-spec)]
-             [use-success (if (default-option? old-success)
+             [use-success (if (pipeline-default-option? old-success)
                               (pipeline-member-spec-success-pred new-spec)
                               old-success)])
         (mk-pipeline-member-spec (pipeline-member-spec-argl new-spec)
@@ -145,9 +143,9 @@
       (mk-pipeline-member-spec
        (pipeline-member-spec-argl spec)
        #:err (let ([e (pipeline-member-spec-port-err spec)])
-               (if (default-option? e) err-default e))
+               (if (pipeline-default-option? e) err-default e))
        #:success (let ([s (pipeline-member-spec-success-pred spec)])
-                   (if (default-option? s) #f s))))
+                   (if (pipeline-default-option? s) #f s))))
 
     (let* ([argl (pipeline-member-spec-argl pm-spec)]
            [bad-argl? (when (or (not (list? argl))
@@ -398,8 +396,8 @@
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
                               m
-                              (mk-pipeline-member-spec m #:err (default-option)
-                                                       #:success (default-option))))
+                              (mk-pipeline-member-spec m #:err (pipeline-default-option)
+                                                       #:success (pipeline-default-option))))
                         members)])
     (pipeline in out
               members1

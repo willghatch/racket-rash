@@ -39,8 +39,11 @@
  racket/stxparam
  racket/port
  racket/list
+ racket/match
+ racket/string
  shell/mixed-pipeline
  "pipeline-operator-transform.rkt"
+ "mostly-structs.rkt"
  (for-syntax
   racket/base
   syntax/parse
@@ -259,6 +262,22 @@ re-appended).
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
 
 ;;;; unix-y pipes
+
+(define (apply-output-transformer transformer out-port)
+  (match transformer
+    ['port out-port]
+    ['string (port->string out-port)]
+    ['trim (string-trim (port->string out-port))]
+    ['lines (string-split (port->string out-port) "\n")]
+    ['words (string-split (port->string out-port))]
+    [tx (if (procedure? tx)
+            ;; TODO - if this doesn't read the whole port there could be problems
+            (tx out-port)
+            (error 'apply-output-transformer
+                   (format "Neither a procedure nor a known transformer name: ~a"
+                           tx)))]))
+
+
 
 (define-for-syntax unix-pipe-option-table
   (list (list '#:as check-expression)

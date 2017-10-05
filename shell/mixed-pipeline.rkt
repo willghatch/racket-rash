@@ -1,32 +1,49 @@
 #lang racket/base
 
-(provide
- run-pipeline
+(require racket/contract)
 
+(provide
+ (contract-out
+  [run-pipeline (->* ()
+                     (#:in (or/c input-port? false/c path-string-symbol?)
+                      #:out any/c
+                      #|
+                      ;; TODO
+                      ;; This is closer, but it could also be a transformer
+                      ;; for the output rather than a port-like thing.
+                      #:out (or/c output-port? false/c path-string-symbol?
+                                  (list/c path-string-symbol?
+                                          (or/c 'error 'append 'truncate)))
+                      |#
+                      #:err (or/c output-port? false/c path-string-symbol?
+                                  (list/c path-string-symbol?
+                                          (or/c 'error 'append 'truncate)))
+                      #:strictness (or/c 'strict 'lazy 'permissive)
+                      #:lazy-timeout real?
+                      #:bg any/c
+                      #:return-pipeline-object any/c
+                      )
+                     #:rest (listof (or/c unix-pipeline-member-spec?
+                                          object-pipeline-member-spec?
+                                          composite-pipeline-member-spec?))
+                     any/c)]
+  [pipeline? (-> any/c boolean?)]
+  [pipeline-ends-with-unix-segment? (-> pipeline? boolean?)]
+  [pipeline-success? (-> pipeline? any/c)]
+  [pipeline-running? (-> pipeline? any/c)]
+  [pipeline-return (-> pipeline? any/c)]
+  [pipeline-wait (-> pipeline? any/c)]
+  [pipeline-start-ms (-> pipeline? any/c)]
+  [pipeline-end-ms (-> pipeline? any/c)]
+  )
+
+ ;; re-provided from mostly-structs.rkt, already have contracts
  object-pipeline-member-spec
  object-pipeline-member-spec?
-
- composite-pipeline-member-spec
- composite-pipeline-member-spec?
-
  unix-pipeline-member-spec
  unix-pipeline-member-spec?
-
- pipeline?
- pipeline-success?
- pipeline-running?
- pipeline-wait
- pipeline-return
- pipeline-start-ms
- pipeline-end-ms
- pipeline-ends-with-unix-segment?
-
-
- ;; TODO - I don't think these need to be provided...
- (rename-out [u-pipeline-default-option pipeline-default-option])
- apply-output-transformer
-
- ;u-alias-func
+ composite-pipeline-member-spec
+ composite-pipeline-member-spec?
  )
 
 
@@ -200,20 +217,6 @@
 
 (define (default-output-transformer p)
   (string-trim (port->string p)))
-
-(define (apply-output-transformer transformer out-port)
-  (match transformer
-    ['port out-port]
-    ['string (port->string out-port)]
-    ['trim (string-trim (port->string out-port))]
-    ['lines (string-split (port->string out-port) "\n")]
-    ['words (string-split (port->string out-port))]
-    [tx (if (procedure? tx)
-            ;; TODO - if this doesn't read the whole port there could be problems
-            (tx out-port)
-            (error 'apply-output-transformer
-                   (format "Neither a procedure nor a known transformer name: ~a"
-                           tx)))]))
 
 (define (run-pipeline
          #:in [init-in-port (open-input-string "")]
