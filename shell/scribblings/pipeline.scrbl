@@ -2,7 +2,9 @@
 
 @(require (for-label racket/base
                      racket/contract
-                     shell/pipeline))
+                     shell/pipeline
+                     (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
+                     ))
 
 @title[#:tag "pipeline"]{Basic Unix-style Pipelines}
 
@@ -83,7 +85,9 @@ Make a pipeline-member-spec.  @racket[argl] is the command/argument list.  The f
 }
 
 @defproc[(pipeline? [p any/c]) boolean?]{
-Is it a pipeline object?
+Is it a pipeline object?  Note that this is not the same as @racket[shell/mixed-pipeline/pipeline?].
+
+Also, pipelines are synchronizable.
 }
 
 @defproc[(pipeline-port-to [p pipeline?]) (or/c false/c output-port?)]{Get initial input port (if one was provided initially, this will be false)}

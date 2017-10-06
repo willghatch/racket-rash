@@ -20,7 +20,11 @@ Some specific things that may change are the names of keyword arguments to run-p
 
 @section{shell/mixed-pipeline guide}
 
-TODO - write a guide.
+This is the runtime library behind
+@secref["pipeline-macro"
+#:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
+
+The @racket[run-pipeline] function from this package should probably only be used if you want to write a replacement for the pipeline-macro library.  The other functions are essentially for use in inspecting pipeline objects or creating pipeline operator macros.
 
 @section{shell/mixed-pipeline reference}
 
@@ -81,7 +85,7 @@ Creates a composite pipeline member spec.  This is essentially a convenience so 
 }
 
 @defproc[(pipeline? [pline any/c]) boolean?]{
-Returned by @racket[run-pipeline] depending on its arguments.
+Returned by @racket[run-pipeline] depending on its arguments.  Note that this is not the same as @racket[shell/pipeline/pipeline?].
 
 Also, pipelines are synchronizable.
 }
