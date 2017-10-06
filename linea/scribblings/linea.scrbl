@@ -5,11 +5,11 @@
 
 @defmodule[linea]
 
+@section{Stability}
+
+Linea was created for Rash, and I'm not 100% sure right now whether I will fold it back into rash (and get rid of the name Linea entirely), or split it into a separate package.  One of those two things will happen some time in the near-ish future.  Probably it will be folded back in.
+
 @section{Linea Guide}
-
-THIS IS ALL ALPHA AND UNSTABLE
-
-Linea was created for Rash, and I'm not 100% sure right now whether I will fold it back into rash (and get rid of the name Linea entirely), or split it into a separate package.  One of those two things will happen some time in the near-ish future.
 
 TODO - show some examples, explain it...
 
