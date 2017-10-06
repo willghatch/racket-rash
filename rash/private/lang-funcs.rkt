@@ -6,13 +6,12 @@
  pipeline-line-macro
  cd
 
- (all-from-out shell/mixed-pipeline)
-
  (all-from-out shell/pipeline-macro)
  (all-from-out linea/line-macro)
 
  (for-syntax
   make-rash-module-begin-transformer
+  make-rash-transformer
   ))
 
 (module+ experimental
@@ -29,8 +28,6 @@
 
 
 (require
- (except-in shell/mixed-pipeline
-            run-pipeline)
  racket/splicing
  racket/string
  racket/port
@@ -199,20 +196,10 @@
 
 (define-syntax rash
   (make-rash-transformer))
-
-(define-syntax (rash/wired stx)
-  (syntax-parse stx
-    [(_ arg ...)
-     (define-values (tab rest-stx)
-       (parse-keyword-options #'(arg ...)
-                              rash-keyword-table
-                              #:context stx
-                              #:no-duplicates? #t))
-     (with-syntax ([(code-segs-hopefully ...) rest-stx]
-                   [in (opref tab '#:in #'(current-input-port))]
-                   [out (opref tab '#:out #'(current-output-port))]
-                   [err (opref tab '#:err #'(current-error-port))])
-       #'(rash #:in in #:out out #:err err code-segs-hopefully ...))]))
+(define-syntax rash/wired
+  (make-rash-transformer #:in (current-input-port)
+                         #:out (current-output-port)
+                         #:err (current-error-port)))
 
 (begin-for-syntax
   (define-syntax rash-template-escaper

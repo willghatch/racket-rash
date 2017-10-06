@@ -31,7 +31,9 @@ rash/wired
 
 mk-rash-macro
 
-mk-rash-module-begin
+make-rash-transformer
+
+make-rash-module-begin-transformer
 
 pipeline-line-macro
 
