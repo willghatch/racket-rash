@@ -9,6 +9,8 @@
  (all-from-out shell/pipeline-macro)
  (all-from-out "linea/line-macro.rkt")
 
+ make-rash-reader-submodule
+ ;make-rash-lang-submodule
  (for-syntax
   make-rash-module-begin-transformer
   make-rash-transformer
@@ -101,6 +103,35 @@
                  #,default-starter-stx
                  #,default-line-macro-stx)
                 e)]))))
+
+;; TODO - I would like a turnkey version of make-rash-reader-submodule
+;; that includes options for setting the module language, providing options
+;; to make-rash-module-begin-transformer, etc.
+;; But I can't seem to get the module paths to work out...
+(define-syntax (make-rash-reader-submodule stx)
+  (syntax-parse stx
+    [(_ module-lang-path)
+     #'(module reader syntax/module-reader
+         module-lang-path
+         #:read-syntax linea-read-syntax
+         #:read linea-read
+         (require rash/private/linea/read))]))
+#;(define-syntax (make-rash-lang-submodule stx)
+  (syntax-parse stx
+    [(_ modname)
+     #'(module modname racket/base
+         (require rash/private/lang-funcs)
+         (define-syntax my-module-begin
+           (make-rash-module-begin-transformer
+            #:in (current-input-port)
+            #:out (current-output-port)
+            #:err (current-error-port)
+            #:default-starter #'=quoting-basic-unix-pipe=
+            ;#:default-line-macro #'pipeline-line-macro
+            ))
+         (provide (except-out (all-from-out racket/base) #%module-begin)
+                  (rename-out [my-module-begin #%module-begin])
+                  (all-from-out rash/private/lang-funcs)))]))
 
 (begin-for-syntax
   (define-syntax (make-rash-module-begin-transformer stx)

@@ -218,16 +218,17 @@ This takes all the same options as @racket[rash], but doesn't take a code string
 (define-syntax my-rash (make-rash-transformer #:default-starter #'=basic-object-pipe=)))
 }
 
-@defform[(make-rash-module-begin-transformer options ...)]{
-This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like #%module-begin in #lang rash, but with different defaults and reader options.
+@;@defform[(make-rash-module-begin-transformer options ...)]{
+@;This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like #%module-begin in #lang rash, but with different defaults and reader options.
+@;
+@;Use it to make a #lang that is like #lang rash but customized to your liking.
+@;
+@;@(racketblock
+@;(define-syntax my-rash-module-begin
+@;  (make-rash-module-begin-transformer #:default-starter #'=basic-object-pipe=)))
+@;}
 
-Use it to make a #lang that is like #lang rash but customized to your liking.
-
-@(racketblock
-(define-syntax my-rash-module-begin
-  (make-rash-module-begin-transformer #:default-starter #'=basic-object-pipe=)))
-}
-
+TODO - finish make-rash-reader-submodule and document it -- it should be like @racket[make-rash-transformer] only in should essentially create a #lang.
 
 things to document:
 
@@ -286,7 +287,7 @@ Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-mac
 
 You can run the repl by running @verbatim{racket -l rash/repl}.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.
 
-How to run the repl and various details of how it works and what is available might change in the near future.  I may, for instance, add some sort of make-repl-command macro similar to @racket[make-rash-transformer] and @racket[make-rash-module-begin-transformer] to change defaults at a very low level.  As it is defaults are changed by having variables that you essentially @verbatim{set!} in the repl, and there are some rc files that are loaded.
+How to run the repl and various details of how it works and what is available might change in the near future.  I may, for instance, add some sort of make-repl-command macro similar to @racket[make-rash-transformer] to change defaults at a very low level.  As it is defaults are changed by having variables that you essentially @verbatim{set!} in the repl, and there are some rc files that are loaded.
 
 First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).  There is an example rashrc file in the project repo's demo directory.
 
