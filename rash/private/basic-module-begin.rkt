@@ -8,7 +8,7 @@
 
 (require
  rash
- (submod "../private/lang-funcs.rkt" for-module-begin)
+ (submod "lang-funcs.rkt" for-module-begin)
  (for-syntax
   racket/base))
 
