@@ -10,7 +10,6 @@
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing
- shell/pipeline-macro
 
  basedir
  racket/exn

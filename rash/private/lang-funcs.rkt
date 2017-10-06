@@ -3,7 +3,7 @@
 (provide
  rash
  rash/wired
- pipeline-line-macro
+ run-pipeline
  cd
 
  (all-from-out shell/pipeline-macro)
@@ -23,11 +23,13 @@
 (module+ for-repl
   (provide
    rash-set-defaults
-   pipeline-line-macro
+   run-pipeline
    ))
 
 
 (require
+ (rename-in shell/pipeline-macro
+            [run-pipeline run-pipeline/no-line-macro])
  racket/splicing
  racket/string
  racket/port
@@ -35,7 +37,6 @@
  linea/line-macro
  linea/line-parse
  linea/read
- shell/pipeline-macro
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
 
@@ -54,11 +55,11 @@
    shell/private/misc-utils
    )))
 
-(define-line-macro pipeline-line-macro
+(define-line-macro run-pipeline
   (λ (stx)
     (syntax-parse stx
       [(_ arg ...)
-       #'(run-pipeline arg ...)])))
+       #'(run-pipeline/no-line-macro arg ...)])))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
@@ -119,7 +120,7 @@
                      [mk-default-starter (opref tab '#:default-starter
                                              #'#'=quoting-basic-unix-pipe=)]
                      [mk-default-line-macro (opref tab '#:default-line-macro
-                                                #'#'pipeline-line-macro)])
+                                                #'#'run-pipeline)])
          #'(syntax-parser
              [(_ arg (... ...))
               #'(#%plain-module-begin
@@ -167,7 +168,7 @@
                      [mk-default-starter (opref tab '#:default-starter
                                                 #'#'=quoting-basic-unix-pipe=)]
                      [mk-line-macro (opref tab '#:default-line-macro
-                                                   #'#'pipeline-line-macro)])
+                                                   #'#'run-pipeline)])
          #'(λ (stx)
              (syntax-parse stx
                [(rash tx-arg (... ...))
@@ -189,7 +190,7 @@
                   #'(rash-expressions-begin (input output err-output
                                                    default-starter
                                                    line-macro
-                                                   ;#'pipeline-line-macro
+                                                   ;#'run-pipeline
                                                    )
                                             parsed-rash-code (... ...)))])))]))
   )
