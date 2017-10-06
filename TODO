@@ -1,67 +1,26 @@
-Main stable release blockers
-----------------------------
+* make a module of short names -- say it's unstable but at least provide some standard-ish short names for the short term.  At some point decide which pipes deserve canonical short names.
 
-* The local-expanding of object-pipelines breaks keyword arguments.  Handle this better, or don't use local-expand.
+* unix pipeline with $var unquoting and $VAR environment variable reference
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
-** they should also have setter functions -- this way you can change the default for the rest of the context (eg. switch defaults in the repl, for the second half of a module, etc)
-** There should be a form to (splicingly, hopefully) set a new block for defaults, so you can change the default for the block (either with the block-creating form directly or by mutating it within) and have it revert when leaving the block.  Obviously this form is the rash macro itself.
+** the forms for setting these (eg. the rash macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
 
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
-
-* alternate reader where bare things on the top level are assumed to be normal racket UNLESS there is an explicit start pipe.  This would give an option to have a repl *almost* the same as the default racket repl, except with an easy escape into shell-world.
 
 * object operator that uses aliases as well
 ** be sure `detect alias` works in new prop:procedure-like way
 
-* I can probably avoid the hash for default-starter by using 3d syntax in the stx-parameterize.  Is that better?
-
-
-* a version of pipeline running/rash macros that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
-** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible.
-** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
-** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro to be what they ought to be
-** each level of pipeline operator unwrapping should check whether it got another pipeline operator or if it got a spec definition form, which will kill any runtime errors of not getting specs
-*** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) -- so is this a good idea?
-*** Maybe the efficient version requires no wrapping, but the convenient one allows wrapping.
-
-* maybe pipeline starters used as normal macros should work like (rash «starter-here arg ...»)
-** how would this interact with having two different versions - the wrapped convenient backgroundable version vs the non-bg-able non-wrapped version?
-*** this definitely would require more firm defaults, because you wouldn't be wrapping it in anything that could set defaults.
-*** maybe there are forms to change the defaults (IE syntax-parameterizing) that are available just as s-expressions to wrap these with.
-**** Maybe starter-operators have extra properties that say what they want the defaults to be, set by define-pipeline-operator?  Then every starter pipe is also a rash macro... (without a special reader)
-*** maybe the fast one is the default, and only certain macros bother with the wrapped way?
-** if an explicit pipe were always required, this would just mean than newlines act as parens, but allowing implicit pipes is more like newlines are parens but there is an implicit #%rash-line-macro there.  Plus rash has a modified readtable to provide various conveniences.
-*** a potentially useful idea is to have udelim string wrappers whose macro just changes the readtable inside.  This is similar to the option for that that already exists on list delimiters, but string delimiters won't have the issue of maybe not having that same delimiter inside.  You might just have a reader-changing macro that gives you the the rash reader.
-**** maybe defaults are set (for wrapped/unwrapped rash, implicit pipe operator, etc) by an implicit #%rash-default-something-or-other macro.  Different rash modules could export different ones.  Problem: if you import two, you have this annoying collision.  This is probably not a good idea.
-
-* make it a syntax error to have a normal racket expression [IE starting a line with an open paren] have a pipeline later on the same line.  This will clear up any issues with having the first segment of a pipeline open with parens.
+* maybe make it a syntax error to have a normal racket expression [IE starting a line with an open paren] have a pipeline later on the same line.  This will clear up any issues with having the first segment of a pipeline open with parens.
 
 * review names -- pick good ones before doing any stable release
 
-* add features to shell/pipeline from its todo to get to a stable release point
-
-* document
-
 * look through TODO comments
 
-
-demo todo
----------
-
-* wrapper functions to pass objects for common commands
-* nice table formatting for output
-** probably a line macro for auto-tabling output of objects that can act like tables
-** rash has a default output transformer for unix segments, but should there maybe be a transformer for other things for eg. tabling?  Better would probably be special handling eg. with the prompt function to display things nicely for interactive use.
-* what sort of objects should be passed around for these common commands?  I could just use hash tables for a lot of tabular data things, but I want them to also provide info for how to display a table -- maybe just a hash table wrapper with extra metadata that implements gen:dict?
-
-* unix pipeline with $var unquoting and $VAR environment variable reference
-
 * better drracket integration
-** fix whatever causes pipes to need to be balanced
-** hopefully figure out how to make the interactions window start with the default-pipeline-starter that the module has
+** fix interactions window -- it was working (though not great) before but then I broke it.
+** write a lexer for coloring, maybe
 
 
 misc
@@ -73,21 +32,16 @@ misc
 About interactive shells
 ------------------------
 
-* job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
-** importantly, currently the repl is still the foreground process of the terminal when you press control c or control z, so it gets sigint or sigstop even when you have launched eg. vim
-** I need to set a pipeline to all have the same process group ID that is different than the pgid of the host shell.  Right now I can either let them all keep the pgid of the shell or give each of them a different pgid.  Anything else would require changes to the subprocess API in the C code of Racket.
-** I need to use `tcsetpgrp` to set the foreground process group on a terminal, to control which processes get sigint/sigstop signals from C-c and C-z.
-** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
+* job control -- see TODO file for shell-pipeline package.
 
 * discoverability
 ** the default prompt should help with discoverability -- maybe say the command to get help, look up docs, etc.  Something like «type HELP START» in LoE.
 ** how can interactive features be more discoverable than just being listed in the docs/tutorial?
+** in the short term this probably doesn't matter much, but long term it would be nice.
 
 
 Documentation
 -------------
 
-* API docs
-* guide -- high level overview
-** maybe split it into sections for people with different backgrounds - eg. racketeers vs people coming from bash who don't know racket.
+Maybe at some point there should be a section for Racketeers unfamiliar with Rash or shells in general, and a section for people familiar with shells to but unfamiliar with Racket.
 
