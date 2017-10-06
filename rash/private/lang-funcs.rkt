@@ -7,7 +7,7 @@
  cd
 
  (all-from-out shell/pipeline-macro)
- (all-from-out linea/line-macro)
+ (all-from-out "linea/line-macro.rkt")
 
  (for-syntax
   make-rash-module-begin-transformer
@@ -34,9 +34,9 @@
  racket/string
  racket/port
  "cd.rkt"
- linea/line-macro
- linea/line-parse
- linea/read
+ "linea/line-macro.rkt"
+ "linea/line-parse.rkt"
+ "linea/read.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
 
@@ -44,7 +44,7 @@
   syntax/keyword
   racket/base
   syntax/parse
-  linea/read
+  "linea/read.rkt"
   shell/private/misc-utils
 
   (for-syntax

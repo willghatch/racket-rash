@@ -5,7 +5,7 @@
  )
 
 (require
- linea/line-macro
+ "linea/line-macro.rkt"
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
  (for-syntax
