@@ -1,31 +1,30 @@
-Fully stable release blockers
------------------------------
-
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
-* environment variable augment/replace per-member
-
 * option for code to run in manager thread before running members in order to modify parameters - IE generalization of modifying env for all members.
+** environment variable / generic thread environment mutation per-member as well
 
 * process fd/temp-file redirects a la <() >() from bash
 
 * inspecting pipeline segments with correct compound member handling
-
-* reorganize code -- everything in pipeline.rkt should just be exporting something defined in private/
 
 * add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
 
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
 
 * review names -- pick good ones before doing any stable release
-** *-pipeline-member-spec should be better -- eg. `object` instead of `obj`.
 ** 'string-port for errors -- I don't like this one
 
 * look through TODO comments
 
 * API - be sure it's conservative enough to change implementation details (eg. for spec creation)
 * contracts - check old ones, make new ones
-* document new stuff, fix old docs
+
+* a version of pipeline-macro that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
+** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible -- eg. =filter=, =for=, etc are nice, especially if they have short names.
+** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
+** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro, basically determining whether they produce runtime pipeline objects or if they desugar to the fast path that has no process or thread overhead.
+** each level of pipeline operator unwrapping should check whether it got another pipeline operator or if it got a spec definition form, which will kill any runtime errors of not getting specs
+*** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) and have it work for the fast path -- so is this a good idea?  I think I still want it even though it doesn't support all pipelines.  In my mind it never supported unix pipeline members, so this seems like it alters little.
 
 
 less important TODO items, which may wait until version 2
@@ -40,21 +39,15 @@ less important TODO items, which may wait until version 2
 
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?  But this is a pretty standard shell feature for job control.
 
+* job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
+** importantly, currently the repl is still the foreground process of the terminal when you press control c or control z, so it gets sigint or sigstop even when you have launched eg. vim
+** I need to set a pipeline to all have the same process group ID that is different than the pgid of the host shell.  Right now I can either let them all keep the pgid of the shell or give each of them a different pgid.  Anything else would require changes to the subprocess API in the C code of Racket.
+** I need to use `tcsetpgrp` to set the foreground process group on a terminal, to control which processes get sigint/sigstop signals from C-c and C-z.
+** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
+
 * bg pipeline disowning?
-    Disowning will probably only work for pipelines
-    without any racket functions or filters in them.  But perhaps you should
-    be able to mark a pipeline as disownable, which would start a new racket
-    process which would run the pipeline?  It would have to be very restricted,
-    because a pipeline could be using closures, which could not really be copied.
-    It looks like bash and zsh can disown a backgrounded shell
-    function and have it survive the shell exiting if that function was started
-    in the background, which tells me that backgrounded bash/zsh functions are
-    run in a subshell.  Presumably this means the process is forked, so that
-    the subshell can still access all previously defined functions.  I feel
-    like this could have many cases of subtle weirdness, so I'm not sure I
-    want to follow that direction without something more explicit marking a
-    clear boundary.  Also, fork() only works on Unix, and it would be nice if
-    the shell worked on Windows too, so if I can reasonably avoid relying on
-    fork, I should.
+** This is really only reasonable for external-proccess-only pipelines, and I'm not sure how reasonable it is on Windows.
+
+* ulimit and other resource limiting things for subprocesses and pipeline threads -- how can I go about doing that?
 
 * initial input-port transformer to try to solve readline-port issues -- there doesn't seem to be any way to get the real stdin port from the readline port, so this is hopeless for the moment.
