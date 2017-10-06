@@ -225,6 +225,7 @@
          #:err [default-err 'string-port]
          #:strictness [strictness 'lazy]
          #:lazy-timeout [lazy-timeout 1]
+         ;; TODO - make consistent with other run-pipelines
          #:bg [bg #f]
          ;; TODO - better name
          #:return-pipeline-object [return-pipeline-object #f]
@@ -325,5 +326,3 @@
 
 
 ;; TODO - orig. pipelines need <() >() redirects, environment modifiers, ...
-;; TODO - the structs for pipeline-member-specs should not be exported entirely, only creation functions with #:keyword args, and some inspection functions.
-;; TODO - u-pipeline's real implementation should be in a private dir, and the pipeline.rkt should just export some things from it.

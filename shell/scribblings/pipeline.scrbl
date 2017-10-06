@@ -14,6 +14,8 @@ This library is not entirely stable.
 
 Forthcoming features include features such as process redirection (similar to @bold{<()} and @bold{>()} in Bash).
 
+Some specific things that may change are the names of keyword arguments to run-pipeline, and the type of arguments and exact semantics of the redirection options for pipelines.  Also, the extra run-pipline/ functions.
+
 @section{shell/pipeline guide}
 
 @; TODO - I should probably just rewrite this, but at least I should make sure it all makes sense within the tower of libraries to Rash.  And I should maybe explain better the types of return values you get from functions, or the defaults they have...
@@ -35,6 +37,7 @@ This library DOES work on MS Windows, and if it can't find a program it retries 
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
                 (current-error-port)]
 [#:strictness strictness (or/c 'strict 'lazy 'permissive) 'lazy]
+[#:lazy-timeout lazy-timeout real? 1]
 [#:background? bg? any/c #f])
 any/c]{
 Run a pipeline.  Each @racket[member] should be either a @racket[pipeline-member-spec] or a list, where the first of the list is the command and the rest are arguments.  The command may be a symbol, string, path, or function.  If it is a string or path, it will spawn a subprocess.  If it is a function, it will use that function in a thread.  If the command is an @racket[alias-func], it is called with its arguments before the pipeline is started to receive a new command/argument list which replaces it.
