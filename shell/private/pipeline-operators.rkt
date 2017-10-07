@@ -25,11 +25,16 @@
  =composite-pipe=
 
  =basic-object-pipe=
- =basic-object-pipe/left=
- =basic-object-pipe/expression=
  =object-pipe=
- =object-pipe/left=
+
+ =basic-object-pipe/expression=
  =object-pipe/expression=
+
+ =basic-object-pipe/form=
+ =object-pipe/form=
+
+; =basic-object-pipe/left=
+; =object-pipe/left=
 
  =basic-unix-pipe=
  =quoting-basic-unix-pipe=
@@ -208,7 +213,7 @@ re-appended).
            #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
           [(#f narg ...)
            #'(object-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
-(define-pipeline-operator =basic-object-pipe/left=
+#;(define-pipeline-operator =basic-object-pipe/left=
   #:start
   (syntax-parser
     [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
@@ -225,6 +230,7 @@ re-appended).
           [(#f narg ...)
            #'(object-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
 
+;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
 (define-pipeline-operator =basic-object-pipe/expression=
   #:start
   (syntax-parser
@@ -241,6 +247,22 @@ re-appended).
           [(_ ne)
            #'(object-pipeline-member-spec (λ (prev-ret) ne))])))]))
 
+;; Like =basic-object-pipe=, but doesn't local-expand each argument separately.
+(define-pipeline-operator =basic-object-pipe/form=
+  #:start
+  (syntax-parser
+    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
+  #:joint
+  (syntax-parser
+    [(_ arg ...+)
+     (expand-pipeline-arguments
+      #'((arg ...))
+      #'prev-ret
+      (λ (expanded-stx)
+        (syntax-parse expanded-stx
+          [(_ (narg ...))
+           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))])))]))
+
 
 (define-for-syntax (with-port-sugar pipe-stx)
   #`(=composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
@@ -252,7 +274,7 @@ re-appended).
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
   #:joint
   (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe= arg ...))]))
-(define-pipeline-operator =object-pipe/left=
+#;(define-pipeline-operator =object-pipe/left=
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe/left= arg ...)])
   #:joint
   (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe/left= arg ...))]))
@@ -260,6 +282,10 @@ re-appended).
   #:start (syntax-parser [(_ e) #'(=basic-object-pipe/expression= e)])
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/expression= e))]))
+(define-pipeline-operator =object-pipe/form=
+  #:start (syntax-parser [(_ e) #'(=basic-object-pipe/form= e)])
+  #:joint
+  (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/form= e))]))
 
 ;;;; unix-y pipes
 

@@ -127,32 +127,109 @@ These identifiers are all errors if used outside of @racket[run-pipeline].  They
 
 The core module only provides a few simple pipeline operators.  There are many more in the demo/ directory in the source repository.  Most of them are hastily written experiments, but some good ones should eventually be standardized.
 
-TODO - document the core operators
+@defform[#:kind "pipeline-operator" (=composite-pipe= (pipe-op arg ...) ...+)]{
+Produces a composite pipeline member spec made from the pipeline operators given.  This is really more for use when defining new pipeline operotars than for use in a pipeline itself.
+}
 
-@;   TODO - some of these do more than they ought -- some of the basic ones do too much, maybe some should be split into a second file with more adveturous operators...
-@;   default-pipeline-starter
-@;   =composite-pipe=
-@;   =basic-object-pipe=
-@;   =basic-object-pipe/left=
-@;   =basic-object-pipe/expression=
-@;   =object-pipe=
-@;   =object-pipe/left=
-@;   =object-pipe/expression=
-@;
-@;   =basic-unix-pipe=
-@;   =quoting-basic-unix-pipe=
+@defform[#:kind "pipeline-operator" (=basic-unix-pipe= options ... args ...+)]{
+Produces a unix-pipeline-member-spec with the given arguments as the process/function argument list.  The arguments are not quoted.  Any argument that produces a list will be spliced into the argument list.
+
+Options all take an argument, must precede any arguments, and are as follows:
+
+@racket[#:as] - This is sugar for adding on an object pipeline member afterward that parses the output somehow.  This should be given either #f (no transformation), a port reading function (eg. @racket[port->string]), or one of a pre-set list of symbols:  @racket['string], @racket['trim], @racket['lines], or @racket['words].
+
+@racket[#:e>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Produces an error if the file exists.
+
+@racket[#:e>!] - Accepts a file name (as an identifier), redirects the error stream to that file.  Truncates the file if it exists.
+
+@racket[#:e>>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Appends to the file if it exists.
+
+@racket[#:err] - Takes an expression to produce an error redirection value suitable for @racket[unix-pipeline-member-spec].
+
+@racket[#:success] - Takes an expression suitable for the @racket[#:success] argument of @racket[unix-pipeline-member-spec].
+
+TODO - env modification
+
+}
+
+@defform[#:kind "pipeline-operator" (=quoting-basic-unix-pipe= options ... args ...+)]{
+Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that are identifiers.  All non-identifier arguments (notably parenthesized forms) are not quoted, and thus you can unquote by using parentheses.
+
+@verbatim|{
+(define x "/etc")
+(define-syntax id (syntax-parser [(_ x) #'x]))
+
+;; I find I really don't mind this as a means of unquoting here.
+(run-pipeline =quoting-basic-unix-pipe= ls (id x))
+}|
+}
+
+@defform[#:kind "pipeline-operator" (=basic-object-pipe/expression= e)]{
+The simplest object pipe.  @racket[e] is simply the body of a @racket[lambda].  When used as a pipeline starter, the lambda accepts no arguments.  Otherwise it is a single-argument function, and @racket[current-pipeline-argument] is used to refer to its argument.
+}
+
+@defform[#:kind "pipeline-operator" (=basic-object-pipe/form= arg ...+)]{
+Creates an object pipe where @code{(arg ...)} is the body of a function.
+
+As with other object pipes, when used as a pipeline starter it generates a lambda with no arguments, and as a pipeline joint it generates a lambda with one argument, @racket[current-pipeline-argument].
+}
+
+@defform[#:kind "pipeline-operator" (=basic-object-pipe= arg ...+)]{
+Like @racket[=basic-object-pipe/form=], except that when not used as a pipeline starter, if the @racket[current-pipeline-argument] is not used within the arguments, it is appended as the last argument.
+
+To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @code{(arg ...)} must be equivalent to a function application form and not a macro invocation form.
+}
+
+@defform[#:kind "pipeline-operator" (=object-pipe/expression= arg ...+)]{
+Like @racket[=basic-object-pipe/expression=], but when it receives a port as an argument, it converts it to a string.
+}
+@defform[#:kind "pipeline-operator" (=object-pipe/form= arg ...+)]{
+Like @racket[=basic-object-pipe/form=], but when it receives a port as an argument, it converts it to a string.
+}
+@defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
+Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
+}
+
+@defidform[#:kind "pipeline-operator"
+         default-pipeline-starter]{
+Syntax parameter determining which pipeline operator is inserted when a @racket[run-pipeline] form doesn't explicitly start with one.
+}
+
+I've written various other pipeline operators that are a little more exciting and that are currently in the demo directory of the repository.  I'll eventually polish them up and put them somewhere stable.  They include things like unix pipes that automatically glob things, unix pipes that have lexically scoped alias resolution, =filter=, =for/list=, =for/stream=,=for/list/unix-arg=,=for/list/unix-input=...
 
 @subsection{Defining Pipeline Operators}
 
-TODO - document the defining forms
+@defform[(define-pipeline-operator name start-or-joint ...)
+#:grammar
+[(start-or-joint
+(code:line #:start transformer)
+(code:line #:joint transformer))
+]]{
+Define a pipeline operator.  Pipeline operators can act differently when they are in the starting position of a pipeline or later (joint position).  Specifically, when an operator creates an @racket[object-pipeline-member-spec], it needs to have a function that accepts 0 arguments when in the start position and 1 argument in others.
 
-@;   define-pipeline-operator
-@;   pipeop
-@;
-@;   current-pipeline-argument
-@;   expand-pipeline-arguments
-@;
+If a transformer function is not specified for one of the options, a default implementation (that generates an error) is used.
 
+The transformer will receive a syntax object corresponding to @code{(name-of-pipe argument ...)}, so it will likely want to ignore its first argument like most macros do.  But simetimes it may be useful to recur.
+
+Example uses are in the demo directory in the repository.
+}
+
+
+@defform[(pipeop name syntax-parser-clauses ...+)]{
+The name of this will probably change.  And maybe it will go away entirely.  I'm not sure yet.
+
+@racket[pipeop] is a more streamlined version of @racket[define-pipeline-operator].  It defines a pipeline operator where both @racket[#:start] and @racket[#:joint] are the same.  The syntax transformer used is basically @code{(syntax-parser syntax-parser-clauses ...)}.  I made this because I thought it would be a convenient way to be able to swiftly define a new pipeline even interactively in the Rash repl.
+
+Example uses are in the demo directory.
+}
+
+@defform[#:id current-pipeline-argument current-pipeline-argument]{
+The name of the implicit argument for object pipes.  The default is an error, and pipe operators that accept it must set it up using @racket[expand-pipeline-arguments] or @racket[syntax-parameterize].
+}
+
+@defform[(expand-pipeline-arguments)]{
+TODO - document this.
+}
 
 @subsection{Inspecting Pipelines}
 @defthing[#:kind "procedure" pipeline? procedure?]{
