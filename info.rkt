@@ -9,6 +9,8 @@
                "scribble-doc"
                "racket-doc"
                "rackunit-lib"
+               ;; temporarily
+               "text-table"
                ))
 (define version "0.1")
 
