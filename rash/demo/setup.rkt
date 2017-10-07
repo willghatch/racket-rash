@@ -22,8 +22,11 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 (require
  rash
+
+ ;; These are the interesting demo files to look at for defining pipeline operators.
  shell/demo/define-rash-alias
  shell/demo/more-pipeline-operators
+
  racket/string
  racket/port
  racket/function

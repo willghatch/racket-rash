@@ -185,6 +185,13 @@ id bar
 
 Rash is also useful as an interactive repl that feels like a nice mix between a normal Racket repl and an interactive Bash shell.
 
+
+
+
+
+
+
+
 @section{RASH Reference}
 
 Also be sure to see
@@ -285,20 +292,39 @@ Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-mac
 
 @section{Interactive Use}
 
-You can run the repl by running @verbatim{racket -l rash/repl}.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.
+You can run the repl by running @code{racket -l rash/repl}.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.
 
-How to run the repl and various details of how it works and what is available might change in the near future.  I may, for instance, add some sort of make-repl-command macro similar to @racket[make-rash-transformer] to change defaults at a very low level.  As it is defaults are changed by having variables that you essentially @verbatim{set!} in the repl, and there are some rc files that are loaded.
+How to run the repl and various details of how it works and what is available might change in the near future.  I may, for instance, add some sort of make-repl-command macro similar to @racket[make-rash-transformer] to change defaults at a very low level.  As it is defaults are changed by having variables that you essentially @code{set!} in the repl, and there are some rc files that are loaded.
 
 First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).  There is an example rashrc file in the project repo's demo directory.
 
-TODO
+To really just get going with the repl, put the following into $HOME/.config/rash/rashrc:
 
-how to refer to old repl results
+@verbatim|{
+(require rash/demo/demo-rc.rkt)
+set-default-pipeline-starter! |
+}|
 
-how to change the default pipe in the repl
 
-rashrc stuff
+All the following repl functions are not stable.
 
+@defproc[(result-n [n integer?]) any/c]{
+Only available in the repl.  Return the result of the @racket[n]th interactive command.
+}
+
+@defproc[(return-n [n integer?]) any/c]{
+Only available in the repl.  Like result-n, but if the result is a pipeline, get the return value of it.  In the repl, the default line-macro is like @racket[run-pipeline], but always prepending the @racket[&pipeline-ret] flag.  So you get pipeline objects instead of their results generally, and the prompt handles it specially to see the return value, but also to potentially use other information from the pipeline object.
+}
+
+@defform[(set-default-pipeline-starter! new-starter)]{
+Only available in the repl.  A line-macro that mutates the default pipeline starter used in the repl.  It's not really hygienic, so if you defined macros that used @racket[run-pipeline] without an explicit starter, this will change the result of new calls to that macro.  Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
+}
+
+
+@section{Demo file with the good stuff that I haven't yet put in the main implementation}
+Many interesting things and the setup you really want for running a repl are still in a demo file.  Largely this is because a lot of the pipeline operators I've defined are basically quick hacks, and while they do interesting things, I want to write better implementations of most of them.  Especially for unix operators -- I have written several that have one feature, but I want to write one with all the features, which is harder.
+
+To use the demo, @code{(require rash/demo/setup)}.  Also look at the file to see some examples.
 
 
 @section{Code and License}
