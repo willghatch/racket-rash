@@ -183,6 +183,8 @@ id bar
 }|
 
 
+At the moment #lang rash prints the values of top-level expressions, like #lang racket.  I generally hate that.  I will probably change that, but for the moment I'll leave it.  When I finish making the forms to define new #langs I will add an option to set that to your liking for custom versions, and probably make the default not print.
+
 Rash is also useful as an interactive repl that feels like a nice mix between a normal Racket repl and an interactive Bash shell.
 
 

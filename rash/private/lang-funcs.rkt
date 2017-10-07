@@ -154,7 +154,8 @@
                                                 #'#'run-pipeline)])
          #'(syntax-parser
              [(_ arg (... ...))
-              #'(#%plain-module-begin
+              #'(;#%plain-module-begin
+                 #%module-begin
                  (module* configure-runtime #f
                    (current-read-interaction
                     (λ (src in)
