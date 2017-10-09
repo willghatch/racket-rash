@@ -1,3 +1,47 @@
+If you want to help, there are various things you might do:
+
+* One thing that would be helpful regardless of your level of ability
+  is documentation help.  I wrote most of the docs in a hurry and they
+  aren't very good.  You could read them and let me know what doesn't
+  make sense, or edit them and send pull requests.  All the examples I
+  used were sort of stupid things I pulled off the top of my head that
+  aren't really compelling.  So if you think of some good examples
+  (eg. useful pipelining, especially mixed pipelines of external
+  programs and racket functions) that would be great.
+
+* Testing!  I have written very few tests.  Tests that use external
+  programs are somewhat difficult because they rely on the
+  environment, they can't be run in the sandbox provided by the
+  automated test servers (though this basically just means there
+  should be a directory of tests that the auto server won't run and
+  that I (or other contributors) can run locally), etc.  But I've been
+  planning on making a directory of tests that use common unix tools
+  that should be generally available, and having them do operations in
+  some sandbox directory and check that they are correct.
+
+* You can look through the TODO files in the repositories ( IE
+  https://github.com/willghatch/racket-rash and
+  https://github.com/willghatch/racket-shell-pipeline ) or grep for
+  "TODO" in the code base and see if there are things you want to try
+  working on.
+
+* You can report any bugs you find.
+
+* You can raise issues for things that you dislike or find weird, or
+  features that you want that are missing.  One reason I have said
+  "it's not stable yet" aside from some missing features is that I
+  want a space to collect feedback for general improvements before a
+  stable release.
+
+* You can try writing some interesting pipeline operators (requires
+  some macro know-how, so it may not be the best project if you're new
+  to Racket).  You could also just think up pipeline operators you
+  would find convenient or useful and tell me about them.
+
+
+General Todos (written more for my memory than for something readable by others)
+--------------------------------------------------------------------------------
+
 * make a module of short names -- say it's unstable but at least provide some standard-ish short names for the short term.  At some point decide which pipes deserve canonical short names.
 
 * unix pipeline with $var unquoting and $VAR environment variable reference
