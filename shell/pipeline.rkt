@@ -590,7 +590,11 @@
          [to-ret (if (and to-port to-out)
                      (begin
                        (thread (λ ()
-                                 (copy-port to-port to-out)
+                                 ;; TODO - log this somehow, don't just throw it out.
+                                 ;; There seem to be occasional errors about the pipe
+                                 ;; being closed in a way that copy-port is unhappy with.
+                                 (with-handlers ([(λ _ #t) (λ e (void))])
+                                   (copy-port to-port to-out))
                                  (close-output-port to-out)))
                        #f)
                      to-out)]
