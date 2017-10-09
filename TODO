@@ -4,13 +4,12 @@
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
+* I need to make a unix operator that has all the features together -- I have several that have one feature (in the demo dir), and I need to roll them all together, or make a macro that makes unixy operators with keywords to turn features on or off.
+
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 ** the forms for setting these (eg. the rash macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
 
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
-
-* object operator that uses aliases as well
-** be sure `detect alias` works in new prop:procedure-like way
 
 * maybe make it a syntax error to have a normal racket expression [IE starting a line with an open paren] have a pipeline later on the same line.  This will clear up any issues with having the first segment of a pipeline open with parens.
 
@@ -45,3 +44,13 @@ Documentation
 
 Maybe at some point there should be a section for Racketeers unfamiliar with Rash or shells in general, and a section for people familiar with shells to but unfamiliar with Racket.
 
+Line Editing
+------------
+
+At the time of writing, the one feature that keeps me from using Rash as my full-time shell is completion.  If I can just get file name completion, I will switch to using Rash all the time.
+
+For the short term, I want to hook up readline or editline in the fastest dirtiest way possible to get just file name completion.  Then I will switch to Rash full time.  Other sorts of completions would be nice too, and I have a lot of that right now with zsh.  But the only one that I *really* want all the time is file name completion.
+
+In the long term, what I really want is an emacs in racket that can be used as the line editor.  Specifically, I would want an emacs-style extensible editor where the buffer objects and editing commands are not tied to any sort of display, such that they could be connected to different displays (even more flexibly than GNU emacs with its ability to be used with curses/terminal version and a gui version).  Then one such display could be a line-editor style display that just lives in the bottom lines of a terminal, but still give full emacs buffer style editing to the code in the line (or lines -- obviously it should have real support for multi-lines) that you are editing.  The editor would be connected to your repl evaluator and be able to talk with it to determine information about the code in the buffer, do various different types of completion on it, know whether it is a valid command/whether it parses, etc.  Of course then you could also make a curses-style interface, and a gui interface, and maybe (hopefully!) even embed it to be the editor inside DrRacket (and in other GUI racket programs that have text editing fields).  Then you could, among other things, have custom editing commands, keymaps, editing modes (a la vim), etc all set up in one place and used in your shell, in your stand-alone text editor, editing fields in other programs, etc.  Several people have talked about wanting an emacs in Racket.  It would be a big project.  If nobody else makes one I can definitely see myself doing it (a basic version, at least), but it's not really at the top of my priorities right now -- I need to do things like, say, work on my PhD.  So I don't see this happening terribly soon.
+
+However distant it may be, you really want this sort of thing in your shell.  The only major difference between bash and zsh, for instance, is that zsh has an emacs as its editor.  And that makes a world of difference.  Zsh has many more and better programmed completions available.  It has many really useful plugins (eg. zaw -- it's like helm in emacs).  It's why so many people love zsh so much when as a language it is essentially the same as bash.  But while it has an emacs, you have to do all the extending in (*gulp*) zsh itself...  so plugins for zsh are rather limited by the implementation language.  Wouldn't it be great if the extension language for your editor were... any language in the Racket ecosystem?  Yes, it would.
