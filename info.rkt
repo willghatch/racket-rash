@@ -9,6 +9,7 @@
                "scribble-doc"
                "racket-doc"
                "rackunit-lib"
+               "readline-lib"
                ;; temporarily
                "text-table"
                ))

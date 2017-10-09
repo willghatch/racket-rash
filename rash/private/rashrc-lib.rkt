@@ -2,13 +2,63 @@
 
 (provide current-prompt-function)
 (provide current-result-print-default-function)
+(provide
+ complete-paths
+ composite-complete
+ cwd-hack-box
+ )
 
 (require racket/date)
 (require shell/mixed-pipeline)
 (require (prefix-in sp- shell/pipeline))
 (require "rashrc-git-stuff.rkt")
 (require racket/exn)
+(require racket/list)
+(require racket/string)
+(require readline/pread)
 
+;; Somehow completions are getting a different current directory.
+;; Maybe they run in a different thread sometimes?
+;; Let's hack around that.
+(define cwd-hack-box (box (current-directory)))
+
+(define (composite-complete pat)
+  (append (complete-paths pat)
+          (complete-namespaced pat)))
+
+(define (complete-namespaced pat)
+  (with-handlers ([(λ _ #t) (λ e '())])
+    (define names (map symbol->string (namespace-mapped-symbols)))
+    (define qpat (string-append "^" (regexp-quote pat)))
+    (filter (λ (n) (regexp-match qpat n)) names)))
+
+(define (complete-paths pstr)
+  (with-handlers ([(λ _ #t) (λ e #;(eprintf "error: ~a\n" e)'())])
+    (parameterize ([current-directory (unbox cwd-hack-box)])
+      (let* ([cdir (current-directory)]
+             [given-path (string->path pstr)]
+             [given-path-parts (explode-path given-path)]
+             [parts-but-last (drop-right given-path-parts 1)]
+             [last-part (car (reverse given-path-parts))]
+             [build (apply build-path cdir parts-but-last)]
+             [listing (directory-list build)]
+             [possibles (filter (λ (p) (and (string-prefix? (path->string p)
+                                                            (path->string last-part))
+                                            (not (equal? p last-part))))
+                                listing)]
+             [possibles (map (λ (p) (apply build-path
+                                           (append parts-but-last (list p))))
+                             possibles)]
+             [dir-exists-possibles (if (or (directory-exists? pstr)
+                                           (equal? pstr ""))
+                                       (map (λ (p) (build-path pstr p))
+                                            (directory-list pstr))
+                                       '())])
+        (map string->bytes/utf-8
+             (map (λ (p) (if (directory-exists? p)
+                             (string-append p "/")
+                             p))
+                  (map path->string (append possibles dir-exists-possibles))))))))
 
 (define (print-ret-maybe last-ret ret-number)
   (define (pre)
@@ -95,17 +145,22 @@
          [padded-min (if (< cmin 10)
                          (string-append "0" (number->string cmin))
                          cmin)])
-    (printf "~a:~a ~a~a\n~a "
+    (printf "~a:~a ~a~a~a\n"
             (cyan chour) padded-min
             (with-handlers ([(λ _ #t) (λ (e) (default-style "[git-info-error] "))])
               (git-info-with-style))
             (bblue (path->string (current-directory)))
-            (default-style "➤"))))
+            (default-style ""))
+    ;(current-prompt (string->bytes/utf-8 "➤ "))
+    (readline-prompt (string->bytes/utf-8 "➤ "))
+    ))
 
 (define (lame-prompt #:last-return-value [last-ret #f]
                      #:last-return-index [last-ret-n #f])
   (print-ret-maybe last-ret last-ret-n)
-  (printf ">"))
+  ;(printf ">")
+  (readline-prompt #"> ")
+  )
 
 (define current-prompt-function (make-parameter (if windows?
                                                     lame-prompt

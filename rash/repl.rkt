@@ -19,6 +19,13 @@
   syntax/parse
   ))
 
+(require readline)
+(require readline/readline)
+
+;; To have this work nicely, I really need job control.  I think I'm having issues with both the rash repl and subprocesses reading stdin at the same time.  I need to be able to set the controlling process group to fix it, I think.
+(define real-stdin pre-readline-input-port)
+(define readline-stdin (current-input-port))
+
 (define-line-macro run-pipeline/ret-obj
   (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
 
@@ -29,26 +36,28 @@
                 #:last-return-index n))
   (flush-output (current-output-port))
   (flush-output (current-error-port))
+  (set-box! cwd-hack-box (current-directory))
   (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a\n" e)
                                               #`(%%linea-racket-line (void)))])
-                       (linea-read-syntax (object-name (current-input-port))
-                                          (current-input-port)))]
+                       (linea-read-syntax (object-name readline-stdin)
+                                          readline-stdin))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
              (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
-                     (eval-syntax (parameterize ([current-namespace repl-namespace])
-                                    (namespace-syntax-introduce
-                                     #`(rash-set-defaults
-                                        ((current-input-port)
-                                         (current-output-port)
-                                         (current-error-port))
-                                        (splicing-syntax-parameterize
-                                            ([default-line-macro #'run-pipeline/ret-obj]
-                                             ;; TODO - make configurable
-                                             [default-pipeline-starter
-                                               #'repl-default-pipeline-starter])
-                                          (linea-line-parse #,next-input))))))))
+                     (eval-syntax
+                      (parameterize ([current-namespace repl-namespace])
+                        (namespace-syntax-introduce
+                         #`(rash-set-defaults
+                            (real-stdin
+                             (current-output-port)
+                             (current-error-port))
+                            (splicing-syntax-parameterize
+                                ([default-line-macro #'run-pipeline/ret-obj]
+                                 ;; TODO - make configurable
+                                 [default-pipeline-starter
+                                   #'repl-default-pipeline-starter])
+                              (linea-line-parse #,next-input))))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -81,7 +90,13 @@
                                                   (open-input-file rcfile)))))))))
 
 (define (main)
-  (port-count-lines! (current-input-port))
+  ;; Hmm... probably only one of these should count?
+  ;(port-count-lines! real-stdin)
+  (port-count-lines! readline-stdin)
+
+  (current-namespace repl-namespace)
+  (set-completion-function! composite-complete)
+
   (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
     (with-handlers ([(λ _ #t) (λ (ex)
                                 (eprintf "error in rc file ~a: ~a"
