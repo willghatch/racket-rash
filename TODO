@@ -10,6 +10,7 @@
 * add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
 
 * decide what to do with APIs that are bad, that I said are "mostly stable"...
+** The redirection API is bad in how it handles things like truncate/append/error flags.  This should change.
 
 * review names -- pick good ones before doing any stable release
 ** 'string-port for errors -- I don't like this one
@@ -23,8 +24,6 @@
 ** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible -- eg. =filter=, =for=, etc are nice, especially if they have short names.
 ** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
 ** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro, basically determining whether they produce runtime pipeline objects or if they desugar to the fast path that has no process or thread overhead.
-** each level of pipeline operator unwrapping should check whether it got another pipeline operator or if it got a spec definition form, which will kill any runtime errors of not getting specs
-*** BUT this would mean you couldn't wrap the struct forms, eg. (let ([foo aoeu]) (obj-spec (λ (arg) (foo arg foo)))) and have it work for the fast path -- so is this a good idea?  I think I still want it even though it doesn't support all pipelines.  In my mind it never supported unix pipeline members, so this seems like it alters little.
 
 
 less important TODO items, which may wait until version 2
