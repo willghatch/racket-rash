@@ -27,6 +27,9 @@ Here is a quick example to show what it looks like:
 @verbatim|{
 #lang rash
 
+;; For the moment this is required to get short names like |
+(require rash/demo/setup)
+
 ;; Pretend there are some require forms here (that I'm too lazy to add
 ;; while writing documentation on a plane) for anything that isn't
 ;; in scope with just #lang rash
