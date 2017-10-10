@@ -43,6 +43,7 @@ less important TODO items, which may wait until version 2
 ** I need to set a pipeline to all have the same process group ID that is different than the pgid of the host shell.  Right now I can either let them all keep the pgid of the shell or give each of them a different pgid.  Anything else would require changes to the subprocess API in the C code of Racket.
 ** I need to use `tcsetpgrp` to set the foreground process group on a terminal, to control which processes get sigint/sigstop signals from C-c and C-z.
 ** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
+** When Racket gets SIGHUP the main thread generates exn:break:hang-up, and for SIGQUIT it generates exn:break:terminate.  So a handler around the main repl loop can propogate SIGHUP to any jobs (except disowned ones) and quit gracefully.
 
 * bg pipeline disowning?
 ** This is really only reasonable for external-proccess-only pipelines, and I'm not sure how reasonable it is on Windows.
