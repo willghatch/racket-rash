@@ -13,9 +13,11 @@
   racket/base))
 
 (define-syntax basic-rash-module-begin
-  (make-rash-module-begin-transformer #:in (current-input-port)
-                                      #:out (current-output-port)
-                                      #:err (current-error-port)
-                                      #:default-starter #'=quoting-basic-unix-pipe=
-                                      ;#:default-line-macro #'pipeline-line-macro
-                                      ))
+  (make-rash-module-begin-transformer
+   #:this-module-path rash/private/basic-module-begin
+   #:in (current-input-port)
+   #:out (current-output-port)
+   #:err (current-error-port)
+   #:default-starter #'=quoting-basic-unix-pipe=
+   ;#:default-line-macro #'pipeline-line-macro
+   ))

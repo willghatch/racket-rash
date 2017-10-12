@@ -139,13 +139,19 @@
       [(_ make-module-begin-arg ...)
        (define-values (tab rest-stx)
          (parse-keyword-options #'(make-module-begin-arg ...)
-                                rash-keyword-table
+                                (list*
+                                 (list '#:this-module-path check-expression)
+                                 rash-keyword-table)
                                 #:context stx
                                 #:no-duplicates? #t))
        (syntax-parse rest-stx
          [() (void)]
          [else (raise-syntax-error 'make-rash-module-begin-transformer "unexpected arguments" rest-stx)])
-       (with-syntax ([mk-input (opref tab '#:in #'(current-input-port))]
+       (with-syntax ([this-mod-path (opref tab '#:this-module-path
+                                           #'(raise-syntax-error
+                                              'make-rash-module-begin-transformer
+                                              "expected #:this-module-path argument."))]
+                     [mk-input (opref tab '#:in #'(current-input-port))]
                      [mk-output (opref tab '#:out #'(current-output-port))]
                      [mk-err-output (opref tab '#:err #'(current-error-port))]
                      [mk-default-starter (opref tab '#:default-starter
@@ -154,9 +160,12 @@
                                                 #'#'run-pipeline)])
          #'(syntax-parser
              [(_ arg (... ...))
-              #'(;#%plain-module-begin
+              #`(;#%plain-module-begin
                  #%module-begin
-                 (module* configure-runtime #f
+                 (module configure-runtime racket/base
+                   (require rash/private/linea/read
+                            rash/private/lang-funcs
+                            this-mod-path)
                    (current-read-interaction
                     (λ (src in)
                       ;; TODO - this is totally broken
@@ -166,11 +175,11 @@
                             stx
                             (syntax-parse stx
                               [e #'(rash-expressions-begin
-                                    ((current-input-port)
-                                     (current-output-port)
-                                     (current-error-port)
-                                     default-pipeline-starter
-                                     default-line-macro)
+                                    (mk-input
+                                     mk-output
+                                     mk-err-output
+                                     mk-default-starter
+                                     mk-default-line-macro)
                                     e)]))))))
                  (rash-expressions-begin (mk-input
                                           mk-output
