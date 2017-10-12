@@ -8,16 +8,15 @@
 
 (require
  rash
- (submod "lang-funcs.rkt" for-module-begin)
  (for-syntax
   racket/base))
 
-(define-syntax basic-rash-module-begin
-  (make-rash-module-begin-transformer
-   #:this-module-path rash/private/basic-module-begin
-   #:in (current-input-port)
-   #:out (current-output-port)
-   #:err (current-error-port)
-   #:default-starter #'=quoting-basic-unix-pipe=
-   ;#:default-line-macro #'pipeline-line-macro
-   ))
+(define-rash-module-begin basic-rash-module-begin
+  #:this-module-path rash/private/basic-module-begin
+  #:in (current-input-port)
+  #:out (current-output-port)
+  #:err (current-error-port)
+  #:default-starter =quoting-basic-unix-pipe=
+  ;#:top-level-wrap println
+  ;#:default-line-macro pipeline-line-macro
+  )

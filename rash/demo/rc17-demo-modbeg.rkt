@@ -16,13 +16,18 @@
  rash/demo/setup
 
  rash
- (submod rash/private/lang-funcs for-module-begin)
  (for-syntax
   racket/base
   syntax/parse
   ))
 
-(define-syntax basic-rash-module-begin
+(define-rash-module-begin basic-rash-module-begin
+  #:in (current-input-port)
+  #:out (current-output-port)
+  #:err (current-error-port)
+  #:default-starter =quoting-basic-unix-pipe=
+  )
+#;(define-syntax basic-rash-module-begin
   (make-rash-module-begin-transformer #:in (current-input-port)
                                       #:out (current-output-port)
                                       #:err (current-error-port)

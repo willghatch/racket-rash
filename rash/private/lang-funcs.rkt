@@ -10,16 +10,17 @@
  (all-from-out "linea/line-macro.rkt")
 
  make-rash-reader-submodule
+ define-rash-module-begin
  ;make-rash-lang-submodule
  (for-syntax
-  make-rash-module-begin-transformer
+  ;make-rash-module-begin-transformer
   make-rash-transformer
   ))
 
 (module+ experimental
   (provide (for-syntax rash-template-escaper)))
 
-(module+ for-module-begin
+#;(module+ for-module-begin
   (provide (for-syntax make-rash-module-begin-transformer)))
 
 (module+ for-repl
@@ -41,8 +42,10 @@
  "linea/read.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
+  syntax/wrap-modbeg
 
  (for-syntax
+  syntax/wrap-modbeg
   syntax/keyword
   racket/base
   syntax/parse
@@ -50,6 +53,7 @@
   shell/private/misc-utils
 
   (for-syntax
+  syntax/wrap-modbeg
    racket/base
    syntax/parse
    syntax/keyword
@@ -110,12 +114,13 @@
 ;; But I can't seem to get the module paths to work out...
 (define-syntax (make-rash-reader-submodule stx)
   (syntax-parse stx
-    [(_ module-lang-path)
-     #'(module reader syntax/module-reader
-         module-lang-path
-         #:read-syntax linea-read-syntax
-         #:read linea-read
-         (require rash/private/linea/read))]))
+    [(_ this-module-path)
+     #'(begin
+         (module reader syntax/module-reader
+           this-module-path
+           #:read-syntax linea-read-syntax
+           #:read linea-read
+           (require rash/private/linea/read)))]))
 #;(define-syntax (make-rash-lang-submodule stx)
   (syntax-parse stx
     [(_ modname)
@@ -133,14 +138,18 @@
                   (rename-out [my-module-begin #%module-begin])
                   (all-from-out rash/private/lang-funcs)))]))
 
-(begin-for-syntax
-  (define-syntax (make-rash-module-begin-transformer stx)
-    (syntax-parse stx
-      [(_ make-module-begin-arg ...)
+(define-syntax (identity-macro stx)
+  (syntax-parse stx
+    [(_ e) #'e]))
+
+(define-syntax (define-rash-module-begin stx)
+  (syntax-parse stx
+    [(_ rmb-name make-mb-arg ...)
        (define-values (tab rest-stx)
-         (parse-keyword-options #'(make-module-begin-arg ...)
+         (parse-keyword-options #'(make-mb-arg ...)
                                 (list*
                                  (list '#:this-module-path check-expression)
+                                 (list '#:top-level-wrap check-expression)
                                  rash-keyword-table)
                                 #:context stx
                                 #:no-duplicates? #t))
@@ -151,43 +160,50 @@
                                            #'(raise-syntax-error
                                               'make-rash-module-begin-transformer
                                               "expected #:this-module-path argument."))]
+                     [top-level-wrap (opref tab '#:top-level-wrap #'identity-macro)]
                      [mk-input (opref tab '#:in #'(current-input-port))]
                      [mk-output (opref tab '#:out #'(current-output-port))]
                      [mk-err-output (opref tab '#:err #'(current-error-port))]
                      [mk-default-starter (opref tab '#:default-starter
-                                             #'#'=quoting-basic-unix-pipe=)]
+                                                #'=quoting-basic-unix-pipe=)]
                      [mk-default-line-macro (opref tab '#:default-line-macro
-                                                #'#'run-pipeline)])
-         #'(syntax-parser
-             [(_ arg (... ...))
-              #`(;#%plain-module-begin
-                 #%module-begin
-                 (module configure-runtime racket/base
-                   (require rash/private/linea/read
-                            rash/private/lang-funcs
-                            this-mod-path)
-                   (current-read-interaction
-                    (λ (src in)
-                      ;; TODO - this is totally broken
-                      ;; TODO - This really should be as close as using repl.rkt as possible
-                      (let ([stx (linea-read-syntax src in)])
-                        (if (eof-object? stx)
-                            stx
-                            (syntax-parse stx
-                              [e #'(rash-expressions-begin
-                                    (mk-input
-                                     mk-output
-                                     mk-err-output
-                                     mk-default-starter
-                                     mk-default-line-macro)
-                                    e)]))))))
-                 (rash-expressions-begin (mk-input
-                                          mk-output
-                                          mk-err-output
-                                          mk-default-starter
-                                          mk-default-line-macro)
-                                         arg (... ...)))]))]))
+                                                   #'run-pipeline)]
+                     [wrap-modbeg-name (datum->syntax stx (gensym
+                                                           'wrapping-modbeg-for-rash))])
+         #'(begin
+             (define-syntax wrap-modbeg-name
+               (make-wrapping-module-begin #'top-level-wrap))
+             (define-syntax rmb-name
+               (syntax-parser
+                 [(_ arg (... ...))
+                  #'(wrap-modbeg-name
+                     (module configure-runtime racket/base
+                       (require rash/private/linea/read
+                                rash/private/lang-funcs
+                                this-mod-path)
+                       (current-read-interaction
+                        (λ (src in)
+                          ;; TODO - this is totally broken
+                          ;; TODO - This really should be as close as using repl.rkt as possible
+                          (let ([stx (linea-read-syntax src in)])
+                            (if (eof-object? stx)
+                                stx
+                                (syntax-parse stx
+                                  [e #'(rash-expressions-begin
+                                        (mk-input
+                                         mk-output
+                                         mk-err-output
+                                         #'mk-default-starter
+                                         #'mk-default-line-macro)
+                                        e)]))))))
+                     (rash-expressions-begin (mk-input
+                                              mk-output
+                                              mk-err-output
+                                              #'mk-default-starter
+                                              #'mk-default-line-macro)
+                                             arg (... ...)))]))))]))
 
+(begin-for-syntax
   (define-syntax (make-rash-transformer stx)
     (syntax-parse stx
       [(_ make-transformer-arg ...)
@@ -199,7 +215,7 @@
        (syntax-parse rest-stx
          [() (void)]
          [else (raise-syntax-error
-                'make-rash-module-begin-transformer
+                'make-rash-transformer
                 "unexpected arguments"
                 rest-stx)])
        (with-syntax ([mk-input (opref tab '#:in #'(open-input-string ""))]
@@ -207,9 +223,9 @@
                      [mk-err-output (opref tab '#:err #''string-port)]
                      ;; TODO - make it possible for these to inherit
                      [mk-default-starter (opref tab '#:default-starter
-                                                #'#'=quoting-basic-unix-pipe=)]
+                                                #'=quoting-basic-unix-pipe=)]
                      [mk-line-macro (opref tab '#:default-line-macro
-                                                   #'#'run-pipeline)])
+                                                   #'run-pipeline)])
          #'(λ (stx)
              (syntax-parse stx
                [(rash tx-arg (... ...))
@@ -225,9 +241,9 @@
                               [output (opref tab '#:out #'mk-output)]
                               [err-output (opref tab '#:err #'mk-err-output)]
                               [default-starter (opref tab '#:default-starter
-                                                      #'mk-default-starter)]
+                                                      #'#'mk-default-starter)]
                               [line-macro (opref tab '#:default-line-macro
-                                                 #'mk-line-macro)])
+                                                 #'#'mk-line-macro)])
                   #'(rash-expressions-begin (input output err-output
                                                    default-starter
                                                    line-macro
