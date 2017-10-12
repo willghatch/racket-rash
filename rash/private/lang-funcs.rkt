@@ -11,17 +11,12 @@
 
  make-rash-reader-submodule
  define-rash-module-begin
- ;make-rash-lang-submodule
  (for-syntax
-  ;make-rash-module-begin-transformer
   make-rash-transformer
   ))
 
 (module+ experimental
   (provide (for-syntax rash-template-escaper)))
-
-#;(module+ for-module-begin
-  (provide (for-syntax make-rash-module-begin-transformer)))
 
 (module+ for-repl
   (provide
@@ -93,25 +88,40 @@
             (in-eval out-eval err-eval)
             (linea-line-parse e ...))))]))
 
-(define ((mk-rash-read-interaction default-starter-stx default-line-macro-stx) src in)
-  ;; TODO - This really should be as close as using repl.rkt as possible
-  (let ([stx (linea-read-syntax src in)])
-    (if (eof-object? stx)
-        stx
-        (syntax-parse stx
-          [e #`(rash-expressions-begin
-                ((current-input-port)
-                 (current-output-port)
-                 (current-error-port)
-                 ;; TODO - make this configurable along with the one in the #lang body
-                 #,default-starter-stx
-                 #,default-line-macro-stx)
-                e)]))))
 
-;; TODO - I would like a turnkey version of make-rash-reader-submodule
-;; that includes options for setting the module language, providing options
-;; to make-rash-module-begin-transformer, etc.
-;; But I can't seem to get the module paths to work out...
+#|
+TODO
+
+The define-rash-module-begin and make-reader-submodule stuff is really an
+intermediate step to better configurability.
+
+I want a form to easily define a new #lang based on rash with custom options for
+the defaults and the reader.  Something like this:
+
+```
+#lang racket/base
+(require rash)
+(provide (except-out (all-from-out racket/base)
+                     #%module-begin)
+         (all-from-out rash)
+         (except-out (all-defined-out)
+                     my-mb)
+         (rename-out [my-mb #%module-begin])
+         )
+(rash-hash-lang-setup
+   #:module-begin-name my-mb
+   #:default-starter =object-pipe=
+   #:rash-readtable (modify-readtable-somehow basic-rash-readtable)
+   ...
+   )
+```
+
+And then be able to use the module path for that module as a #lang.
+
+Also it might be nice for #lang rash to take arguments that affect it somehow.
+But how can it be done in a way that let those arguments affect the reader?
+|#
+
 (define-syntax (make-rash-reader-submodule stx)
   (syntax-parse stx
     [(_ this-module-path)
@@ -121,22 +131,6 @@
            #:read-syntax linea-read-syntax
            #:read linea-read
            (require rash/private/linea/read)))]))
-#;(define-syntax (make-rash-lang-submodule stx)
-  (syntax-parse stx
-    [(_ modname)
-     #'(module modname racket/base
-         (require rash/private/lang-funcs)
-         (define-syntax my-module-begin
-           (make-rash-module-begin-transformer
-            #:in (current-input-port)
-            #:out (current-output-port)
-            #:err (current-error-port)
-            #:default-starter #'=quoting-basic-unix-pipe=
-            ;#:default-line-macro #'pipeline-line-macro
-            ))
-         (provide (except-out (all-from-out racket/base) #%module-begin)
-                  (rename-out [my-module-begin #%module-begin])
-                  (all-from-out rash/private/lang-funcs)))]))
 
 (define-syntax (identity-macro stx)
   (syntax-parse stx
@@ -183,8 +177,6 @@
                                 this-mod-path)
                        (current-read-interaction
                         (λ (src in)
-                          ;; TODO - this is totally broken
-                          ;; TODO - This really should be as close as using repl.rkt as possible
                           (let ([stx (linea-read-syntax src in)])
                             (if (eof-object? stx)
                                 stx
@@ -246,9 +238,7 @@
                                                  #'#'mk-line-macro)])
                   #'(rash-expressions-begin (input output err-output
                                                    default-starter
-                                                   line-macro
-                                                   ;#'run-pipeline
-                                                   )
+                                                   line-macro)
                                             parsed-rash-code (... ...)))])))]))
   )
 
