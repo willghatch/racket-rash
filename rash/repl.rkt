@@ -23,13 +23,13 @@
   (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
 
 (define (rash-repl last-ret-val n)
-  (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a~n" e))])
+  (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
     (option-app (current-prompt-function)
                 #:last-return-value last-ret-val
                 #:last-return-index n))
   (flush-output (current-output-port))
   (flush-output (current-error-port))
-  (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a~n" e)
+  (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a\n" e)
                                               #`(%%linea-racket-line (void)))])
                        (linea-read-syntax (object-name (current-input-port))
                                           (current-input-port)))]
@@ -95,6 +95,6 @@
 
   (rash-repl (void) 0)
 
-  (printf "and now exiting for some reason~n"))
+  (printf "and now exiting for some reason\n"))
 
 (main)

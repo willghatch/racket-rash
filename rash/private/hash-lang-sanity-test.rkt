@@ -8,6 +8,6 @@
       (define y 6)
       (define z 7)»)
 
-(printf "adding: ~a~n" (+ x y z))
+(printf "adding: ~a\n" (+ x y z))
 
 ls

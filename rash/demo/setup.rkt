@@ -67,7 +67,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
                   (if (equal? eof oline)
                       (void)
                       (begin
-                        (fprintf outer-oport "\033[31m~a\033[0m~n" oline)
+                        (fprintf outer-oport "\033[31m~a\033[0m\n" oline)
                         (loop)))))
               (loop)))
     to-pipe)

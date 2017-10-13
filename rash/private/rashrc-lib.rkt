@@ -12,21 +12,21 @@
 
 (define (print-ret-maybe last-ret ret-number)
   (define (pre)
-    (printf "Result ~a:~n" ret-number))
+    (printf "Result ~a:\n" ret-number))
   (cond [(exn? last-ret)
          (begin (pre)
-                (eprintf "~a~n" last-ret)
+                (eprintf "~a\n" last-ret)
                 ;; let any filtering output finish
                 (sleep 0.01))]
         [(and (pipeline? last-ret)
               (pipeline-running? last-ret))
          (pre)
-         (printf "~a~n" last-ret)]
+         (printf "~a\n" last-ret)]
         [(and (pipeline? last-ret)
               (not (pipeline-success? last-ret)))
          (pre)
          (let ([err (pipeline-return last-ret)])
-           (eprintf "~a~n" (format "~a" (if (exn? err)
+           (eprintf "~a\n" (format "~a" (if (exn? err)
                                             (exn->string err)
                                             err)))
            (sleep 0.01))]
@@ -95,7 +95,7 @@
          [padded-min (if (< cmin 10)
                          (string-append "0" (number->string cmin))
                          cmin)])
-    (printf "~a:~a ~a~a~n~a "
+    (printf "~a:~a ~a~a\n~a "
             (cyan chour) padded-min
             (with-handlers ([(λ _ #t) (λ (e) (default-style "[git-info-error] "))])
               (git-info-with-style))
@@ -111,4 +111,4 @@
                                                     lame-prompt
                                                     basic-prompt)))
 (define current-result-print-default-function
-  (make-parameter (λ (result) (printf "~s~n" result))))
+  (make-parameter (λ (result) (printf "~s\n" result))))

@@ -83,11 +83,11 @@
 #;(let ([tab (my-ps)])
   (for ([header (car tab)])
     (printf "~a " (car header))
-    (printf "~n"))
+    (printf "\n"))
   (for ([row (my-ps)])
     (for ([field row])
       (printf "~a " (cdr field)))
-    (printf "~n")
+    (printf "\n")
     ))
 
 (define (format-table-list rows)
@@ -101,7 +101,7 @@
   (if (and (list? result)
            (not (null? result))
            (andmap table-elem? result))
-      (printf "~a~n" (format-table-list result))
+      (printf "~a\n" (format-table-list result))
       (fallback-printer result)))
 
 (define (tablesort rows #:key [key-sym'pid] #:rev [rev #f])
@@ -121,12 +121,12 @@
      l r))
   (sort rows (if rev gt lt) #:key getkey))
 
-#;(printf "~a~n" (format-table-list (sort (my-ps) < #:key (λ (x) (string->number
+#;(printf "~a\n" (format-table-list (sort (my-ps) < #:key (λ (x) (string->number
                                                                 (dict-ref x 'pid))))))
-#;(printf "~a~n" (format-table-list (sort (my-ps) string<? #:key (λ (x) (dict-ref x 'command)))))
+#;(printf "~a\n" (format-table-list (sort (my-ps) string<? #:key (λ (x) (dict-ref x 'command)))))
 
 #;(let ([tab (my-ps)])
-  (printf "~a~n"
+  (printf "~a\n"
           (table->string
            #:framed? #f
            #:row-sep? #f
