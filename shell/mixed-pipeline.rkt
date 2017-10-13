@@ -93,12 +93,12 @@
              (if (and stderr (not (equal? stderr "")))
                  (error 'run-pipeline
                         (format
-                         "unix pipeline segment ~a terminated with code ~a.  Captured stderr:~n~a~n"
+                         "unix pipeline segment ~a terminated with code ~a.  Captured stderr:\n~a\n"
                          argl
                          status
                          stderr))
                  (error 'run-pipeline
-                        (format "unix pipeline-segment ~a terminated with code ~a~n"
+                        (format "unix pipeline-segment ~a terminated with code ~a\n"
                                 argl status)))))]
         [else (unbox (object-pipeline-member-err-box seg))]))
 

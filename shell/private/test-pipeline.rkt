@@ -130,7 +130,7 @@
   (require rackunit)
 
   ;; TODO - how to I wrap this so I get a nice summary as with raco test and the test module?
-  (printf "If this exits without saying things passed, then things failed.~n")
+  (printf "If this exits without saying things passed, then things failed.\n")
 
   (check-equal? (string->number
                  (string-trim
@@ -140,6 +140,6 @@
                                     '(wc -l))))
                 1)
 
-  (printf "If it didn't say anything about falures, then the tests passed.~n")
+  (printf "If it didn't say anything about falures, then the tests passed.\n")
 
   )

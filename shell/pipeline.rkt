@@ -757,7 +757,7 @@
         ([(λ (exn) #t)
           (λ (exn)
             (set-box! err-box exn)
-            (eprintf "~a~n" (exn->string exn)))])
+            (eprintf "~a\n" (exn->string exn)))])
         (let* ([argl (pipeline-member-spec-argl m-spec)]
                [thread-ret (apply (car argl) (cdr argl))])
           (set-box! ret-box thread-ret)))
