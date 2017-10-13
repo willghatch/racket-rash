@@ -55,7 +55,8 @@
 
 (define (git-submodule-dirty?)
   (pipeline-status (run-pipeline '(git submodule summary -n 1)
-                                 (list (λ () (not (equal? "" (port->string))))))))
+                                 (list (λ () (not (equal? "" (port->string)))))
+                                 #:in 'null)))
 
 (define (git-has-untracked?)
   (let ([out (run-pipeline/out '(git ls-files --other --directory --exclude-standard))])
