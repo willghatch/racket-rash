@@ -37,8 +37,15 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
   syntax/parse
   ))
 
-;; convenient short name for identity function
-(define (id x) x)
+;; convenient short name for identity line-macro and function
+(define-line-macro id
+  (syntax-parser
+    ;; pass through the normal case
+    [(_ e) #'e]
+    ;; I guess multiple values makes sense here...
+    [(_ e ...) #'(values e ...)]
+    ;; And we want it to work as a first-order function.
+    [_ #'(λ args (apply values args))]))
 
 (define-syntax #%upper-triangles (make-rename-transformer #'rash))
 (define-syntax #%lower-triangles (make-rename-transformer #'rash/wired))

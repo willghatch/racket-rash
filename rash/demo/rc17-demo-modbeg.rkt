@@ -9,7 +9,6 @@
 
  app
  def
- id
  )
 
 (require
@@ -43,4 +42,3 @@
                                        #'(define def-form
                                            (do-line-macro arg ...))]))
 
-(define-line-macro id (syntax-parser [(_ e) #'e]))
