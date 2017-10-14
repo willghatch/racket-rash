@@ -124,7 +124,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 
 (define-simple-rash-alias d 'ls '--color=auto)
-(define-simple-rash-alias di 'ls '-l '--color=auto)
+(define-simple-rash-alias di 'ls '-laFh '--color=auto)
 (define-simple-rash-alias gc "git" 'commit )
 (define-simple-rash-alias gs "git" 'status )
 (define-simple-rash-alias gd "git" 'diff )
