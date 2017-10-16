@@ -54,10 +54,10 @@
                            [old (map (λ (k) (hash-ref e k)) keys)]
                            [new (map rec-walk old)])
                       (re-stx new old (apply
-                                           {cond [(hash-eq? e) hasheq]
-                                                 [(hash-equal? e) hash]
-                                                 [else hasheqv]}
-                                           (alternate keys new))))))]
+                                       {cond [(hash-eq? e) hasheq]
+                                             [(hash-equal? e) hash]
+                                             [else hasheqv]}
+                                       (alternate keys new))))))]
       ;; immutable prefab struct of stx objects
       [(struct? e)
        (f stx (λ ()
@@ -66,8 +66,8 @@
                        [elem-list (cdr (vector->list vec))]
                        [new-elem-list (map rec-walk elem-list)])
                   (re-stx new-elem-list elem-list (apply make-prefab-struct
-                                                             pkey
-                                                             new-elem-list)))))]
+                                                         pkey
+                                                         new-elem-list)))))]
       ;; symbol
       ;; misc datum
       [else (f stx (λ () stx))])))

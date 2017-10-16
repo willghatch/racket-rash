@@ -27,17 +27,17 @@
     [(lm:template-escape arg ...)
      (let ([slv (syntax-local-value #'lm)])
        (let ([transform (template-escape-ref slv)])
-             (cond [(procedure? transform) (transform slv stx)]
-                   [(number? transform) ({vector-ref (struct->vector slv)
-                                                   (add1 transform)}
-                                       stx)])))]))
+         (cond [(procedure? transform) (transform slv stx)]
+               [(number? transform) ({vector-ref (struct->vector slv)
+                                                 (add1 transform)}
+                                     stx)])))]))
 
 (struct template-escape-struct
   (transformer)
   #:property prop:template-escape (λ (inst . args)
-                               (apply
-                                {template-escape-struct-transformer inst}
-                                args))
+                                    (apply
+                                     {template-escape-struct-transformer inst}
+                                     args))
   ;#:property prop:procedure (struct-field-index transformer)
   )
 
