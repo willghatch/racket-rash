@@ -1,24 +1,25 @@
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
+* Better API for redirection settings in basic and mixed pipelines
+** specifically, how to tell it truncate/append/error
+** how to tell it you want stderr as a string-port or shared-string-port
+
+* good API for setting defaults
+** all default values should have syntax parameters that are either exposed as such or have a nice API for setting their values, and they should probably all live in one file in private/
+*** specifically these include the defaults for in/out/err, the default pipeline starter, the default truncate/append/error behavior for out/err, default strict/permissive/lazy correctness, lazy-timeout,
+
 * option for code to run in manager thread before running members in order to modify parameters - IE generalization of modifying env for all members.
 ** environment variable / generic thread environment mutation per-member as well
 
 * process fd/temp-file redirects a la <() >() from bash
+** Probably I want a flag struct for each.  The struct will contain a thunk that will evaluate to a file name (for <()) or will take a file name (for >(), the pipeline running mechanism will have to give it one).
+** Unless it's actually backed by FD, the output process will have to finish before starting the input process, and pipeline waiting will have to wait for the sub-pipeline stuff as well...
 
 * inspecting pipeline segments with correct compound member handling
 
 * add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
 
-* decide what to do with APIs that are bad, that I said are "mostly stable"...
-** The redirection API is bad in how it handles things like truncate/append/error flags.  This should change.
-
-* review names -- pick good ones before doing any stable release
-** 'string-port for errors -- I don't like this one
-
 * look through TODO comments
-
-* API - be sure it's conservative enough to change implementation details (eg. for spec creation)
-* contracts - check old ones, make new ones
 
 * a version of pipeline-macro that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
 ** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible -- eg. =filter=, =for=, etc are nice, especially if they have short names.

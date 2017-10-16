@@ -78,15 +78,13 @@
                         &in &out &err &< &> &>! &>>
                         &strict &permissive &lazy &lazy-timeout)))))
 
+;; TODO - maybe these should be used by mixed-pipeline as well?
 (define-syntax-parameter rash-default-in
-  (λ (stx) (raise-syntax-error 'rash-default-in
-                               "Internal error - default used where none is set")))
+  (syntax-parser [_ #'(open-input-string "")]))
 (define-syntax-parameter rash-default-out
-  (λ (stx) (raise-syntax-error 'rash-default-out
-                               "Internal error - default used where none is set")))
+  (syntax-parser [_ #'(λ (x) (string-trim (port->string x)))]))
 (define-syntax-parameter rash-default-err-out
-  (λ (stx) (raise-syntax-error 'rash-default-err-out
-                               "Internal error - default used where none is set")))
+  (syntax-parser [_ #''string-port]))
 
 (define-syntax (rash-set-defaults stx)
   (syntax-parse stx
