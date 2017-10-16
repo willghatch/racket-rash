@@ -48,6 +48,7 @@
   shell/private/misc-utils
 
   (for-syntax
+   "linea/read.rkt"
    syntax/wrap-modbeg
    racket/base
    syntax/parse
