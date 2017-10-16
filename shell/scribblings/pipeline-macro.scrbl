@@ -8,15 +8,15 @@
 @; TODO - naming...
 @title[#:tag "pipeline-macro"]{Pipeline Macro Library}
 
-@defmodule[shell/macro-pipeline]
+@defmodule[shell/pipeline-macro]
 
-@section{shell/macro-pipeline stability}
+@section{shell/pipeline-macro stability}
 
 This library is not entirely stable.
 
 The base set of pipeline operators is likely to change, and some of the names I want to review before a stable release.
 
-@section{shell/macro-pipeline guide}
+@section{shell/pipeline-macro guide}
 
 This module is a macro DSL wrapper around the shell/mixed-pipeline library.  It is designed for running pipelines of external processes (which pass each other ports) and Racket functions (which pass each other objects).  It does this with a very flat syntax and user-definable pipeline operators, which provide a lot of convenient sugar for making pipelines shorter.  It is particularly tailored for use in a line-based syntax, like that of the Rash language.
 
@@ -49,7 +49,7 @@ We can mix the two:
 
 I am really running out of steam for documenting right now... TODO - write a good guide.
 
-@section{shell/macro-pipeline reference}
+@section{shell/pipeline-macro reference}
 
 @subsection{Running Pipelines}
 
