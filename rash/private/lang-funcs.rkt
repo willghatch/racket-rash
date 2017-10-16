@@ -255,7 +255,7 @@ But how can it be done in a way that let those arguments affect the reader?
      (λ (stx)
        (syntax-parse stx
          [(_ arg ...)
-          (with-syntax ([(parsed-rash-code ...) (rash-stx-strs->stx #'(arg ...))])
+          (with-syntax ([(parsed-rash-code ...) (linea-stx-strs->stx #'(arg ...))])
             #'(rash-expressions-begin
                ((open-input-string "")
                 default-output-port-transformer
