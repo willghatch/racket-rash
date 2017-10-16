@@ -37,7 +37,7 @@
  "linea/read.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
-  syntax/wrap-modbeg
+ syntax/wrap-modbeg
 
  (for-syntax
   syntax/wrap-modbeg
@@ -48,7 +48,7 @@
   shell/private/misc-utils
 
   (for-syntax
-  syntax/wrap-modbeg
+   syntax/wrap-modbeg
    racket/base
    syntax/parse
    syntax/keyword
@@ -109,11 +109,11 @@ the defaults and the reader.  Something like this:
          (rename-out [my-mb #%module-begin])
          )
 (rash-hash-lang-setup
-   #:module-begin-name my-mb
-   #:default-starter =object-pipe=
-   #:rash-readtable (modify-readtable-somehow basic-rash-readtable)
-   ...
-   )
+ #:module-begin-name my-mb
+ #:default-starter =object-pipe=
+ #:rash-readtable (modify-readtable-somehow basic-rash-readtable)
+ ...
+ )
 ```
 
 And then be able to use the module path for that module as a #lang.
@@ -139,61 +139,61 @@ But how can it be done in a way that let those arguments affect the reader?
 (define-syntax (define-rash-module-begin stx)
   (syntax-parse stx
     [(_ rmb-name make-mb-arg ...)
-       (define-values (tab rest-stx)
-         (parse-keyword-options #'(make-mb-arg ...)
-                                (list*
-                                 (list '#:this-module-path check-expression)
-                                 (list '#:top-level-wrap check-expression)
-                                 rash-keyword-table)
-                                #:context stx
-                                #:no-duplicates? #t))
-       (syntax-parse rest-stx
-         [() (void)]
-         [else (raise-syntax-error 'make-rash-module-begin-transformer "unexpected arguments" rest-stx)])
-       (with-syntax ([this-mod-path (opref tab '#:this-module-path
-                                           #'(raise-syntax-error
-                                              'make-rash-module-begin-transformer
-                                              "expected #:this-module-path argument."))]
-                     [top-level-wrap (opref tab '#:top-level-wrap #'identity-macro)]
-                     [mk-input (opref tab '#:in #'(current-input-port))]
-                     [mk-output (opref tab '#:out #'(current-output-port))]
-                     [mk-err-output (opref tab '#:err #'(current-error-port))]
-                     [mk-default-starter (opref tab '#:default-starter
-                                                #'=quoting-basic-unix-pipe=)]
-                     [mk-default-line-macro (opref tab '#:default-line-macro
-                                                   #'run-pipeline)]
-                     [wrap-modbeg-name (datum->syntax stx (gensym
-                                                           'wrapping-modbeg-for-rash))])
-         #'(begin
-             (define-syntax wrap-modbeg-name
-               (make-wrapping-module-begin #'top-level-wrap))
-             (define-syntax rmb-name
-               (syntax-parser
-                 [(_ arg (... ...))
-                  #'(wrap-modbeg-name
-                     (module configure-runtime racket/base
-                       (require rash/private/linea/read
-                                rash/private/lang-funcs
-                                this-mod-path)
-                       (current-read-interaction
-                        (λ (src in)
-                          (let ([stx (linea-read-syntax src in)])
-                            (if (eof-object? stx)
-                                stx
-                                (syntax-parse stx
-                                  [e #'(rash-expressions-begin
-                                        (mk-input
-                                         mk-output
-                                         mk-err-output
-                                         #'mk-default-starter
-                                         #'mk-default-line-macro)
-                                        e)]))))))
-                     (rash-expressions-begin (mk-input
-                                              mk-output
-                                              mk-err-output
-                                              #'mk-default-starter
-                                              #'mk-default-line-macro)
-                                             arg (... ...)))]))))]))
+     (define-values (tab rest-stx)
+       (parse-keyword-options #'(make-mb-arg ...)
+                              (list*
+                               (list '#:this-module-path check-expression)
+                               (list '#:top-level-wrap check-expression)
+                               rash-keyword-table)
+                              #:context stx
+                              #:no-duplicates? #t))
+     (syntax-parse rest-stx
+       [() (void)]
+       [else (raise-syntax-error 'make-rash-module-begin-transformer "unexpected arguments" rest-stx)])
+     (with-syntax ([this-mod-path (opref tab '#:this-module-path
+                                         #'(raise-syntax-error
+                                            'make-rash-module-begin-transformer
+                                            "expected #:this-module-path argument."))]
+                   [top-level-wrap (opref tab '#:top-level-wrap #'identity-macro)]
+                   [mk-input (opref tab '#:in #'(current-input-port))]
+                   [mk-output (opref tab '#:out #'(current-output-port))]
+                   [mk-err-output (opref tab '#:err #'(current-error-port))]
+                   [mk-default-starter (opref tab '#:default-starter
+                                              #'=quoting-basic-unix-pipe=)]
+                   [mk-default-line-macro (opref tab '#:default-line-macro
+                                                 #'run-pipeline)]
+                   [wrap-modbeg-name (datum->syntax stx (gensym
+                                                         'wrapping-modbeg-for-rash))])
+       #'(begin
+           (define-syntax wrap-modbeg-name
+             (make-wrapping-module-begin #'top-level-wrap))
+           (define-syntax rmb-name
+             (syntax-parser
+               [(_ arg (... ...))
+                #'(wrap-modbeg-name
+                   (module configure-runtime racket/base
+                     (require rash/private/linea/read
+                              rash/private/lang-funcs
+                              this-mod-path)
+                     (current-read-interaction
+                      (λ (src in)
+                        (let ([stx (linea-read-syntax src in)])
+                          (if (eof-object? stx)
+                              stx
+                              (syntax-parse stx
+                                [e #'(rash-expressions-begin
+                                      (mk-input
+                                       mk-output
+                                       mk-err-output
+                                       #'mk-default-starter
+                                       #'mk-default-line-macro)
+                                      e)]))))))
+                   (rash-expressions-begin (mk-input
+                                            mk-output
+                                            mk-err-output
+                                            #'mk-default-starter
+                                            #'mk-default-line-macro)
+                                           arg (... ...)))]))))]))
 
 (begin-for-syntax
   (define-syntax (make-rash-transformer stx)
@@ -217,7 +217,7 @@ But how can it be done in a way that let those arguments affect the reader?
                      [mk-default-starter (opref tab '#:default-starter
                                                 #'=quoting-basic-unix-pipe=)]
                      [mk-line-macro (opref tab '#:default-line-macro
-                                                   #'run-pipeline)])
+                                           #'run-pipeline)])
          #'(λ (stx)
              (syntax-parse stx
                [(rash tx-arg (... ...))
