@@ -29,22 +29,37 @@
 (define-line-macro run-pipeline/ret-obj
   (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
 
+(define (clean/exit)
+  ;; TODO - I should keep a list of background jobs and send them sighup.
+  ;;      - This requires signal abilities in the pipeline library.
+  ;;      - As it is, if there is a job running when the shell is killed
+  ;;        (eg. by closing a terminal), then it keeps running to completion
+  ;;        unless it independently detects eg. its controlling terminal is dead.
+  (exit))
+
+
 (define (rash-repl last-ret-val n)
-  (with-handlers ([(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
+  (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
+                  [exn:break:terminate? (λ (e) (clean/exit))]
+                  [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
     (option-app (current-prompt-function)
                 #:last-return-value last-ret-val
                 #:last-return-index n))
   (flush-output (current-output-port))
   (flush-output (current-error-port))
   (set-box! cwd-hack-box (current-directory))
-  (let* ([next-input (with-handlers ([exn? (λ (e) (eprintf "~a\n" e)
+  (let* ([next-input (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
+                                     [exn:break:terminate? (λ (e) (clean/exit))]
+                                     [exn? (λ (e) (eprintf "~a\n" e)
                                               #`(%%linea-racket-line (void)))])
                        (linea-read-syntax (object-name readline-stdin)
                                           readline-stdin))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
-             (λ () (with-handlers ([(λ (e) #t) (λ (e) e)])
+             (λ () (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
+                                   [exn:break:terminate? (λ (e) (clean/exit))]
+                                   [(λ (e) #t) (λ (e) e)])
                      (eval-syntax
                       (parameterize ([current-namespace repl-namespace])
                         (namespace-syntax-introduce
