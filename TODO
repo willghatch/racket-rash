@@ -1,5 +1,9 @@
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
+* mixed/pipeline pipeline-kill
+
+* pipeline send signal?  eg. to send sighup when rash is killed so that some programs (eg nohup) can decide whether or not they should die.
+
 * Better API for redirection settings in basic and mixed pipelines
 ** specifically, how to tell it truncate/append/error
 ** how to tell it you want stderr as a string-port or shared-string-port
