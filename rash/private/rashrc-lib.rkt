@@ -36,18 +36,25 @@
 
 (define (complete-paths pstr)
   (set-completion-append-character! #\null)
-  (with-handlers ([(λ _ #t) (λ e #;(eprintf "error: ~a\n" e)'())])
+  (with-handlers ([(λ _ #t) (λ e '())])
     (parameterize ([current-directory (unbox cwd-hack-box)])
       (let* ([cdir (current-directory)]
              [given-path (string->path pstr)]
              [given-path-parts (explode-path given-path)]
              [parts-but-last (drop-right given-path-parts 1)]
              [last-part (car (reverse given-path-parts))]
-             [build (apply build-path cdir parts-but-last)]
+             [build (cond [(equal? pstr "/") (build-path "/")]
+                          [(absolute-path? given-path)
+                           (apply build-path parts-but-last)]
+                          [else (apply build-path cdir parts-but-last)])]
+             [build (if (absolute-path? given-path)
+                        (if (equal? pstr "/")
+                            (build-path "/")
+                            (apply build-path parts-but-last))
+                        (apply build-path cdir parts-but-last))]
              [listing (directory-list build)]
              [possibles (filter (λ (p) (and (string-prefix? (path->string p)
-                                                            (path->string last-part))
-                                            (not (equal? p last-part))))
+                                                            (path->string last-part))))
                                 listing)]
              [possibles (map (λ (p) (apply build-path
                                            (append parts-but-last (list p))))
