@@ -4,6 +4,7 @@
 (provide current-result-print-default-function)
 (provide
  complete-paths
+ complete-namespaced
  composite-complete
  cwd-hack-box
  )
@@ -16,6 +17,7 @@
 (require racket/list)
 (require racket/string)
 (require readline/pread)
+(require readline/readline)
 
 ;; Somehow completions are getting a different current directory.
 ;; Maybe they run in a different thread sometimes?
@@ -33,6 +35,7 @@
     (filter (λ (n) (regexp-match qpat n)) names)))
 
 (define (complete-paths pstr)
+  (set-completion-append-character! #\null)
   (with-handlers ([(λ _ #t) (λ e #;(eprintf "error: ~a\n" e)'())])
     (parameterize ([current-directory (unbox cwd-hack-box)])
       (let* ([cdir (current-directory)]
