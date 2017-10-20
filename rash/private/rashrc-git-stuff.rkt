@@ -31,19 +31,20 @@
                             (let ([bs (filter (λ (l) (string-prefix? l "*"))
                                               (port->lines))])
                               (if (null? bs)
-                                  (void) 
+                                  (void)
                                   (display (substring (car bs) 2))))))))
 
 (define (git-behind/ahead-numbers)
-  (let* ([lrs
-          (run-pipeline/out '(git rev-list --left-right "@{u}...HEAD")
-                            (list (λ ()
-                                    (for ([l (port->lines)])
-                                      (display (string-ref l 0))))))]
-         [lr-list (string->list lrs)])
-    ;; < is behind > is ahead
-    (values (count (λ (c) (equal? #\< c)) lr-list)
-            (count (λ (c) (equal? #\> c)) lr-list))))
+  (with-handlers ([exn? (λ _ (values 0 0))])
+    (let* ([lrs
+            (run-pipeline/out '(git rev-list --left-right "@{u}...HEAD")
+                              (list (λ ()
+                                      (for ([l (port->lines)])
+                                        (display (string-ref l 0))))))]
+           [lr-list (string->list lrs)])
+      ;; < is behind > is ahead
+      (values (count (λ (c) (equal? #\< c)) lr-list)
+              (count (λ (c) (equal? #\> c)) lr-list)))))
 
 (define (git-dirty?)
   (let ([pline (run-pipeline '(git diff --quiet --ignore-submodules HEAD)

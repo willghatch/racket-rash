@@ -118,12 +118,14 @@
   (if info
       (string-append
        (default-style "[")
-       (hash-ref info 'branch) " "
+       (hash-ref info 'branch)
        (if (< 0 (hash-ref info 'ahead))
-           (format "~a~a" (default-style "▲") (cyan (hash-ref info 'ahead)))
+           (format "~a~a" (default-style " ▲")
+                   (cyan (hash-ref info 'ahead)))
            "")
        (if (< 0 (hash-ref info 'behind))
-           (format "~a~a" (default-style "▼") (cyan (hash-ref info 'behind)))
+           (format "~a~a" (default-style " ▼")
+                   (cyan (hash-ref info 'behind)))
            "")
        (if (hash-ref info 'dirty?) (red " D") "")
        (if (hash-ref info 'submodule-dirty?) (red " S") "")
