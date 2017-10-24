@@ -112,6 +112,10 @@
   (current-namespace repl-namespace)
   (set-completion-function! composite-complete)
 
+  ;; make real-stdin available to repl
+  (eval-syntax (namespace-syntax-introduce
+                (datum->syntax #f (list 'define 'real-stdin #'real-stdin))))
+
   (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
     (with-handlers ([(λ _ #t) (λ (ex)
                                 (eprintf "error in rc file ~a: ~a"

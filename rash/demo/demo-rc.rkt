@@ -14,6 +14,7 @@ set-default-pipeline-starter! |
  (all-from-out rash/demo/setup)
  (all-from-out rash/private/rashrc-lib)
  (all-from-out rash/demo/ps-wrapper)
+ real-stderr
  )
 
 (require

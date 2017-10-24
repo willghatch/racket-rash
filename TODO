@@ -65,6 +65,8 @@ General Todos (written more for my memory than for something readable by others)
 ** fix interactions window -- it was working (though not great) before but then I broke it.
 ** write a lexer for coloring, maybe
 
+* make #lang rash/bash-env or something that uses bash syntax for environment variables and aliases
+** it will be nice just as a configuration bridge so you can share a fair amount of config with bash
 
 misc
 ----
