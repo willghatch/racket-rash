@@ -108,6 +108,7 @@
   ;; Hmm... probably only one of these should count?
   ;(port-count-lines! real-stdin)
   (port-count-lines! readline-stdin)
+  (putenv "SHELL" "rash")
 
   (current-namespace repl-namespace)
   (set-completion-function! composite-complete)
