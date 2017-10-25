@@ -36,7 +36,7 @@
     (filter (λ (n) (regexp-match qpat n)) names)))
 
 (define (complete-paths pstr)
-  ;(set-completion-append-character! #\null)
+  (set-completion-append-character! #\null)
   (with-handlers ([(λ _ #t) (λ e '())])
     (parameterize ([current-directory (unbox cwd-hack-box)])
       (let* ([cdir (current-directory)]

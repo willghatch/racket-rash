@@ -19,12 +19,10 @@
   syntax/parse
   ))
 
-;(require readline)
-;(require readline/readline)
+(require readline)
+(require readline/readline)
 
-;; TODO - once pre-readline-input-port is available in the released version, uncomment.
-;(define real-stdin pre-readline-input-port)
-(define real-stdin (current-input-port))
+(define real-stdin pre-readline-input-port)
 (define readline-stdin (current-input-port))
 
 (define-line-macro run-pipeline/ret-obj
@@ -112,7 +110,7 @@
   (putenv "SHELL" "rash-repl")
 
   (current-namespace repl-namespace)
-  ;(set-completion-function! composite-complete)
+  (set-completion-function! composite-complete)
 
   ;; make real-stdin available to repl
   (eval-syntax (namespace-syntax-introduce
