@@ -19,11 +19,12 @@
   syntax/parse
   ))
 
-(require readline)
-(require readline/readline)
+;(require readline)
+;(require readline/readline)
 
-;; To have this work nicely, I really need job control.  I think I'm having issues with both the rash repl and subprocesses reading stdin at the same time.  I need to be able to set the controlling process group to fix it, I think.
-(define real-stdin pre-readline-input-port)
+;; TODO - once pre-readline-input-port is available in the released version, uncomment.
+;(define real-stdin pre-readline-input-port)
+(define real-stdin (current-input-port))
 (define readline-stdin (current-input-port))
 
 (define-line-macro run-pipeline/ret-obj
@@ -111,7 +112,7 @@
   (putenv "SHELL" "rash")
 
   (current-namespace repl-namespace)
-  (set-completion-function! composite-complete)
+  ;(set-completion-function! composite-complete)
 
   ;; make real-stdin available to repl
   (eval-syntax (namespace-syntax-introduce
