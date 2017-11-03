@@ -25,17 +25,10 @@
 
 
 #|
-What should the good unix pipe do (or at least have options to do)?
-
-* expansion
-** ~ expansion (only with literal tilde, not as the result of variable lookup.  Except)
-** $var and $ENV_VAR expansion (the results of the variables should not be expanded as globs [eg. if the variable contains "~" or "*"], but are needed for globbing)
-** glob expansion (but the expansions from variables should be protected from being part of the glob...  I may have to implement a custom glob function rather than using file/glob)
-* alias support
+TODO
+What more should the good unix pipe do (or at least have options to do)?
 * non-default option to be an object pipe if the command-position is bound
 * non-default option to be an infix math pipe if the command-position is a number (solves the common case of quick calculator math that I use python for)
-
-
 |#
 
 (define-syntax (envar stx)
