@@ -7,7 +7,6 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 (provide
  (all-defined-out)
- (all-from-out shell/demo/define-rash-alias)
  (all-from-out shell/demo/more-pipeline-operators)
  (all-from-out racket/string)
  (all-from-out racket/port)
@@ -24,7 +23,6 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
  rash
 
  ;; These are the interesting demo files to look at for defining pipeline operators.
- shell/demo/define-rash-alias
  shell/demo/more-pipeline-operators
 
  racket/string
@@ -53,15 +51,13 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 (define-syntax =o= (make-rename-transformer #'=object-pipe=))
 (define-syntax =ol= (make-rename-transformer #'=object-pipe/left=))
 (define-syntax =oe= (make-rename-transformer #'=object-pipe/expression=))
-(define-syntax =u= (make-rename-transformer #'=quoting-basic-unix-pipe=))
+(define-syntax =u= (make-rename-transformer #'=default-unix-pipe=))
 (define-syntax \|> (make-rename-transformer #'=object-pipe=))
 (define-syntax \|o (make-rename-transformer #'=object-pipe=))
 (define-syntax \|e (make-rename-transformer #'=object-pipe/expression=))
 (define-syntax \|seq (make-rename-transformer #'=for/list=))
 (define-syntax \|>l (make-rename-transformer #'=object-pipe/left=))
-(define-syntax \|u (make-rename-transformer #'=quoting-basic-unix-pipe=))
-(define-syntax \|g (make-rename-transformer #'=globbing-basic-unix-pipe=))
-(define-syntax \| (make-rename-transformer #'=aliasing-unix-pipe=))
+(define-syntax \| (make-rename-transformer #'=default-unix-pipe=))
 (define-syntax \|ou (make-rename-transformer #'=obj-if-def/unix-if-undef=))
 (define-syntax _ (make-rename-transformer #'current-pipeline-argument))
 
@@ -123,41 +119,28 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
      #'(lambda (fp ...) (rash-line-or-line-macro line-arg ...))]))
 
 
-(define-simple-rash-alias d 'ls '--color=auto)
-(define-simple-rash-alias di 'ls '-laFh '--color=auto)
-(define-simple-rash-alias gc "git" 'commit )
-(define-simple-rash-alias gs "git" 'status )
-(define-simple-rash-alias gd "git" 'diff )
-(define-simple-rash-alias gka "gitk" '--all )
-(define-simple-rash-alias gta "tig" '--all )
-(define-simple-rash-alias greb "git" 'rebase )
-(define-simple-rash-alias gru "git" 'remote 'update )
-(define-simple-rash-alias gunadd "git" 'reset 'HEAD )
-(define-simple-rash-alias gco "git" 'checkout )
-(define-simple-rash-alias gcob "git" 'checkout '-b )
-(define-simple-rash-alias gclone "git" 'clone '--recursive )
-(define-simple-rash-alias gp "git" 'push )
-(define-simple-rash-alias ga "git" 'add )
+(define-simple-pipeline-alias d 'ls '--color=auto)
+(define-simple-pipeline-alias di 'ls '-laFh '--color=auto)
+(define-simple-pipeline-alias gc "git" 'commit )
+(define-simple-pipeline-alias gs "git" 'status )
+(define-simple-pipeline-alias gd "git" 'diff )
+(define-simple-pipeline-alias gka "gitk" '--all )
+(define-simple-pipeline-alias gta "tig" '--all )
+(define-simple-pipeline-alias greb "git" 'rebase )
+(define-simple-pipeline-alias gru "git" 'remote 'update )
+(define-simple-pipeline-alias gunadd "git" 'reset 'HEAD )
+(define-simple-pipeline-alias gco "git" 'checkout )
+(define-simple-pipeline-alias gcob "git" 'checkout '-b )
+(define-simple-pipeline-alias gclone "git" 'clone '--recursive )
+(define-simple-pipeline-alias gp "git" 'push )
+(define-simple-pipeline-alias ga "git" 'add )
 
-(define-rash-alias my-grep
+(define-pipeline-alias my-grep
   (syntax-parser
    [(_ pat) #'(=object-pipe= grep-func current-pipeline-argument pat)]))
 
 ;; note that grep returns 1 when it finds nothing, which is normally considered an error
-(define-simple-rash-alias grep "grep" #:success (list 1))
+(define-simple-pipeline-alias grep "grep" #:success (list 1))
 
-(define-syntax envar
-  (syntax-parser
-    [(rec x:id)
-     #'(rec x #:default
-            (error 'envar
-                   "unset environment variable with no default: ~a"
-                   (symbol->string 'x)))]
-    [(_ x:id #:default def:expr)
-     #'(or (getenv (symbol->string 'x)) def)]
-    [(_ x:id ve:expr)
-     #'(let ([v ve])
-         (and (or (putenv (symbol->string 'x) v)
-                  (error 'envar "setting environment variable failed"))
-              v))]))
+
 
