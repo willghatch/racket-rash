@@ -1,6 +1,7 @@
 #lang racket/base
 (require
  "../main.rkt"
+ shell/pipeline-macro-short-names
  ;(submod "lang-funcs.rkt" for-module-begin)
  (for-syntax
   racket/base
@@ -15,7 +16,7 @@
     (if (pipeline? pline)
         (pipeline-return pline)
         pline)))
-(define-for-syntax repl-default-pipeline-starter-variable #'=quoting-basic-unix-pipe=)
+(define-for-syntax repl-default-pipeline-starter-variable #'=unix-pipe=)
 (define-line-macro set-default-pipeline-starter!
   (syntax-parser [(_ starter)
                   (set! repl-default-pipeline-starter-variable #'starter)

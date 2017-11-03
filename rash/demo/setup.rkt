@@ -51,15 +51,12 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 (define-syntax =o= (make-rename-transformer #'=object-pipe=))
 (define-syntax =ol= (make-rename-transformer #'=object-pipe/left=))
 (define-syntax =oe= (make-rename-transformer #'=object-pipe/expression=))
-(define-syntax =u= (make-rename-transformer #'=default-unix-pipe=))
-(define-syntax \|> (make-rename-transformer #'=object-pipe=))
+(define-syntax =u= (make-rename-transformer #'=unix-pipe=))
 (define-syntax \|o (make-rename-transformer #'=object-pipe=))
 (define-syntax \|e (make-rename-transformer #'=object-pipe/expression=))
 (define-syntax \|seq (make-rename-transformer #'=for/list=))
 (define-syntax \|>l (make-rename-transformer #'=object-pipe/left=))
-(define-syntax \| (make-rename-transformer #'=default-unix-pipe=))
 (define-syntax \|ou (make-rename-transformer #'=obj-if-def/unix-if-undef=))
-(define-syntax _ (make-rename-transformer #'current-pipeline-argument))
 
 
 (define (highlighting-output-port outer-oport)
