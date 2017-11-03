@@ -26,7 +26,6 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  =filter=
  )
 
-(provide =aliasing-unix-pipe=)
 (provide lsl)
 (provide ls)
 (provide =unix-with-xargs-behavior=)
@@ -158,18 +157,11 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 |#
 
 
-(require (for-syntax "rash-alias.rkt"))
-(require "define-rash-alias.rkt")
-(pipeop =aliasing-unix-pipe=
-        [(_ cmd:rash-alias-id arg ...)
-         (let ([slv (syntax-local-value #'cmd)])
-           ({rash-alias-ref slv} slv #'(cmd arg ...)))]
-        [(_ arg ...)
-         #'(=quoting-basic-unix-pipe= arg ...)])
-(define-rash-alias lsl
+(require "../private/define-pipeline-alias.rkt")
+(define-pipeline-alias lsl
   (syntax-parser [(_ arg ...)
                   #'(=quoting-basic-unix-pipe= 'ls '-l '--color=auto arg ...)]))
-(define-simple-rash-alias ls 'ls '--color=auto)
+(define-simple-pipeline-alias ls 'ls '--color=auto)
 
 
 (require racket/port racket/list)

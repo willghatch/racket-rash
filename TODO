@@ -19,6 +19,9 @@
 ** Probably I want a flag struct for each.  The struct will contain a thunk that will evaluate to a file name (for <()) or will take a file name (for >(), the pipeline running mechanism will have to give it one).
 ** Unless it's actually backed by FD, the output process will have to finish before starting the input process, and pipeline waiting will have to wait for the sub-pipeline stuff as well...
 
+* I should probably provide a standard wrapper for the run-pipeline macro that detects some AND and OR identifiers and splits into multiple run-pipeline macros that automatically turn on pipeline-object-return
+** I should probably also change the option for returning the pipeline object to take an argument rather than being just a presence-only flag...
+
 * inspecting pipeline segments with correct compound member handling
 
 * add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
