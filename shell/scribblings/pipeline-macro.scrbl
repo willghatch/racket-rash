@@ -164,6 +164,21 @@ Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that
 }|
 }
 
+@defform[#:kind "pipeline-operator" (=default-unix-pipe= args ...+)]{
+This is the pipe that does more or less what you expect.  It does tilde expansion (~ -> $HOME).  It does globbing.  When you have $identifiers-with-dollar-signs they are expanded into variable references.  When $DOLLAR_IDENTIFIERS_ARE_CAPITALIZED they are expanded to environment variable lookups.
+
+After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=].
+
+However, if the first argument is a pipeline alias defined with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias], then the operator from that alias is swapped in instead, skipping everything else that this operator would normally do.
+
+@verbatim|{
+(run-pipeline =default-unix-pipe= echo $HOME/*.rkt)
+(define-simple-pipeline-alias d 'ls '--color=auto)
+(define dfdir 'dotfiles)
+(run-pipeline =default-unix-pipe= d $HOME/$dfdir)
+}|
+}
+
 @defform[#:kind "pipeline-operator" (=basic-object-pipe/expression= e)]{
 The simplest object pipe.  @racket[e] is simply the body of a @racket[lambda].  When used as a pipeline starter, the lambda accepts no arguments.  Otherwise it is a single-argument function, and @racket[current-pipeline-argument] is used to refer to its argument.
 }
@@ -221,6 +236,36 @@ The name of this will probably change.  And maybe it will go away entirely.  I'm
 @racket[pipeop] is a more streamlined version of @racket[define-pipeline-operator].  It defines a pipeline operator where both @racket[#:start] and @racket[#:joint] are the same.  The syntax transformer used is basically @code{(syntax-parser syntax-parser-clauses ...)}.  I made this because I thought it would be a convenient way to be able to swiftly define a new pipeline even interactively in the Rash repl.
 
 Example uses are in the demo directory.
+}
+
+
+@defform[(define-pipeline-alias name transformer)]{
+Defines an alias macro recognized by @racket[=default-unix-pipe=] and maybe others.
+
+@racket[transformer] must be a syntax transformer function, and must return a syntax object that starts with a pipeline operator.
+
+@verbatim|{
+;; Unix `find` has to take the directory first, but we want
+;; to always add the -type f flag at the end.
+(define-pipeline-alias find-f
+  (syntax-parser
+    [(_ arg ...) #'(=default-unix-pipe= find arg ... -type f)]))
+
+;; these are equivalent
+(run-pipeline =default-unix-pipe= find-f .)
+(run-pipeline =default-unix-pipe= find . -type f)
+}|
+}
+
+@defform[(define-simple-pipeline-alias name cmd arg ...)]{
+Simple sugar for @racket[define-pipeline-alias].  It defines an alias transformer that uses @racket[=default-unix-pipe=].
+
+@verbatim|{
+(define-simple-pipeline-alias ls 'ls '--color=auto)
+;; these are equivalent
+(run-pipeline =default-unix-pipe= d -l $HOME)
+(run-pipeline =default-unix-pipe= 'ls '--color=auto -l $HOME)
+}|
 }
 
 @defform[#:id current-pipeline-argument current-pipeline-argument]{
