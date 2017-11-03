@@ -16,4 +16,4 @@
          (rash-alias
           (syntax-parser
             [(_ arg (... ...))
-             #'(=default-unix-pipe= template-arg ... arg (... ...))])))]))
+             #'(=unix-pipe= template-arg ... arg (... ...))])))]))

@@ -2,7 +2,7 @@
 
 (provide
  define-unixy-pipe
- =default-unix-pipe=
+ =unix-pipe=
  envar
  )
 
@@ -235,6 +235,6 @@ What more should the good unix pipe do (or at least have options to do)?
              #:start tx-name
              #:joint tx-name)))]))
 
-(define-unixy-pipe =default-unix-pipe=)
+(define-unixy-pipe =unix-pipe=)
 
 

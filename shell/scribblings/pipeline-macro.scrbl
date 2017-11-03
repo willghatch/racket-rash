@@ -165,7 +165,7 @@ Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that
 }|
 }
 
-@defform[#:kind "pipeline-operator" (=default-unix-pipe= args ...+)]{
+@defform[#:kind "pipeline-operator" (=unix-pipe= args ...+)]{
 This is the pipe that does more or less what you expect.  It does tilde expansion (~ -> $HOME).  It does globbing.  When you have $identifiers-with-dollar-signs they are expanded into variable references.  When $DOLLAR_IDENTIFIERS_ARE_CAPITALIZED they are expanded to environment variable lookups.
 
 After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=].
@@ -173,10 +173,10 @@ After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=
 However, if the first argument is a pipeline alias defined with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias], then the operator from that alias is swapped in instead, skipping everything else that this operator would normally do.
 
 @verbatim|{
-(run-pipeline =default-unix-pipe= echo $HOME/*.rkt)
+(run-pipeline =unix-pipe= echo $HOME/*.rkt)
 (define-simple-pipeline-alias d 'ls '--color=auto)
 (define dfdir 'dotfiles)
-(run-pipeline =default-unix-pipe= d $HOME/$dfdir)
+(run-pipeline =unix-pipe= d $HOME/$dfdir)
 }|
 
 Also available in shell/pipeline-macro-short-names as @racket[\|]
@@ -245,7 +245,7 @@ Example uses are in the demo directory.
 
 
 @defform[(define-pipeline-alias name transformer)]{
-Defines an alias macro recognized by @racket[=default-unix-pipe=] and maybe others.
+Defines an alias macro recognized by @racket[=unix-pipe=] and maybe others.
 
 @racket[transformer] must be a syntax transformer function, and must return a syntax object that starts with a pipeline operator.
 
@@ -254,22 +254,22 @@ Defines an alias macro recognized by @racket[=default-unix-pipe=] and maybe othe
 ;; to always add the -type f flag at the end.
 (define-pipeline-alias find-f
   (syntax-parser
-    [(_ arg ...) #'(=default-unix-pipe= find arg ... -type f)]))
+    [(_ arg ...) #'(=unix-pipe= find arg ... -type f)]))
 
 ;; these are equivalent
-(run-pipeline =default-unix-pipe= find-f .)
-(run-pipeline =default-unix-pipe= find . -type f)
+(run-pipeline =unix-pipe= find-f .)
+(run-pipeline =unix-pipe= find . -type f)
 }|
 }
 
 @defform[(define-simple-pipeline-alias name cmd arg ...)]{
-Simple sugar for @racket[define-pipeline-alias].  It defines an alias transformer that uses @racket[=default-unix-pipe=].
+Simple sugar for @racket[define-pipeline-alias].  It defines an alias transformer that uses @racket[=unix-pipe=].
 
 @verbatim|{
 (define-simple-pipeline-alias ls 'ls '--color=auto)
 ;; these are equivalent
-(run-pipeline =default-unix-pipe= d -l $HOME)
-(run-pipeline =default-unix-pipe= 'ls '--color=auto -l $HOME)
+(run-pipeline =unix-pipe= d -l $HOME)
+(run-pipeline =unix-pipe= 'ls '--color=auto -l $HOME)
 }|
 }
 
@@ -310,7 +310,7 @@ I don't want to commit to these short names being stable yet.  I may want to use
 But they probably won't change much.
 
 @defform[#:kind "pipeline-operator" (\| args ...+)]{
-Alias for @racket[=default-unix-pipe=].
+Alias for @racket[=unix-pipe=].
 
 Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
 }
