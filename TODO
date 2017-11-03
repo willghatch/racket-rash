@@ -44,11 +44,7 @@ General Todos (written more for my memory than for something readable by others)
 
 * make a module of short names -- say it's unstable but at least provide some standard-ish short names for the short term.  At some point decide which pipes deserve canonical short names.
 
-* unix pipeline with $var unquoting and $VAR environment variable reference
-
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
-
-* I need to make a unix operator that has all the features together -- I have several that have one feature (in the demo dir), and I need to roll them all together, or make a macro that makes unixy operators with keywords to turn features on or off.
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 ** the forms for setting these (eg. the rash macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
