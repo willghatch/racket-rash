@@ -160,7 +160,7 @@ But how can it be done in a way that let those arguments affect the reader?
                    [mk-output (opref tab '#:out #'(current-output-port))]
                    [mk-err-output (opref tab '#:err #'(current-error-port))]
                    [mk-default-starter (opref tab '#:default-starter
-                                              #'=quoting-basic-unix-pipe=)]
+                                              #'=unix-pipe=)]
                    [mk-default-line-macro (opref tab '#:default-line-macro
                                                  #'run-pipeline)]
                    [wrap-modbeg-name (datum->syntax stx (gensym
@@ -216,7 +216,7 @@ But how can it be done in a way that let those arguments affect the reader?
                      [mk-err-output (opref tab '#:err #''string-port)]
                      ;; TODO - make it possible for these to inherit
                      [mk-default-starter (opref tab '#:default-starter
-                                                #'=quoting-basic-unix-pipe=)]
+                                                #'=unix-pipe=)]
                      [mk-line-macro (opref tab '#:default-line-macro
                                            #'run-pipeline)])
          #'(λ (stx)

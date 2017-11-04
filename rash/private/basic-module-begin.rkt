@@ -16,7 +16,7 @@
   #:in (current-input-port)
   #:out (current-output-port)
   #:err (current-error-port)
-  #:default-starter =quoting-basic-unix-pipe=
+  ;#:default-starter =unix-pipe=
   ;#:top-level-wrap println
   ;#:default-line-macro pipeline-line-macro
   )
