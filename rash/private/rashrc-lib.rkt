@@ -169,7 +169,7 @@
             (bblue (path->string (current-directory)))
             (default-style ""))
     ;(current-prompt (string->bytes/utf-8 "➤ "))
-    (readline-prompt (string->bytes/utf-8 "➤ "))
+    (readline-prompt (string->bytes/utf-8 "> "))
     ))
 
 (define (lame-prompt #:last-return-value [last-ret #f]
