@@ -22,7 +22,9 @@ Also I gave a talk at RacketCon 2017 about it, which can be viewed
 
 @section{Stability}
 
-Rash is not entirely stable.  It is not quite ready for a stable release.  But it is definitely ready to have fun with!
+Rash is not entirely stable.  It's still missing a lot of features, and there are some names and APIs I want to re-visit.
+
+However, it is ready to use for most basic interactive shell tasks and as a replacement for the default Racket repl.  Try it out (and report bugs and feedback to me)!
 
 @section{RASH Guide}
 
