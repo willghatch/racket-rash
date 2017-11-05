@@ -12,6 +12,14 @@ rash
 
 @bold{Rash}, @italic{adj} 1.  Hurrying into action or assertion without due caution and regardless of prudence, hasty, reckless, precipitate.  “@italic{A rash programmer is likely to produce shell scripts.}”
 
+
+I made a quick demo recording of an interactive repl
+@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
+
+Also I gave a talk at RacketCon 2017 about it, which can be viewed
+@hyperlink["https://www.youtube.com/watch?v=WI8uA4KjQJk#t=3h32m40s"]{here}.
+
+
 @section{Stability}
 
 Rash is not entirely stable.  It is not quite ready for a stable release.  But it is definitely ready to have fun with!

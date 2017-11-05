@@ -11,6 +11,11 @@ Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html)
 After installing with `raco pkg install rash`, documentation
 is available locally by running `raco docs rash`.
 
+Also I gave a talk about Rash at RacketCon 2017.  You can watch it here:
+https://www.youtube.com/watch?v=WI8uA4KjQJk#t=3h32m40s
+(A higher quality stand-alone video should be available some time in the future.)
+
+
 FYI
 ---
 
