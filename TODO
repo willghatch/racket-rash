@@ -42,7 +42,9 @@ If you want to help, there are various things you might do:
 General Todos (written more for my memory than for something readable by others)
 --------------------------------------------------------------------------------
 
-* make a module of short names -- say it's unstable but at least provide some standard-ish short names for the short term.  At some point decide which pipes deserve canonical short names.
+* put $ and ~ expansion stuff into library, add expansion support to redirection (&> and friends) and cd.
+
+* put short names into default libraries, make another library that only exports long names.
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
