@@ -1,8 +1,6 @@
 #lang racket/base
 (require
  "../main.rkt"
- shell/pipeline-macro-short-names
- ;(submod "lang-funcs.rkt" for-module-begin)
  (for-syntax
   racket/base
   syntax/parse
