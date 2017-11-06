@@ -19,6 +19,9 @@ locally by running `raco docs rash`.  You can install the git version
 by running 
 `git clone https://github.com/willghatch/racket-rash rash && cd rash && raco pkg install`
 
+See also the [shell-pipeline](https://github.com/willghatch/racket-shell-pipeline)
+library that contains most of the actual meat of the Rash language.
+
 
 Completion
 ----------
