@@ -22,7 +22,7 @@ Also I gave a talk at RacketCon 2017 about it, which can be viewed
 
 @section{Stability}
 
-Rash is not entirely stable.  It's still missing a lot of features, and there are some names and APIs I want to re-visit.
+Rash is not entirely stable.  It's still missing features, and there are some names and APIs I want to re-visit.
 
 However, it is ready to use for most basic interactive shell tasks and as a replacement for the default Racket repl.  Try it out (and report bugs and feedback to me)!
 
@@ -37,18 +37,8 @@ Here is a quick example to show what it looks like:
 @verbatim|{
 #lang rash
 
-;; For the moment this is required to get short names like |
-(require rash/demo/setup)
-
-;; Pretend there are some require forms here (that I'm too lazy to add
-;; while writing documentation on a plane) for anything that isn't
-;; in scope with just #lang rash
-
 ;; the beginning and end of lines act like parens
 run-pipeline ls | grep foobar
-
-;; Also, | is treated as a normal alphabet character in the rash reader.
-;; So let's assume it's bound to a unixy pipe-operator.
 
 ;; Every line starts with a line-macro.
 ;; If it doesn't have one, a default is inserted.
@@ -60,10 +50,22 @@ ls | grep foobar
 ;; See the run-pipeline docs for more information.
 ls |> string-upcase | cowsay
 
+;; Note that the pipe (|) character is normal in the
+;; Rash reader, unlike the default Racket reader.
+;; In normal Racket, you would type \| or \|>.
+;; | is actually short for =unix-pipe=.
+;; |> is short for =object-pipe=.
+;; By convention, pipeline operators are named with = signs.
+;; Because they sort of look like pipes.  =I= =guess=.
+;; I have made a few handy pipeline operators in the
+;; demo directory of the shell-pipeline library.
+;; At some point I'll put the most useful ones in the standard
+;; exports of the library.  But you can also make your own.
+
 ;; Inside a pipeline you can use parentheses
 ;; to escape to Racket.
 ;; Here we compute the arguments to `ls`.
-ls (list '-l (or some-dir other-dir)) | grep foobar
+ls (list '-l (if (even? (random 2)) '-a '-h)) | grep foobar
 
 ;; If a line starts with a parenthesis, it is
 ;; treated as a normal Racket form -- no line macro
@@ -86,25 +88,53 @@ ls (list '-l (or some-dir other-dir)) | grep foobar
 ;; normal racket forms is worth it.
 ;;
 ;; RIGHT
+(define use-clang? (even? (random 2)))
 [if use-clang? 'clang 'gcc] -o foo foo.c
+;; But this could potentially change in the future.
+;; I'm considering making a line that starts with any type of
+;; paren be a non-line-macro line.  So you would have to
+;; explicitly add a line-macro or the starter pipe.
+| (if use-clang? 'clang 'gcc) -o foo foo.c
 
+;; Pipelines can pass objects as well as byte streams.
+;; The =unix-pipe= operator returns a port, and the
+;; =object-pipe= automatically converts it to a string.
+;; But =unix-pipe= has a convenience to add a parser
+;; with the #:as flag.
+(require json)
+echo "[1, 2, 3]" #:as read-json |> map add1
+
+;; The =unix-pipe= also supports some things you might expect
+;; in a Unix shell -- ~ expansion, $ENVIRONMENT_VARIABLE
+;; expansion, glob expansion, and $local-variable expansion.
+(define my-new-dir "my-new-dir")
+cp ~/my-dir/*.rkt $HOME/$my-new-dir/
+
+;; The =unix-pipe= also supports aliases.
+(define-simple-pipeline-alias ls 'ls '--color=auto)
+;; Now ls has color.
+ls $XDG_CONFIG_HOME
 
 ;; If you want to break up a long line, you can comment
 ;; out the newline like so.  I will add \ to escape the
 ;; newline like other shell languages, but I haven't yet
 ;; because I think the way I'll add it is gross, but
 ;; sooner or later I will definitely add it.
-ls -la my-directory-that-has-a-long-name | grep foobar #|
+ls -laH /sys/class/power_supply/BAT0 | grep now #|
 |# |> string-upcase | cowsay
 
 ;; If you want to turn one line into two logical lines like
 ;; this bash snippet: `ls ; cd ..`. too bad.
-;; But I'm considering making a single ; be a line
-;; break instead of a comment (thus necessitating two ;;
-;; characters to quote).  I would love to hear feedback from
-;; people as to whether or not they would like that.
+;; I'm considering adding something to break up a line, but
+;; I haven't decided how I want to do it yet.
+
+;; When a pipeline is unsuccessful, an exception is thrown.
+;; This when a command in the middle of the pipeline
+;; is unsuccessful.  There are some flags for controlling
+;; the specific behavior.
 
 }|
+
 We can use rash not only by using #lang rash, but also by using the @racket[rash] macro in any other language:
 
 @verbatim|{
@@ -125,7 +155,7 @@ The macro reads the string at compile time and turns it into syntax-objects with
 (rash «cat (rash «which myscript.rkt»)»)
 }|
 
-See the udelim docs for more detailed information on the string delimiters.  TODO - add link.  The extra delimiters provided by udelim are enabled by default in #lang rash and inside the @racket[rash] macro.
+See the udelim docs for more detailed information on the string delimiters (particularly @racket[make-string-delim-readtable]).  The extra delimiters provided by @racket[make-udelim-readtable] are enabled by default in #lang rash and inside the @racket[rash] macro.
 
 @verbatim|{
 #lang udelim racket
@@ -195,24 +225,19 @@ id bar
 ;; (values bar)
 }|
 
-
-At the moment #lang rash prints the values of top-level expressions, like #lang racket.  I generally hate that.  I will probably change that, but for the moment I'll leave it.  When I finish making the forms to define new #langs I will add an option to set that to your liking for custom versions, and probably make the default not print.
+#lang rash differs from #lang racket in its treatment of top-level expressions.  #lang racket prints the result of top-level expressions, but I hate that.  #lang rash does not print the value of top-level expressions, so you should explicitly print any racket forms.  If #lang rash did print results of top-level expressions, you would get pipeline results (eg. 0 when a unix pipeline is successful), and that could be annoying.
 
 Rash is also useful as an interactive repl that feels like a nice mix between a normal Racket repl and an interactive Bash shell.
 
 
-
-
-
-
-
-
 @section{RASH Reference}
 
-Also be sure to see
+Note that all the pipeline stuff (@racket[run-pipeline],
+@racket[=unix-pipe=], @racket[=object-pipe=],
+@racket[define-pipeline-operator], etc) are documented in the
 @secref["pipeline-macro"
         #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
-for documentation on running pipelines, defining and using pipeline operators, etc.
+module.
 
 @defform[(rash options ... codestring)]{
 Read @racket[codestring] as rash code.
@@ -307,19 +332,22 @@ Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-mac
 
 @section{Interactive Use}
 
-You can run the repl by running @code{racket -l rash/repl}.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.
+You can run the repl by running @code{racket -l rash/repl}.  An executable named @code{rash-repl} is installed in Racket's bin directory, so if you have it on your path you can run @code{rash-repl} instead.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.  (readline support, including basic tab completion, is written, but depends on features in the development version of Racket's readline FFI library.)
 
-How to run the repl and various details of how it works and what is available might change in the near future.  I may, for instance, add some sort of make-repl-command macro similar to @racket[make-rash-transformer] to change defaults at a very low level.  As it is defaults are changed by having variables that you essentially @code{set!} in the repl, and there are some rc files that are loaded.
+Various details of the repl will change over time.
 
-First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).  There is an example rashrc file in the project repo's demo directory.
+The repl can be customized with rc files.
+First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).
 
-To really just get going with the repl, put the following into $HOME/.config/rash/rashrc:
+A few nice things (like stderr highlighting) are in a demo-rc file you can require.  To do so, add this to $HOME/.config/rash/rashrc:
 
 @verbatim|{
 (require rash/demo/demo-rc.rkt)
-set-default-pipeline-starter! |
 }|
 
+(Rash actually follows the XDG basedir standard -- you can have rashrc.rkt or rashrc files in any directory of $XDG_CONFIG_HOME or $XDG_CONFIG_DIRS, and the rash repl will load all of them)
+
+You can also change the prompt.  But I don't want to document how right now.  TODO.  (The default includes some handy git information and such.  At some point I plan to make some prompt utilities like that available in a library to be drop-in components of custom prompts.)
 
 All the following repl functions are not stable.
 
@@ -336,8 +364,9 @@ Only available in the repl.  A line-macro that mutates the default pipeline star
 }
 
 
-@section{Demo file with the good stuff that I haven't yet put in the main implementation}
-Many interesting things and the setup you really want for running a repl are still in a demo file.  Largely this is because a lot of the pipeline operators I've defined are basically quick hacks, and while they do interesting things, I want to write better implementations of most of them.  Especially for unix operators -- I have written several that have one feature, but I want to write one with all the features, which is harder.
+@section{Demo stuff}
+
+I have some proof-of-concept pipes and things in the demo directories of the rash and shell-pipeline repositories.  Eventually some of the good stuff from them will probably be improved and moved into the main modules.  But you can check them out for ideas of some things you might do.
 
 To use the demo, @code{(require rash/demo/setup)}.  Also look at the file to see some examples.
 
