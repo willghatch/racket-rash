@@ -8,6 +8,12 @@
  (all-from-out "private/define-pipeline-alias.rkt")
  (all-from-out "private/define-simple-alias.rkt")
  (all-from-out "mixed-pipeline.rkt")
+
+ ;; Short names
+ \|
+ \|>
+ _
+
  ;; TODO - some things from pipeline-operator-detect.rkt should be provided
  )
 (require
@@ -19,4 +25,11 @@
  "private/define-simple-alias.rkt"
  (except-in "mixed-pipeline.rkt"
             run-pipeline)
- )
+
+ (for-syntax
+  racket/base
+  ))
+
+(define-syntax \| (make-rename-transformer #'=unix-pipe=))
+(define-syntax \|> (make-rename-transformer #'=object-pipe=))
+(define-syntax _ (make-rename-transformer #'current-pipeline-argument))

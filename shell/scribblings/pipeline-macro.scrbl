@@ -2,7 +2,6 @@
 
 @(require
 (for-label shell/pipeline-macro
-           shell/pipeline-macro-short-names
            (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
            ))
 
@@ -178,8 +177,11 @@ However, if the first argument is a pipeline alias defined with @racket[define-p
 (define dfdir 'dotfiles)
 (run-pipeline =unix-pipe= d $HOME/$dfdir)
 }|
+}
+@defform[#:kind "pipeline-operator" (\| args ...+)]{
+Alias for @racket[=unix-pipe=].
 
-Also available in shell/pipeline-macro-short-names as @racket[\|]
+Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
 }
 
 @defform[#:kind "pipeline-operator" (=basic-object-pipe/expression= e)]{
@@ -206,8 +208,11 @@ Like @racket[=basic-object-pipe/form=], but when it receives a port as an argume
 }
 @defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
+}
+@defform[#:kind "pipeline-operator" (\|> args ...+)]{
+Alias for @racket[=object-pipe=].
 
-Also available in shell/pipeline-macro-short-names as @racket[\|>].
+Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
 }
 
 @defidform[#:kind "pipeline-operator"
@@ -276,6 +281,9 @@ Simple sugar for @racket[define-pipeline-alias].  It defines an alias transforme
 @defform[#:id current-pipeline-argument current-pipeline-argument]{
 The name of the implicit argument for object pipes.  The default is an error, and pipe operators that accept it must set it up using @racket[expand-pipeline-arguments] or @racket[syntax-parameterize].
 }
+@defform[#:id _ _]{
+Alias for @racket[current-pipeline-argument].  It's an underscore, if you're having trouble telling which of the many horizontal line characters it is since it's all alone right there in that bar.
+}
 
 @defform[(expand-pipeline-arguments)]{
 TODO - document this.
@@ -301,24 +309,3 @@ Same as @racket[shell/mixed-pipeline/pipeline-start-ms]
 Same as @racket[shell/mixed-pipeline/pipeline-end-ms]
 }
 
-
-@subsection{short names}
-@defmodule[shell/pipeline-macro-short-names]
-
-I don't want to commit to these short names being stable yet.  I may want to use a slightly different unix pipe, for instance, as the | pipe.
-
-But they probably won't change much.
-
-@defform[#:kind "pipeline-operator" (\| args ...+)]{
-Alias for @racket[=unix-pipe=].
-
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
-}
-@defform[#:kind "pipeline-operator" (\|> args ...+)]{
-Alias for @racket[=object-pipe=].
-
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
-}
-@defform[#:id _ _]{
-Alias for @racket[current-pipeline-argument].  It's an underscore, if you're having trouble telling which of the many horizontal line characters it is since it's all alone right there in that bar.
-}
