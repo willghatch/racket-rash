@@ -18,7 +18,10 @@ The base set of pipeline operators is likely to change, and some of the names I 
 
 @section{shell/pipeline-macro guide}
 
-This module is a macro DSL wrapper around the shell/mixed-pipeline library.  It is designed for running pipelines of external processes (which pass each other ports) and Racket functions (which pass each other objects).  It does this with a very flat syntax and user-definable pipeline operators, which provide a lot of convenient sugar for making pipelines shorter.  It is particularly tailored for use in a line-based syntax, like that of the Rash language.
+This module is a macro DSL wrapper around the
+@secref["mixed-pipeline"
+        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+library.  It is designed for running pipelines of external processes (which pass each other ports) and Racket functions (which pass each other objects).  It does this with a very flat syntax and user-definable pipeline operators, which provide a lot of convenient sugar for making pipelines shorter.  It is particularly tailored for use in a line-based syntax, like that of the Rash language.
 
 Here are some quick examples:
 
@@ -164,7 +167,7 @@ Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that
 }|
 }
 
-@defform[#:kind "pipeline-operator" (=unix-pipe= args ...+)]{
+@defform[#:kind "pipeline-operator" (=unix-pipe= arg ...+)]{
 This is the pipe that does more or less what you expect.  It does tilde expansion (~ -> $HOME).  It does globbing.  When you have $identifiers-with-dollar-signs they are expanded into variable references.  When $DOLLAR_IDENTIFIERS_ARE_CAPITALIZED they are expanded to environment variable lookups.
 
 After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=].
@@ -178,7 +181,7 @@ However, if the first argument is a pipeline alias defined with @racket[define-p
 (run-pipeline =unix-pipe= d $HOME/$dfdir)
 }|
 }
-@defform[#:kind "pipeline-operator" (\| args ...+)]{
+@defform[#:kind "pipeline-operator" (\| arg ...+)]{
 Alias for @racket[=unix-pipe=].
 
 Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
@@ -209,7 +212,7 @@ Like @racket[=basic-object-pipe/form=], but when it receives a port as an argume
 @defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
 }
-@defform[#:kind "pipeline-operator" (\|> args ...+)]{
+@defform[#:kind "pipeline-operator" (\|> arg ...+)]{
 Alias for @racket[=object-pipe=].
 
 Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
