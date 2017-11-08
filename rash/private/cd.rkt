@@ -8,6 +8,7 @@
  "linea/line-macro.rkt"
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
+ shell/utils/bourne-expansion-utils
  (for-syntax
   racket/base
   syntax/parse
@@ -24,6 +25,6 @@
   (λ (stx)
     (syntax-parse stx
       [(_ (~and dir (~or ds:str di:id)))
-       #'(change-directory 'dir)]
+       #`(change-directory #,(dollar-expand-syntax #'dir))]
       [(_) #'(change-directory (getenv "HOME"))])))
 
