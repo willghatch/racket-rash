@@ -256,6 +256,8 @@ Options:
 
 TODO - options for changing the reader, etc.
 
+Note that the input/output/error-output have different defaults for the rash macro than for the #lang or repl.
+
 }
 
 @defform[(make-rash-transformer options ...)]{
@@ -276,6 +278,7 @@ This takes all the same options as @racket[rash], but doesn't take a code string
 @;}
 
 TODO - finish make-rash-reader-submodule and document it -- it should be like @racket[make-rash-transformer] only in should essentially create a #lang.
+Note that the default #lang rash has its input/output/error-output as stdin/stdout/stderr, which is different than the rash macro.
 
 things to document:
 
@@ -336,6 +339,8 @@ You can run the repl by running @code{racket -l rash/repl}.  An executable named
 
 Various details of the repl will change over time.
 
+Note that in the repl the default input/output/error-output are to the stdin/out/err connected to the terminal unless you change them.  This is different than the rash macro, and allows you to do things like run curses programs that have access to terminal ports.
+
 The repl can be customized with rc files.
 First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).
 
@@ -346,8 +351,6 @@ A few nice things (like stderr highlighting) are in a demo-rc file you can requi
 }|
 
 (Rash actually follows the XDG basedir standard -- you can have rashrc.rkt or rashrc files in any directory of $XDG_CONFIG_HOME or $XDG_CONFIG_DIRS, and the rash repl will load all of them)
-
-You can also change the prompt.  But I don't want to document how right now.  TODO.  (The default includes some handy git information and such.  At some point I plan to make some prompt utilities like that available in a library to be drop-in components of custom prompts.)
 
 All the following repl functions are not stable.
 
@@ -361,6 +364,18 @@ Only available in the repl.  Like result-n, but if the result is a pipeline, get
 
 @defform[(set-default-pipeline-starter! new-starter)]{
 Only available in the repl.  A line-macro that mutates the default pipeline starter used in the repl.  It's not really hygienic, so if you defined macros that used @racket[run-pipeline] without an explicit starter, this will change the result of new calls to that macro.  Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
+}
+
+@defparam[current-prompt-function prompt procedure?]{
+You can set this parameter to change the prompt.  The prompt is responsible for printing the result returned by whatever was last run as well as showing any information you want to see.  Right now I would just stick with the default, but I plan on making a nice library of useful functions to put in a prompt (eg. functions for displaying git information, path information with length pruning, ...), and have a way of easily connecting some prompt pieces to make something good (including a way to customize how results are displayed -- I want to, for example, have types of objects that can be recognized to print tables nicely, etc).
+
+The given function's arity is tested to see if it receives various keywords, so that the protocol can be extended and the user only has to specify the keywords that are needed for a given prompt.
+
+Keywords optionally given:
+
+@racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.
+
+@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[return-n].
 }
 
 
