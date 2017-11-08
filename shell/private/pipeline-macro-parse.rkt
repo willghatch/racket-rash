@@ -27,7 +27,7 @@
  "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
  "pipeline-operator-transform.rkt"
- "bourne-expansion-utils.rkt"
+ "../utils/bourne-expansion-utils.rkt"
  (for-syntax
   racket/base
   syntax/parse

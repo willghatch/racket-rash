@@ -9,20 +9,15 @@
   ))
 
 (require
- racket/string
  racket/match
  racket/format
+ racket/string
  file/glob
- "pipeline-operators.rkt"
  (for-syntax
   racket/base
-  racket/match
   syntax/parse
-  syntax/keyword
+  racket/match
   racket/string
-  "rash-alias.rkt"
-  "filter-keyword-args.rkt"
-  "misc-utils.rkt"
   ))
 
 (define-syntax (envar stx)

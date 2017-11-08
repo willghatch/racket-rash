@@ -11,7 +11,7 @@
  racket/format
  file/glob
  "pipeline-operators.rkt"
- "bourne-expansion-utils.rkt"
+ "../utils/bourne-expansion-utils.rkt"
  (for-syntax
   racket/base
   racket/match
