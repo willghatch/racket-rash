@@ -27,6 +27,7 @@
  "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
  "pipeline-operator-transform.rkt"
+ "bourne-expansion-utils.rkt"
  (for-syntax
   racket/base
   syntax/parse
@@ -211,24 +212,29 @@
                                                       [else #''lazy])
                                       'in #,(cond [(attribute s-in)]
                                                   [(attribute e-in)]
-                                                  [(attribute s-<) #`(quote #,(attribute s-<))]
-                                                  [(attribute e-<) #`(quote #,(attribute e-<))]
+                                                  [(or (attribute s-<)
+                                                       (attribute e-<))
+                                                   =>
+                                                   (λ (f) (dollar-expand f))]
                                                   ;; TODO - respect outer macro default
                                                   [else #'rash-default-in])
                                       'out #,(cond [(attribute s-out)]
                                                    [(attribute e-out)]
-                                                   [(attribute s->) #`(list (quote #,(attribute s->))
-                                                                            'error)]
-                                                   [(attribute e->) #`(list (quote #,(attribute e->))
-                                                                            'error)]
-                                                   [(attribute s->!) #`(list (quote #,(attribute s->!))
-                                                                             'truncate)]
-                                                   [(attribute e->!) #`(list (quote #,(attribute e->!))
-                                                                             'truncate)]
-                                                   [(attribute s->>) #`(list (quote #,(attribute s->>))
-                                                                             'append)]
-                                                   [(attribute e->>) #`(list (quote #,(attribute e->>))
-                                                                             'append)]
+                                                   [(or (attribute s->)
+                                                        (attribute e->))
+                                                    =>
+                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                                   'error))]
+                                                   [(or (attribute s->!)
+                                                        (attribute e->!))
+                                                    =>
+                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                                   'truncate))]
+                                                   [(or (attribute s->>)
+                                                        (attribute e->>))
+                                                    =>
+                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                                   'append))]
                                                    ;; TODO - respect outer macro default
                                                    [else  #'rash-default-out])
                                       'err #,(cond [(attribute s-err)]

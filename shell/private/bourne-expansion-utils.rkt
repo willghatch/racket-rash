@@ -72,14 +72,16 @@
 (define-for-syntax (dollar-expand str-stx
                                   #:dollar-string [dollar-str "$"]
                                   #:glob-expand? [glob-after? #f]
-                                  #:tilde-expand? [tilde-expand-after? #f])
+                                  #:tilde-expand? [tilde-expand-after? #t])
   ;; TODO - get location data better
-  (define str (syntax->datum str-stx))
+  (define str (let ([s (syntax->datum str-stx)])
+                (or (and (string? s) s)
+                    (format "~a" s))))
   (define dollar-regexp-str (regexp-quote dollar-str))
   (define dollar-regexp (pregexp dollar-regexp-str))
   (define dollar-id-end-regexp (pregexp (string-append dollar-regexp-str
                                                        "|\\s|/")))
-  (define (dollar-var-str->identifier str old-stx glob-protect-maybe)
+  (define (dollar-var-str->var-ref str old-stx glob-protect-maybe)
     (with-syntax ([ref (if (equal? str (string-upcase str))
                            #`(envar #,(datum->syntax old-stx str old-stx))
                            (datum->syntax old-stx (string->symbol str) old-stx))])
@@ -138,7 +140,7 @@
              (for/list ([i (vector-length id-posns)])
                (match (vector-ref id-posns i)
                  [(cons start end)
-                  (dollar-var-str->identifier
+                  (dollar-var-str->var-ref
                    (substring str (+ (string-length dollar-str) start) end)
                    str-stx
                    (and glob-after? glob-detected))]))]
@@ -154,6 +156,6 @@
     [(and glob-after? (has-glob-characters? str))
      #`(glob #,str-stx)]
     [(and tilde-expand-after? (string-prefix? str "~"))
-     #`(tilde-expand #,str-stx)]
-    [else str-stx]))
+     #`(tilde-expand #,(datum->syntax str-stx str str-stx))]
+    [else (datum->syntax str-stx str str-stx)]))
 
