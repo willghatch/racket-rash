@@ -11,6 +11,7 @@
 
 (require racket/date)
 (require shell/mixed-pipeline)
+(require shell/utils/bourne-expansion-utils)
 (require (prefix-in sp- shell/pipeline))
 (require "rashrc-git-stuff.rkt")
 (require racket/exn)
@@ -29,7 +30,7 @@
           (complete-namespaced pat)))
 
 (define (complete-namespaced pat)
-  (with-handlers ([(λ _ #t) (λ e '())])
+  (with-handlers ([(λ _ #t) (λ (e) '())])
     (define names (map symbol->string (namespace-mapped-symbols)))
     (define qpat (string-append "^" (regexp-quote pat)))
     (filter (λ (n) (regexp-match qpat n)) names)))
@@ -39,7 +40,11 @@
   (with-handlers ([(λ _ #t) (λ e '())])
     (parameterize ([current-directory (unbox cwd-hack-box)])
       (let* ([cdir (current-directory)]
-             [given-path (string->path pstr)]
+             ;; TODO - this isn't expanding $VARIABLES, apparently
+             ;; because the $ character is treated as a delimiter
+             ;; in libreadline.
+             [given-path/expanded (dollar-expand-dynamic pstr)]
+             [given-path (string->path given-path/expanded)]
              [given-path-parts (explode-path given-path)]
              [parts-but-last (drop-right given-path-parts 1)]
              [last-part (car (reverse given-path-parts))]
