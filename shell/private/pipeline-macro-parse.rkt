@@ -215,7 +215,7 @@
                                                   [(or (attribute s-<)
                                                        (attribute e-<))
                                                    =>
-                                                   (λ (f) (dollar-expand f))]
+                                                   (λ (f) (dollar-expand-syntax f))]
                                                   ;; TODO - respect outer macro default
                                                   [else #'rash-default-in])
                                       'out #,(cond [(attribute s-out)]
@@ -223,17 +223,17 @@
                                                    [(or (attribute s->)
                                                         (attribute e->))
                                                     =>
-                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
                                                                    'error))]
                                                    [(or (attribute s->!)
                                                         (attribute e->!))
                                                     =>
-                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
                                                                    'truncate))]
                                                    [(or (attribute s->>)
                                                         (attribute e->>))
                                                     =>
-                                                    (λ (f) #`(list #,(dollar-expand f)
+                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
                                                                    'append))]
                                                    ;; TODO - respect outer macro default
                                                    [else  #'rash-default-out])

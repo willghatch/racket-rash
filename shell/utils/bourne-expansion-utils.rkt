@@ -4,7 +4,7 @@
  envar
  tilde-expand
  (for-syntax
-  dollar-expand
+  dollar-expand-syntax
   has-glob-characters?
   ))
 
@@ -61,13 +61,13 @@
   ;; TODO - what is the full list of characters that should induce globbing?
   (regexp-match #px"\\*|\\?|\\{|\\}" str))
 
-;; dollar-expand does Bourne-style expansion of a syntax-string.
+;; dollar-expand-syntax does Bourne-style expansion of a syntax-string.
 ;; It produces a form that does all the runtime checks needed and
 ;; produces a string (or list of strings sometimes under globbing)
-(define-for-syntax (dollar-expand str-stx
-                                  #:dollar-string [dollar-str "$"]
-                                  #:glob-expand? [glob-after? #f]
-                                  #:tilde-expand? [tilde-expand-after? #t])
+(define-for-syntax (dollar-expand-syntax str-stx
+                                         #:dollar-string [dollar-str "$"]
+                                         #:glob-expand? [glob-after? #f]
+                                         #:tilde-expand? [tilde-expand-after? #t])
   ;; TODO - get location data better
   (define str (let ([s (syntax->datum str-stx)])
                 (or (and (string? s) s)

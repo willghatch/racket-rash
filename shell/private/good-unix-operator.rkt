@@ -52,10 +52,10 @@ What more should the good unix pipe do (or at least have options to do)?
     (define str (syntax->datum syntax-str))
     (cond
       [(should-dollar-expand? str)
-       (dollar-expand syntax-str
-                      #:dollar-string dollar-string
-                      #:glob-expand? glob-expand?
-                      #:tilde-expand? tilde-expand?)]
+       (dollar-expand-syntax syntax-str
+                             #:dollar-string dollar-string
+                             #:glob-expand? glob-expand?
+                             #:tilde-expand? tilde-expand?)]
       [(should-glob-expand? str)
        #`(glob #,syntax-str)]
       [(should-tilde-expand? str)
