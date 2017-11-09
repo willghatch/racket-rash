@@ -22,9 +22,9 @@ Also I gave a talk at RacketCon 2017 about it, which can be viewed
 
 @section{Stability}
 
-Rash is not entirely stable.  It's still missing features, and there are some names and APIs I want to re-visit.
+Rash is not entirely stable.  It's still missing features, and there are some names and APIs I want to re-visit.  It's in active development.
 
-However, it is ready to use for most basic interactive shell tasks and as a replacement for the default Racket repl.  Try it out (and report bugs and feedback to me)!
+However, I use it as my default shell on my laptop, and already like it much better than Bash.  I also never launch the Racket repl anymore because Rash does everything the repl does.  Try it out, and please report bugs and feedback to me!  (Note that at the time of writing, completion and line editing work but are in the readline branch waiting for the next upstream release of the readline package that it relies on.)
 
 @section{RASH Guide}
 

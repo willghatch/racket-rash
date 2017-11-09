@@ -11,6 +11,9 @@ I gave a talk about Rash at RacketCon 2017.  You can watch it
 [here](https://www.youtube.com/watch?v=WI8uA4KjQJk#t=3h32m40s).
 (A higher quality stand-alone video should be available some time in the future.)
 
+Rash is in active development, and is not stable as a language.  But I
+use it as my default interactive shell on my laptop.  It's far from
+complete, but I already like it much better than Bash.  Give it a try.
 
 Online documentation is
 [here](http://docs.racket-lang.org/rash@rash/index.html).  After
