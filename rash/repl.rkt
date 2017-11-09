@@ -27,6 +27,8 @@
 
 (define-line-macro run-pipeline/ret-obj
   (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
+(define-line-macro run-pipeline/logic/ret-obj
+  (syntax-parser [(_ arg ...) #'(run-pipeline/logic &pipeline-ret arg ...)]))
 
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.
@@ -67,7 +69,7 @@
                              (current-output-port)
                              (current-error-port))
                             (splicing-syntax-parameterize
-                                ([default-line-macro #'run-pipeline/ret-obj]
+                                ([default-line-macro #'run-pipeline/logic/ret-obj]
                                  ;; TODO - make configurable
                                  [default-pipeline-starter
                                    #'repl-default-pipeline-starter])
@@ -98,7 +100,7 @@
                       (current-output-port)
                       (current-error-port))
                      (splicing-syntax-parameterize
-                         ([default-line-macro #'run-pipeline/ret-obj])
+                         ([default-line-macro #'run-pipeline/logic/ret-obj])
                        (linea-line-parse
                         #,@(linea-read-syntax-all (object-name rcfile)
                                                   (open-input-file rcfile)))))))))

@@ -4,6 +4,7 @@
  rash
  rash/wired
  run-pipeline
+ run-pipeline/logic
  cd
 
  (all-from-out shell/pipeline-macro)
@@ -22,12 +23,14 @@
   (provide
    rash-set-defaults
    run-pipeline
+   run-pipeline/logic
    ))
 
 
 (require
  (rename-in shell/pipeline-macro
-            [run-pipeline run-pipeline/no-line-macro])
+            [run-pipeline run-pipeline/no-line-macro]
+            [run-pipeline/logic run-pipeline/logic/no-line-macro])
  racket/splicing
  racket/string
  racket/port
@@ -62,6 +65,11 @@
     (syntax-parse stx
       [(_ arg ...)
        #'(run-pipeline/no-line-macro arg ...)])))
+(define-line-macro run-pipeline/logic
+  (λ (stx)
+    (syntax-parse stx
+      [(_ arg ...)
+       #'(run-pipeline/logic/no-line-macro arg ...)])))
 
 (define default-output-port-transformer (λ (p) (string-trim (port->string p))))
 
