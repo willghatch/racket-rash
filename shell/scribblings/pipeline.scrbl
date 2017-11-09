@@ -4,6 +4,7 @@
                      racket/contract
                      shell/pipeline
                      (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
+                     (prefix-in shell/pipeline-macro/ shell/pipeline-macro)
                      ))
 
 @title[#:tag "pipeline"]{Basic Unix-style Pipelines}
@@ -116,11 +117,17 @@ Convenience function for putting Racket functions into pipelines.
 Takes a procedure which takes a string as its first argument and returns a string.  Returns a procedure which will turn its @racket[current-input-port] into a string and pass it to the original procedure as its first argument.  It then displays the output string of the function to its @racket[current-output-port].
 }
 
-@defthing[prop:alias-func]{
+@defthing[prop:alias-func struct-type-property?]{
 Struct property for alias-funcs.  The property should be a function that takes the structure as an argument and produces a function that takes the argument list and produces a new one.
+
+This may be renamed to be less confusing with @racket[shell/pipeline-macro/define-pipeline-alias].
 }
 @defstruct[alias-func ([func procedure?])]{
 Wrapper struct with @racket[prop:alias-func].  An alias function must return a non-empty list suitable for a @racket[pipeline-member-spec].
+
+@bold{If you want an alias in Rash, this is probably not what you want.}  See @racket[shell/pipeline-macro/define-pipeline-alias].
+
+This will likely be renamed to be less confusing.
 
 Examples:
 @codeblock|{
