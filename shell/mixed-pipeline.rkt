@@ -44,6 +44,8 @@
  unix-pipeline-member-spec?
  composite-pipeline-member-spec
  composite-pipeline-member-spec?
+ and/success
+ or/success
  )
 
 
@@ -324,5 +326,9 @@
 
   (struct-copy pipeline pipeline-almost [cleaner-thread cleaner-thread]))
 
+(define-syntax-rule (and/success e ...)
+  (and (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
+(define-syntax-rule (or/success e ...)
+  (or (let ([tmp e]) (if (pipeline? tmp) (and (pipeline-success? tmp) tmp) tmp)) ...))
 
 ;; TODO - orig. pipelines need <() >() redirects, environment modifiers, ...

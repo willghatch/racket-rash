@@ -479,7 +479,6 @@
                      "pipeline unsuccessful with return ~a" err))))))
 
 
-(define stderr (current-error-port))
 (define (run-pipeline/spec pipeline-spec)
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [default-err (pipeline-default-err pipeline-spec)]

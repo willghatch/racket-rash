@@ -7,12 +7,18 @@
  (all-from-out "private/good-unix-operator.rkt")
  (all-from-out "private/define-pipeline-alias.rkt")
  (all-from-out "private/define-simple-alias.rkt")
- (all-from-out "mixed-pipeline.rkt")
+ (all-from-out "private/pipeline-macro-logicwrapper.rkt")
+ (except-out (all-from-out "mixed-pipeline.rkt")
+             and/success
+             or/success)
 
  ;; Short names
  \|
  \|>
  _
+
+ &&
+ \|\|
 
  ;; TODO - some things from pipeline-operator-detect.rkt should be provided
  )
@@ -23,6 +29,7 @@
  "private/good-unix-operator.rkt"
  "private/define-pipeline-alias.rkt"
  "private/define-simple-alias.rkt"
+ "private/pipeline-macro-logicwrapper.rkt"
  (except-in "mixed-pipeline.rkt"
             run-pipeline)
 
@@ -33,3 +40,6 @@
 (define-syntax \| (make-rename-transformer #'=unix-pipe=))
 (define-syntax \|> (make-rename-transformer #'=object-pipe=))
 (define-syntax _ (make-rename-transformer #'current-pipeline-argument))
+
+(define-syntax && (make-rename-transformer #'and/success))
+(define-syntax \|\| (make-rename-transformer #'or/success))
