@@ -17,7 +17,7 @@ I made a quick demo recording of an interactive repl
 @hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
 
 Also I gave a talk at RacketCon 2017 about it, which can be viewed
-@hyperlink["https://www.youtube.com/watch?v=WI8uA4KjQJk#t=3h32m40s"]{here}.
+@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
 
 
 @section{Stability}
