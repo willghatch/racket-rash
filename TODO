@@ -1,5 +1,10 @@
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
+* redirection -- currently file redirection only happens when a pipeline ends with a unix segment.  I want it to also happen when a pipeline ends with an object segment.  What should the API be?  Because currently it's implemented as just using a port to that file as the output port, which is only used for unix pipes.  The redirection flags could just auto-insert a copying unix-pipe for the easiest implementation.  There could be a flag that tells it to actually print the last value to the output port when a pipeline ends with an object.
+** this is also tied in with the return value of pipelines -- currently pipelines ending with unix segments return their status if they don't have an object transformer at the end.  I feel like they should just return void.  When an object result is pushed through a port, it should return void as well.
+
+* improve dollar-expansion -- eg. maybe don't always expand to a string, so I can use $funcname at the head of a unix pipe for unix-style functions in pipelines.
+
 * mixed/pipeline pipeline-kill
 
 * pipeline send signal?  eg. to send sighup when rash is killed so that some programs (eg nohup) can decide whether or not they should die.
@@ -32,6 +37,12 @@
 ** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible -- eg. =filter=, =for=, etc are nice, especially if they have short names.
 ** =object-pipe= should have a keyword argument that sets whether it auto-converts ports, and the default is a syntax parameter that the efficient vs convenient rash macros can set accordingly.  Also, this allows the one-off occasions when you do want to do the opposite, without requiring a different =basic-object-pipe=
 ** obj-pipeline-spec, unix-pipeline-spec, and composite-pipeline-spec should be syntax parameters that are also set by the outside macro, basically determining whether they produce runtime pipeline objects or if they desugar to the fast path that has no process or thread overhead.
+
+* I want to have a macro to define a first class pipeline segment (IE a compound-pipeline-member, but one that is always a joint and not a starter).  Maybe a compound-pipeline-member can be called as a function, which takes one argument and shoves it into the pipeline?
+** how will this interact with the trimmed-down version of the macro from above?
+
+
+* Currently each object segment runs in its own thread, but maybe they should always run in the manager thread instead.  That way they can eg. mutate the environment, and that can be an easy way to implement whole-pipeline environment changes.  Also it will lower threading overhead.  However, it is the way it is currently so that the manager thread can (in some future day) catch a signal to suspend for job control.
 
 
 less important TODO items, which may wait until version 2
