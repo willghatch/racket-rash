@@ -24,7 +24,7 @@
 (define-line-macro cd
   (λ (stx)
     (syntax-parse stx
-      [(_ (~and dir (~or ds:str di:id)))
+      [(_ (~and dir (~or ds:str di:id dn:number)))
        #`(change-directory #,(dollar-expand-syntax #'dir))]
       [(_) #'(change-directory (getenv "HOME"))])))
 
