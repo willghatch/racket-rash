@@ -60,6 +60,7 @@
 
 ;; TODO - this was hastily made by copy-paste-driven-development based on
 ;;        dollar-expand-syntax.  The common parts should probably be generalized...
+;;        Note that this only exists for completion.
 (define (dollar-expand-dynamic str
                                #:dollar-string [dollar-str "$"]
                                #:glob-expand? [glob-after? #f]
