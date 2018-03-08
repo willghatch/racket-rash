@@ -195,6 +195,14 @@ re-appended).
      #'(composite-pipeline-member-spec
         (list (rash-transform-joiner-segment op arg ...) ...))]))
 
+;; operator for receiving first-class segments (IE possibly-composite member specs)
+(define-pipeline-operator =pipeline-segment=
+  ;; TODO -- this should behave the same as a starter or joint
+  #:joint
+  (syntax-parser
+    [(_ segment ...)
+     #'(composite-pipeline-member-spec (list segment ...))]))
+
 ;;;; object pipes
 
 (define-pipeline-operator =basic-object-pipe=
