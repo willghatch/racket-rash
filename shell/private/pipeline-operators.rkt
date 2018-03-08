@@ -23,6 +23,7 @@
  (for-syntax expand-pipeline-arguments)
 
  =composite-pipe=
+ =pipeline-segment=
 
  =basic-object-pipe=
  =object-pipe=
@@ -32,9 +33,6 @@
 
  =basic-object-pipe/form=
  =object-pipe/form=
-
-; =basic-object-pipe/left=
-; =object-pipe/left=
 
  =basic-unix-pipe=
  =quoting-basic-unix-pipe=
@@ -76,19 +74,27 @@
     [(def name
        (~or (~optional (~seq #:start s-impl:expr))
             (~optional (~seq #:joint j-impl:expr))
+            (~optional (~seq #:operator o-impl:expr))
             ;; I think it's probably best to NOT allow it to be used as a normal macro.
             ;(~optional (~seq #:macro m-impl:expr))
             )
        ...)
-     (with-syntax ([starter (if (attribute s-impl)
-                                #'s-impl
+     (when (or (and (attribute o-impl)
+                    (attribute j-impl))
+               (and (attribute o-impl)
+                    (attribute s-impl)))
+       (raise-syntax-error 'define-pipeline-operator
+                           "#:operator can't be used with #:start or #:joint"
+                           stx))
+     (with-syntax ([starter (or (and (attribute s-impl) #'s-impl)
+                                (and (attribute o-impl) #'o-impl)
                                 #'(λ (stx)
                                     (raise-syntax-error
                                      (syntax->datum #'name)
                                      "Can't be used as a pipeline starter operator"
                                      stx)))]
-                   [joiner (if (attribute j-impl)
-                               #'j-impl
+                   [joiner (or (and (attribute j-impl) #'j-impl)
+                               (and (attribute o-impl) #'o-impl)
                                #'(λ (stx)
                                    (raise-syntax-error
                                     (syntax->datum #'name)
@@ -117,7 +123,10 @@
 
 ;;;;;;;;;;;;;;;; Pipeline argument detection, replacement functions
 
-(define-syntax-parameter current-pipeline-argument #f)
+(define-syntax-parameter current-pipeline-argument
+  (λ (stx) (raise-syntax-error 'current-pipeline-argument
+                               "Can't use implicit pipeline argument here."
+                               stx)))
 
 (define-for-syntax (stx-contains-id? stx id)
   ;; Does the syntax contain id somethere?
@@ -197,8 +206,7 @@ re-appended).
 
 ;; operator for receiving first-class segments (IE possibly-composite member specs)
 (define-pipeline-operator =pipeline-segment=
-  ;; TODO -- this should behave the same as a starter or joint
-  #:joint
+  #:operator
   (syntax-parser
     [(_ segment ...)
      #'(composite-pipeline-member-spec (list segment ...))]))
@@ -206,10 +214,7 @@ re-appended).
 ;;;; object pipes
 
 (define-pipeline-operator =basic-object-pipe=
-  #:start
-  (syntax-parser
-    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
-  #:joint
+  #:operator
   (syntax-parser
     [(_ arg ...+)
      (expand-pipeline-arguments
@@ -220,23 +225,10 @@ re-appended).
           [(#t narg ...)
            #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
           [(#f narg ...)
-           #'(object-pipeline-member-spec (λ (prev-ret) (arg ... prev-ret)))])))]))
-#;(define-pipeline-operator =basic-object-pipe/left=
-  #:start
-  (syntax-parser
-    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
-  #:joint
-  (syntax-parser
-    [(_ arg ...+)
-     (expand-pipeline-arguments
-      #'(arg ...)
-      #'prev-ret
-      (λ (expanded-stx)
-        (syntax-parse expanded-stx
-          [(#t narg ...)
-           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
-          [(#f narg ...)
-           #'(object-pipeline-member-spec (λ (prev-ret) (prev-ret arg ...)))])))]))
+           #'(object-pipeline-member-spec (λ ([prev-ret (pipeline-default-option)])
+                                            (if (pipeline-default-option? prev-ret)
+                                                (arg ...)
+                                                (arg ... prev-ret))))])))]))
 
 ;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
 (define-pipeline-operator =basic-object-pipe/expression=
@@ -246,14 +238,11 @@ re-appended).
   #:joint
   (syntax-parser
     [(_ e)
-     (expand-pipeline-arguments
-      #'(e)
-      #'prev-ret
-      (λ (expanded-stx)
-        (syntax-parse expanded-stx
-          ;; Ignore the possibility of throwing away the pipe argument
-          [(_ ne)
-           #'(object-pipeline-member-spec (λ (prev-ret) ne))])))]))
+     #'(object-pipeline-member-spec
+        (λ (prev-ret)
+          (syntax-parameterize ([current-pipeline-argument
+                                 (make-rename-transformer #'prev-ret)])
+            e)))]))
 
 ;; Like =basic-object-pipe=, but doesn't local-expand each argument separately.
 (define-pipeline-operator =basic-object-pipe/form=
@@ -263,13 +252,11 @@ re-appended).
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     (expand-pipeline-arguments
-      #'((arg ...))
-      #'prev-ret
-      (λ (expanded-stx)
-        (syntax-parse expanded-stx
-          [(_ (narg ...))
-           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))])))]))
+     #'(object-pipeline-member-spec
+        (λ (prev-ret)
+          (syntax-parameterize ([current-pipeline-argument
+                                 (make-rename-transformer #'prev-ret)])
+            (arg ...))))]))
 
 
 (define-for-syntax (with-port-sugar pipe-stx)
@@ -282,10 +269,6 @@ re-appended).
   #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe= arg ...)])
   #:joint
   (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe= arg ...))]))
-#;(define-pipeline-operator =object-pipe/left=
-  #:start (syntax-parser [(_ arg ...+) #'(=basic-object-pipe/left= arg ...)])
-  #:joint
-  (syntax-parser [(_ arg ...+) (with-port-sugar #'(=basic-object-pipe/left= arg ...))]))
 (define-pipeline-operator =object-pipe/expression=
   #:start (syntax-parser [(_ e) #'(=basic-object-pipe/expression= e)])
   #:joint
@@ -366,8 +349,7 @@ re-appended).
         (datum->syntax #f (append kwargs pargs))))]))
 
 (define-pipeline-operator =basic-unix-pipe=
-  #:start basic-unix-pipe
-  #:joint basic-unix-pipe)
+  #:operator basic-unix-pipe)
 
 (pipeop =quoting-basic-unix-pipe=
         [(_ arg ...+)
