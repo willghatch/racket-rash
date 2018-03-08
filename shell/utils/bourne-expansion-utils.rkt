@@ -148,6 +148,9 @@
      (tilde-expand str)]
     [else str]))
 
+(define-syntax (identity-macro stx)
+  (syntax-parse stx [(_ e) #'e]))
+
 
 ;; dollar-expand-syntax does Bourne-style expansion of a syntax-string.
 ;; It produces a form that does all the runtime checks needed and
@@ -234,6 +237,10 @@
           #`(glob (string-join (map ~a (list #,@mixed-parts)) ""))]
          [(and tilde-expand-after? has-literal-tilde-start)
           #`(tilde-expand (string-join (map ~a (list #,@mixed-parts)) ""))]
+         [(and (equal? 1 (length literal-parts-but-end))
+               (equal? "" (syntax->datum (car literal-parts-but-end)))
+               (equal? "" (syntax->datum last-literal-part)))
+          #`(identity-macro #,(car dollar-parts))]
          [else
           #`(string-join (map ~a (list #,@mixed-parts)) "")]))]
     [(and glob-after? (has-glob-characters? str))
