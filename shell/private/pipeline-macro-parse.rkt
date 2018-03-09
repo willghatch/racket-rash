@@ -5,11 +5,15 @@
    &bg &pipeline-ret &env
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
+   pipeline-start-segment
+   pipeline-joint-segment
    run-pipeline
    default-pipeline-starter
    ))
 
 (provide
+ pipeline-start-segment
+ pipeline-joint-segment
  run-pipeline
  rash-set-defaults
  default-pipeline-starter
@@ -96,18 +100,26 @@
             [rash-default-err-out (λ (stx) #'err)])
          body ...)]))
 
+(define-syntax (pipeline-start-segment stx)
+  (syntax-parse stx
+    [(_ arg ...+)
+     #'(rash-pipeline-splitter/start first-class-split-pipe/start arg ...)]))
+(define-syntax (pipeline-joint-segment stx)
+  (syntax-parse stx
+    [(_ arg ...+)
+     #'(rash-pipeline-splitter/joints first-class-split-pipe/joint () (arg ...))]))
 
 (define-syntax (run-pipeline stx)
   (syntax-parse stx
     [(_ arg ...)
-     #'(rash-pipeline-splitter arg ...)]))
+     #'(run-pipeline/split arg ...)]))
 
 ;; To avoid passing more syntax through layers of macros
 (define rash-pipeline-opt-hash (make-parameter (hash)))
 (define (ropt key)
   (hash-ref (rash-pipeline-opt-hash) key))
 
-(define-syntax (rash-pipeline-splitter stx)
+(define-syntax (run-pipeline/split stx)
   ;; Parse out the beginning/ending whole-pipeline options, then
   ;; pass the pipeline specs to other macros to deal with.
   (syntax-parse stx
@@ -171,7 +183,7 @@
                   [(_ (a ...) (b ...))
                    #'(when (and (or (attribute a) ...) (or (attribute b) ...))
                        (raise-syntax-error
-                        'rash-pipeline-splitter
+                        'run-pipeline
                         "duplicated occurences of pipeline options at beginning and end"
                         stx))]
                   [(rec a:id b:id)
@@ -242,25 +254,27 @@
                                                    ;; TODO - respect outer macro default
                                                    [else #'rash-default-err-out])
                                       )])
-                  (rash-pipeline-splitter/start arg ...))])])])]))
+                  (rash-pipeline-splitter/start run-split-pipe
+                                                arg ...))])])])]))
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
-    [(_ starter:pipe-starter-op args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/rest ([starter args ...]) (rest ...))]
-    [(rps iargs:not-pipeline-op ...+ rest ...)
-     #`(rps #,(syntax-parameter-value #'default-pipeline-starter)
+    [(_ do-macro starter:pipe-starter-op args:not-pipeline-op ... rest ...)
+     #'(rash-pipeline-splitter/joints do-macro ([starter args ...]) (rest ...))]
+    [(rps do-macro iargs:not-pipeline-op ...+ rest ...)
+     #`(rps do-macro
+            #,(syntax-parameter-value #'default-pipeline-starter)
             iargs ... rest ...)]))
 
-(define-syntax (rash-pipeline-splitter/rest stx)
+(define-syntax (rash-pipeline-splitter/joints stx)
   (syntax-parse stx
-    [(rpsr (done-parts ...) ())
-     #'(rash-pipeline-splitter/done done-parts ...)]
-    [(rpsr (done-parts ...)
+    [(rpsj do-macro (done-parts ...) ())
+     #'(do-macro done-parts ...)]
+    [(rpsj do-macro (done-parts ...)
            (op:pipe-joiner-op arg:not-pipeline-op ... rest ...))
-     #'(rpsr (done-parts ... [op arg ...]) (rest ...))]))
+     #'(rpsj do-macro (done-parts ... [op arg ...]) (rest ...))]))
 
-(define-syntax (rash-pipeline-splitter/done stx)
+(define-syntax (run-split-pipe stx)
   (syntax-parse stx
     [(_ (starter startarg ...) (joiner joinarg ...) ...)
      #'(rash-do-transformed-pipeline
@@ -284,3 +298,15 @@
          #:in in #:out out #:err err
          #:strictness strictness #:lazy-timeout lazy-timeout
          args))
+
+(define-syntax (first-class-split-pipe/start stx)
+  (syntax-parse stx
+    [(_ (starter startarg ...) (joiner joinarg ...) ...)
+     #'(mp:composite-pipeline-member-spec
+        (list (rash-transform-starter-segment starter startarg ...)
+              (rash-transform-joiner-segment joiner joinarg ...) ...))]))
+(define-syntax (first-class-split-pipe/joint stx)
+  (syntax-parse stx
+    [(_ (joiner joinarg ...) ...+)
+     #'(mp:composite-pipeline-member-spec
+        (list (rash-transform-joiner-segment joiner joinarg ...) ...))]))
