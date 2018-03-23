@@ -95,6 +95,21 @@
      (ignore-to-newline! port)
      #'%%linea-newline-symbol]))
 
+(define read-backslash
+  ;; TODO - this wants to be a two-character string pattern in a readtable, rather than a 1-character pattern.
+  (case-lambda
+    [(ch port)
+     (syntax->datum (read-backslash ch port #f #f #f #f))]
+    [(ch port src line col pos)
+     (let ([next (peek-char port)])
+       (if (equal? #\newline next)
+           (begin (read-char)
+                  (read-syntax src port))
+           (let ([rt (make-readtable line-readtable
+                                     #\\ #\\ #f)])
+             ;; read with normal backslash handling
+             (read-syntax/recursive src port ch rt #f))))]))
+
 (define (read-and-ignore-hspace! port)
   (let ([nchar (peek-char port)])
     (if (or (equal? #\space nchar)
@@ -160,6 +175,8 @@
                   ;; I want # to have its normal meaning to allow #||# comments,
                   ;; #t and #f, #(vectors, maybe), etc.
                   ;#\# #\a #f
+
+                  #\\ 'non-terminating-macro read-backslash
                   ))
 
 (define line-readtable
