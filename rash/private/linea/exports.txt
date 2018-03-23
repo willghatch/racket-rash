@@ -10,8 +10,6 @@ Exports of this sub-package to document:
  linea-read-all
  linea-stx-strs->stx
 
- linea-line-parse
-
  do-line-macro
  default-line-macro
  define-line-macro

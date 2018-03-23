@@ -36,7 +36,6 @@
  racket/port
  "cd.rkt"
  "linea/line-macro.rkt"
- "linea/line-parse.rkt"
  "linea/read.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
@@ -95,7 +94,7 @@
                                         [default-line-macro line-macro])
            (rash-set-defaults
             (in-eval out-eval err-eval)
-            (linea-line-parse e ...))))]))
+            e ...)))]))
 
 
 #|

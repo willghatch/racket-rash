@@ -5,7 +5,6 @@
  (submod "private/lang-funcs.rkt" for-repl)
  "private/repl-namespace.rkt"
  "private/linea/line-macro.rkt"
- "private/linea/line-parse.rkt"
  "private/linea/read.rkt"
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
@@ -73,7 +72,7 @@
                                  ;; TODO - make configurable
                                  [default-pipeline-starter
                                    #'repl-default-pipeline-starter])
-                              (linea-line-parse #,next-input))))))))
+                              #,next-input)))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -101,9 +100,8 @@
                       (current-error-port))
                      (splicing-syntax-parameterize
                          ([default-line-macro #'run-pipeline/logic/ret-obj])
-                       (linea-line-parse
-                        #,@(linea-read-syntax-all (object-name rcfile)
-                                                  (open-input-file rcfile)))))))))
+                       #,@(linea-read-syntax-all (object-name rcfile)
+                                                 (open-input-file rcfile))))))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?

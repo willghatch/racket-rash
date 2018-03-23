@@ -104,16 +104,16 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
   (λ (stx)
     (syntax-parse stx
       [(_ name:id line-arg ...+)
-       #'(define name (rash-line-or-line-macro line-arg ...))]
+       #'(define name (#%linea-line line-arg ...))]
       [(_ (name:id fp:id ...) line-arg ...+)
-       #'(define (name fp ...) (rash-line-or-line-macro line-arg ...))]
+       #'(define (name fp ...) (#%linea-line line-arg ...))]
       ;; let's be generous, but not good at catching errors
       [(_ name-or-func-form line-arg ...+)
-       #'(define name-or-func-form (rash-line-or-line-macro line-arg ...))])))
+       #'(define name-or-func-form (#%linea-line line-arg ...))])))
 (define-line-macro rash-lambda
   (syntax-parser
     [(_ (fp ...) line-arg ...+)
-     #'(lambda (fp ...) (rash-line-or-line-macro line-arg ...))]))
+     #'(lambda (fp ...) (#%linea-line line-arg ...))]))
 
 
 (define-simple-pipeline-alias d 'ls '--color=auto)

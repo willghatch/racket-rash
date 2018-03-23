@@ -14,6 +14,8 @@
  syntax/strip-context
  )
 
+(struct linea-newline-token ())
+
 (define (linea-read-line-syntax src in)
   (define (rec rlist)
     (let ([output
@@ -22,17 +24,14 @@
       (cond [(and (eof-object? output) (null? rlist))
              output]
             [(eof-object? output)
-             (datum->syntax #f (cons #'%%linea-line-start
+             (datum->syntax #f (cons '#%linea-line
                                      (reverse rlist)))]
-            [else
-             (syntax-parse output
-               #:datum-literals (%%linea-newline-symbol)
-               [%%linea-newline-symbol
-                (if (null? rlist)
-                    (linea-read-syntax src in)
-                    (datum->syntax output (cons #'%%linea-line-start
-                                                (reverse rlist))))]
-               [else (rec (cons output rlist))])])))
+            [(linea-newline-token? (syntax-e output))
+             (if (null? rlist)
+                 (linea-read-syntax src in)
+                 (datum->syntax output (cons '#%linea-line
+                                             (reverse rlist))))]
+            [else (rec (cons output rlist))])))
   (rec '()))
 
 (define (linea-read-syntax src in)
@@ -48,7 +47,7 @@
     (cond [(equal? #\( peeked)
            (let ([s (parameterize ([current-readtable linea-inside-paren-readtable])
                       (read-syntax src in))])
-             #`(%%linea-racket-line #,s))]
+             (datum->syntax #f (list '#%linea-not-line s)))]
           [(equal? #\; peeked)
            (begin (read-line-comment (read-char in) in)
                   (linea-read-syntax src in))]
@@ -85,7 +84,7 @@
     [(ch port)
      (syntax->datum (read-newline ch port #f #f #f #f))]
     [(ch port src line col pos)
-     #'%%linea-newline-symbol]))
+     (datum->syntax #f (linea-newline-token))]))
 
 (define read-line-comment
   (case-lambda
@@ -93,7 +92,7 @@
      (syntax->datum (read-line-comment ch port #f #f #f #f))]
     [(ch port src line col pos)
      (ignore-to-newline! port)
-     #'%%linea-newline-symbol]))
+     (datum->syntax #f (linea-newline-token))]))
 
 (define read-backslash
   ;; TODO - this wants to be a two-character string pattern in a readtable, rather than a 1-character pattern.
