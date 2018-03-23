@@ -1,11 +1,9 @@
 #lang racket/base
 
 (provide
+ make-linea-read-funcs
  linea-read-syntax
- linea-read-syntax-all
  linea-read
- linea-read-all
- linea-stx-strs->stx
  )
 
 (require
@@ -16,11 +14,46 @@
 
 (struct linea-newline-token ())
 
+(define (make-linea-read-funcs
+         #:line-readtable-mod [line-readtable-mod-func (λ(x)x)]
+         #:s-exp-readtable-mod [s-exp-readtable-mod-func (λ(x)x)]
+         #:line-avoid [line-avoid '(#\()])
+
+  (define outer-readtable (line-readtable-mod-func line-readtable))
+  (define inner-readtable (s-exp-readtable-mod-func linea-inside-paren-readtable))
+
+  (define (linea-read-syntax src in)
+    (read-and-ignore-hspace! in)
+    ;; TODO - maybe an extensible table of things to do depending on the start of the line?
+    #|
+    TODO - if a line starts with a #||# comment then `(` isn't the first
+    char, forcing it to be in line-mode and not racket-mode.  That's
+    weird.  Looking at the first character is brittle and crappy, but I'm
+    not sure a better way to do it right now.
+    |#
+    (let ([peeked (peek-char in)])
+      (cond [(member peeked line-avoid)
+             (let ([s (parameterize ([current-readtable inner-readtable])
+                        (read-syntax src in))])
+               (datum->syntax #f (list '#%linea-not-line s)))]
+            [(equal? #\; peeked)
+             (begin (read-line-comment (read-char in) in)
+                    (linea-read-syntax src in))]
+            [else (parameterize ([current-readtable outer-readtable])
+                    (linea-read-line-syntax src in))])))
+
+  (define (linea-read in)
+    (let ([out (linea-read-syntax #f in)])
+      (if (eof-object? out)
+          out
+          (syntax->datum out))))
+
+  (values linea-read-syntax linea-read))
+
 (define (linea-read-line-syntax src in)
+  ;; the current-readtable must already be parameterized to the line-readtable
   (define (rec rlist)
-    (let ([output
-           (parameterize ([current-readtable line-readtable])
-             (read-syntax src in))])
+    (let ([output (read-syntax src in)])
       (cond [(and (eof-object? output) (null? rlist))
              output]
             [(eof-object? output)
@@ -31,43 +64,16 @@
                  (linea-read-syntax src in)
                  (datum->syntax output (cons '#%linea-line
                                              (reverse rlist))))]
+            ;; Check if we got a symbol that is equal to just a newline character.
+            ;; This happens when the newline is escaped.
+            ;; TODO - this is bad.  I really need a multi-character readtable
+            ;; key.  If the first character after the newline is not a space, then
+            ;; the newline is read as part of the symbol name!
+            [(equal? (syntax-e output) '\
+                     )
+             (rec rlist)]
             [else (rec (cons output rlist))])))
   (rec '()))
-
-(define (linea-read-syntax src in)
-  (read-and-ignore-hspace! in)
-  ;; TODO - maybe an extensible table of things to do depending on the start of the line?
-  #|
-  TODO - if a line starts with a #||# comment then `(` isn't the first
-  char, forcing it to be in line-mode and not racket-mode.  That's
-  weird.  Looking at the first character is brittle and crappy, but I'm
-  not sure a better way to do it right now.
-  |#
-  (let ([peeked (peek-char in)])
-    (cond [(equal? #\( peeked)
-           (let ([s (parameterize ([current-readtable linea-inside-paren-readtable])
-                      (read-syntax src in))])
-             (datum->syntax #f (list '#%linea-not-line s)))]
-          [(equal? #\; peeked)
-           (begin (read-line-comment (read-char in) in)
-                  (linea-read-syntax src in))]
-          [else (linea-read-line-syntax src in)])))
-
-(define (linea-read in)
-  (let ([out (linea-read-syntax #f in)])
-    (if (eof-object? out)
-        out
-        (syntax->datum out))))
-
-(define (linea-read-syntax-all src in)
-  (define (rec rlist)
-    (let ([part (linea-read-syntax src in)])
-      (if (eof-object? part)
-          (datum->syntax #f (reverse rlist))
-          (rec (cons part rlist)))))
-  (rec '()))
-(define (linea-read-all in)
-  (syntax->datum (linea-read-syntax-all #f in)))
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -93,21 +99,6 @@
     [(ch port src line col pos)
      (ignore-to-newline! port)
      (datum->syntax #f (linea-newline-token))]))
-
-(define read-backslash
-  ;; TODO - this wants to be a two-character string pattern in a readtable, rather than a 1-character pattern.
-  (case-lambda
-    [(ch port)
-     (syntax->datum (read-backslash ch port #f #f #f #f))]
-    [(ch port src line col pos)
-     (let ([next (peek-char port)])
-       (if (equal? #\newline next)
-           (begin (read-char)
-                  (read-syntax src port))
-           (let ([rt (make-readtable line-readtable
-                                     #\\ #\\ #f)])
-             ;; read with normal backslash handling
-             (read-syntax/recursive src port ch rt #f))))]))
 
 (define (read-and-ignore-hspace! port)
   (let ([nchar (peek-char port)])
@@ -174,8 +165,6 @@
                   ;; I want # to have its normal meaning to allow #||# comments,
                   ;; #t and #f, #(vectors, maybe), etc.
                   ;#\# #\a #f
-
-                  #\\ 'non-terminating-macro read-backslash
                   ))
 
 (define line-readtable
@@ -202,11 +191,4 @@
          #:base-readtable
          (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
 
-(define (linea-stx-strs->stx stx)
-  (let ([src (syntax-parse stx
-               [(linea-src:str) #'linea-src]
-               [(src-seg:str ...+) (scribble-strings->string #'(src-seg ...))])])
-    (map (λ (s) (replace-context src s))
-         (syntax->list
-          (linea-read-syntax-all (syntax-source src)
-                                 (stx-string->port src))))))
+(define-values (linea-read-syntax linea-read) (make-linea-read-funcs))

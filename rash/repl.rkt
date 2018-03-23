@@ -9,6 +9,7 @@
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing
+ racket/port
 
  basedir
  racket/exn
@@ -91,6 +92,7 @@
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
                   (datum->syntax #f `(require (file ,(path->string rcfile))))))))
+
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
@@ -100,8 +102,8 @@
                       (current-error-port))
                      (splicing-syntax-parameterize
                          ([default-line-macro #'run-pipeline/logic/ret-obj])
-                       #,@(linea-read-syntax-all (object-name rcfile)
-                                                 (open-input-file rcfile))))))))
+                       #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
+                                      (open-input-file rcfile))))))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?
