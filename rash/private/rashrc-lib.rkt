@@ -20,6 +20,16 @@
 (require readline/pread)
 (require readline/readline)
 
+(require (for-syntax racket/base racket/string))
+(define-syntax (fail-if-not-6.12+ stx)
+  (define vns (string-split (version) "."))
+  (if (or (> (string->number (car vns)) 6)
+          (and (equal? (string->number (car vns)) 6)
+               (>= (string->number (cadr vns)) 12)))
+      #'(void)
+      (raise-syntax-error 'rash "The Rash REPL can't be used with a Racket version below 6.12")))
+(fail-if-not-6.12+)
+
 ;; Somehow completions are getting a different current directory.
 ;; Maybe they run in a different thread sometimes?
 ;; Let's hack around that.
