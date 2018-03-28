@@ -1,7 +1,7 @@
 #lang info
 
 (define collection 'multi)
-(define deps '("base"
+(define deps '(("base" #:version "6.12")
                "basedir"
                "shell-pipeline"
                "udelim"
