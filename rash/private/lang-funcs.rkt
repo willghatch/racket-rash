@@ -47,6 +47,7 @@
   racket/base
   syntax/parse
   "linea/read.rkt"
+  "linea/stx-strs.rkt"
   udelim
   racket/port
   syntax/strip-context
@@ -207,17 +208,6 @@ But how can it be done in a way that let those arguments affect the reader?
                                            arg (... ...)))]))))]))
 
 (begin-for-syntax
-
-  (define (linea-stx-strs->stx stx)
-    (let ([src (syntax-parse stx
-                 [(linea-src:str) #'linea-src]
-                 [(src-seg:str ...+) (scribble-strings->string #'(src-seg ...))])])
-      (map (λ (s) (replace-context src s))
-           (syntax->list
-            (linea-read-syntax-all (syntax-source src)
-                                   (stx-string->port src))))))
-  (define (linea-read-syntax-all src p)
-    (datum->syntax #f (port->list (λ (p) (linea-read-syntax src p)) p)))
 
   (define-syntax (make-rash-transformer stx)
     (syntax-parse stx
