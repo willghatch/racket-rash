@@ -37,6 +37,7 @@
  "cd.rkt"
  "linea/line-macro.rkt"
  "linea/read.rkt"
+ "linea/stx-strs.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
  syntax/wrap-modbeg
@@ -55,6 +56,7 @@
 
   (for-syntax
    "linea/read.rkt"
+   "linea/stx-strs.rkt"
    syntax/wrap-modbeg
    racket/base
    syntax/parse
