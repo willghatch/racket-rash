@@ -37,7 +37,7 @@
  "cd.rkt"
  "linea/line-macro.rkt"
  "linea/read.rkt"
- "linea/stx-strs.rkt"
+ "linea/read-syntax-string.rkt"
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
  syntax/wrap-modbeg
@@ -48,7 +48,7 @@
   racket/base
   syntax/parse
   "linea/read.rkt"
-  "linea/stx-strs.rkt"
+  "linea/read-syntax-string.rkt"
   udelim
   racket/port
   syntax/strip-context
@@ -56,7 +56,7 @@
 
   (for-syntax
    "linea/read.rkt"
-   "linea/stx-strs.rkt"
+   "linea/read-syntax-string.rkt"
    syntax/wrap-modbeg
    racket/base
    syntax/parse
@@ -242,8 +242,7 @@ But how can it be done in a way that let those arguments affect the reader?
                                          #:context stx
                                          #:no-duplicates? #t))
 
-                (with-syntax ([(parsed-rash-code (... ...))
-                               (linea-stx-strs->stx rest-stx)]
+                (with-syntax ([parsed-rash-code (linea-read-syntax-string rest-stx)]
                               [input (opref tab '#:in #'mk-input)]
                               [output (opref tab '#:out #'mk-output)]
                               [err-output (opref tab '#:err #'mk-err-output)]
@@ -254,7 +253,7 @@ But how can it be done in a way that let those arguments affect the reader?
                   #'(rash-expressions-begin (input output err-output
                                                    default-starter
                                                    line-macro)
-                                            parsed-rash-code (... ...)))])))]))
+                                            parsed-rash-code))])))]))
   )
 
 (define-syntax rash
@@ -270,10 +269,10 @@ But how can it be done in a way that let those arguments affect the reader?
      (λ (stx)
        (syntax-parse stx
          [(_ arg ...)
-          (with-syntax ([(parsed-rash-code ...) (linea-stx-strs->stx #'(arg ...))])
+          (with-syntax ([parsed-rash-code (linea-read-syntax-string #'(arg ...))])
             #'(rash-expressions-begin
                ((open-input-string "")
                 default-output-port-transformer
                 'string-port)
-               parsed-rash-code ...))])))))
+               parsed-rash-code))])))))
 
