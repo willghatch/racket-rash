@@ -131,7 +131,9 @@
     (pipeline-segment-success? pm)))
 (define (pipeline-return pl)
   (if (pipeline-success? pl)
-      (pipeline-segment-ret (car (unbox (pipeline-segment-box pl))))
+      (if (pipeline-ends-with-unix-segment? pl)
+          (void)
+          (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
       (for/or ([pm (reverse (unbox (pipeline-segment-box pl)))])
         (and (not (pipeline-segment-success? pm)) (pipeline-segment-error pm)))))
 
@@ -312,7 +314,8 @@
                                     (display x port)
                                     (flush-output port)
                                     (when (not (eq? port final-out-port))
-                                      (close-output-port port))))))]
+                                      (close-output-port port))
+                                    (void)))))]
             [(null? specs) (pipeline-segment-wait last-seg)]
             [(object-pipeline-member? last-seg)
              (begin

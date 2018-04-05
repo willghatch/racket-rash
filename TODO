@@ -1,8 +1,5 @@
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
-* redirection -- currently file redirection only happens when a pipeline ends with a unix segment.  I want it to also happen when a pipeline ends with an object segment.  What should the API be?  Because currently it's implemented as just using a port to that file as the output port, which is only used for unix pipes.  The redirection flags could just auto-insert a copying unix-pipe for the easiest implementation.  There could be a flag that tells it to actually print the last value to the output port when a pipeline ends with an object.
-** this is also tied in with the return value of pipelines -- currently pipelines ending with unix segments return their status if they don't have an object transformer at the end.  I feel like they should just return void.  When an object result is pushed through a port, it should return void as well.
-
 * improve dollar-expansion -- eg. maybe don't always expand to a string, so I can use $funcname at the head of a unix pipe for unix-style functions in pipelines.
 
 * mixed/pipeline pipeline-kill
