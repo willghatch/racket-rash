@@ -22,6 +22,7 @@
                       #:lazy-timeout real?
                       #:bg any/c
                       #:return-pipeline-object any/c
+                      #:object-to-out any/c
                       )
                      #:rest (listof (or/c unix-pipeline-member-spec?
                                           object-pipeline-member-spec?
@@ -56,6 +57,7 @@
          racket/port
          racket/match
          "private/mostly-structs.rkt"
+         "private/misc-utils.rkt"
          (submod "private/mostly-structs.rkt" internals)
          )
 
@@ -231,11 +233,13 @@
          #:bg [bg #f]
          ;; TODO - better name
          #:return-pipeline-object [return-pipeline-object #f]
+         #:object-to-out [object-to-out #f]
          .
          specs)
   (define pline (-run-pipeline specs init-in-port
                                final-output-port-or-transformer
-                               default-err strictness lazy-timeout))
+                               default-err strictness lazy-timeout
+                               object-to-out))
   (when (not bg) (pipeline-wait pline))
   (if (or bg return-pipeline-object)
       pline
@@ -247,7 +251,8 @@
         )))
 
 (define (-run-pipeline specs init-in-port final-out-transformer
-                       default-err strictness lazy-timeout)
+                       default-err strictness lazy-timeout
+                       object-to-out)
   ;; TODO - thread safety - be sure there's not a new segment being created when everything is killed from eg. C-c
   ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
   ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
@@ -256,7 +261,8 @@
   (define final-out-port (if (or (output-port? final-out-transformer)
                                  (u-path-string-symbol? final-out-transformer)
                                  (match final-out-transformer
-                                   [(list (? u-path-string-symbol?) (? symbol?)) #t]
+                                   [(list (? u-path-string-symbol?) (? symbol?))
+                                    final-out-transformer]
                                    [else #f]))
                              final-out-transformer
                              #f))
@@ -283,7 +289,10 @@
 
   (define (runner-func)
     (define (rec last-seg specs)
-      (cond [(and (null? specs) (u-pipeline? last-seg) out-transform)
+      (cond [(and (null? specs)
+                  (or (u-pipeline? last-seg)
+                      object-to-out)
+                  out-transform)
              ;; add implicit transformer pipe segment
              (let-values ([(new-seg specs-rest)
                            (drive (list (object-pipeline-member-spec out-transform))
@@ -292,6 +301,18 @@
                (set-box! seg-box (cons new-seg (unbox seg-box)))
                ;; Done, but make the manager thread wait until the last segment is done.
                (pipeline-segment-wait new-seg))]
+            [(and (null? specs)
+                  object-to-out
+                  final-out-port
+                  (object-pipeline-member? last-seg))
+             (set! object-to-out #f)
+             (rec last-seg (list (object-pipeline-member-spec
+                                  (λ (x)
+                                    (define port (open-output-spec final-out-port))
+                                    (display x port)
+                                    (flush-output port)
+                                    (when (not (eq? port final-out-port))
+                                      (close-output-port port))))))]
             [(null? specs) (pipeline-segment-wait last-seg)]
             [(object-pipeline-member? last-seg)
              (begin

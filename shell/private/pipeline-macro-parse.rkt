@@ -253,6 +253,16 @@
                                                    [(attribute s-err)]
                                                    ;; TODO - respect outer macro default
                                                    [else #'rash-default-err-out])
+                                      'object-to-out #,(if (or (attribute s-out)
+                                                               (attribute e-out)
+                                                               (attribute s->)
+                                                               (attribute e->)
+                                                               (attribute s->!)
+                                                               (attribute e->!)
+                                                               (attribute s->>)
+                                                               (attribute e->>))
+                                                           #'#t
+                                                           #'#f)
                                       )])
                   (rash-pipeline-splitter/start run-split-pipe
                                                 arg ...))])])])]))
@@ -281,6 +291,7 @@
         #:bg (ropt 'bg) #:return-pipeline-object (ropt 'pipeline-ret)
         #:in (ropt 'in) #:out (ropt 'out) #:err (ropt 'err)
         #:strictness (ropt 'strictness) #:lazy-timeout (ropt 'lazy-timeout)
+        #:object-to-out (ropt 'object-to-out)
         (rash-transform-starter-segment starter startarg ...)
         (rash-transform-joiner-segment joiner joinarg ...) ...)]))
 
@@ -292,11 +303,13 @@
                                       #:err err
                                       #:strictness strictness
                                       #:lazy-timeout lazy-timeout
+                                      #:object-to-out object-to-out
                                       . args)
   ;; TODO - environment extension/replacement
   (apply mp:run-pipeline #:bg bg #:return-pipeline-object return-pipeline-object
          #:in in #:out out #:err err
          #:strictness strictness #:lazy-timeout lazy-timeout
+         #:object-to-out object-to-out
          args))
 
 (define-syntax (first-class-split-pipe/start stx)

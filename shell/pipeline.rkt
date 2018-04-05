@@ -7,6 +7,7 @@
 (require racket/contract)
 (require syntax/parse/define)
 (require "private/mostly-structs.rkt")
+(require "private/misc-utils.rkt")
 (require (submod "private/mostly-structs.rkt" internals))
 
 
@@ -478,7 +479,6 @@
               (error 'run-pipeline/return
                      "pipeline unsuccessful with return ~a" err))))))
 
-
 (define (run-pipeline/spec pipeline-spec)
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [default-err (pipeline-default-err pipeline-spec)]
@@ -503,16 +503,8 @@
                                                      (when (port? to-file-port)
                                                        (close-input-port to-file-port))
                                                      (raise e))])
-                           (cond [(equal? from-port 'null) (open-output-nowhere)]
-                                 [(path-string-symbol? from-port)
-                                  (open-output-file
-                                   (path-string-sym->path from-port)
-                                   #:exists 'error)]
-                                 [(list? from-port)
-                                  (open-output-file
-                                   (path-string-sym->path (first from-port))
-                                   #:exists (second from-port))]
-                                 [else #f]))]
+                           (let ([ffp (open-output-spec from-port)])
+                             (if (eq? ffp from-port) #f ffp)))]
          ;; re-use from-port name
          [from-port (or from-file-port from-port)]
          [from-use (cond [(and (pm-spec-path? (car (reverse members)))
@@ -792,11 +784,6 @@
       (display out-str)
       (flush-output))))
 
-
-(define (path-string-sym->path pss)
-  (cond [(symbol? pss) (string->path (symbol->string pss))]
-        [(string? pss) (string->path pss)]
-        [else pss]))
 
 (define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
   (when (null? argv)

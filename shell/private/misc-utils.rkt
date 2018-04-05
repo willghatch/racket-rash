@@ -2,7 +2,11 @@
 
 (provide (all-defined-out))
 
-(require racket/dict)
+(require
+ racket/dict
+ racket/port
+ "mostly-structs.rkt"
+ )
 
 (define (opref table key default)
   ;; For getting options with default out of a
@@ -14,3 +18,20 @@
   ;; Detect in a literal string segment whether there are glob characters
   ;; TODO - what is the full list of characters that should induce globbing?
   (regexp-match #px"\\*|\\?|\\{|\\}" str))
+
+(define (open-output-spec spec)
+  (cond [(equal? spec 'null) (open-output-nowhere)]
+        [(path-string-symbol? spec)
+         (open-output-file
+          (path-string-sym->path spec)
+          #:exists 'error)]
+        [(list? spec)
+         (open-output-file
+          (path-string-sym->path (car spec))
+          #:exists (cadr spec))]
+        [else spec]))
+
+(define (path-string-sym->path pss)
+  (cond [(symbol? pss) (string->path (symbol->string pss))]
+        [(string? pss) (string->path pss)]
+        [else pss]))
