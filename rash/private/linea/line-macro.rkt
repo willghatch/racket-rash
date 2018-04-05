@@ -5,6 +5,7 @@
 (provide
  #%linea-line
  #%linea-not-line
+ #%linea-expressions-begin
  default-line-macro
  define-line-macro
  )
@@ -31,6 +32,8 @@
     [(rec arg ...)
      (let ([default-macro (syntax-parameter-value #'default-line-macro)])
        #`(rec #,default-macro arg ...))]))
+
+(define-syntax #%linea-expressions-begin (make-rename-transformer #'begin))
 
 ;;; #%linea-not-line is just a pass-through -- it's what wraps normal Racket forms
 ;;; when they are completely escaped from the line syntax.

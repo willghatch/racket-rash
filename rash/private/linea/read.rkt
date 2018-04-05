@@ -1,9 +1,20 @@
 #lang racket/base
 
 (provide
- make-linea-read-funcs
  linea-read-syntax
  linea-read
+
+ make-linea-read-funcs
+
+ readtable-add-linea-escape
+
+ default-linea-s-exp-readtable
+ default-linea-line-readtable
+ default-linea-line-avoid-list
+
+ current-linea-s-exp-readtable
+ current-linea-line-readtable
+ current-linea-line-avoid-list
  )
 
 (require
@@ -14,13 +25,24 @@
 
 (struct linea-newline-token ())
 
-(define (make-linea-read-funcs
-         #:line-readtable-mod [line-readtable-mod-func (λ(x)x)]
-         #:s-exp-readtable-mod [s-exp-readtable-mod-func (λ(x)x)]
-         #:line-avoid [line-avoid '(#\()])
+(define default-linea-line-avoid-list '(#\())
+(define current-linea-line-avoid-list (make-parameter default-linea-line-avoid-list))
 
-  (define outer-readtable (line-readtable-mod-func line-readtable))
-  (define inner-readtable (s-exp-readtable-mod-func linea-inside-paren-readtable))
+(define default-linea-s-exp-readtable
+  (udelimify #f))
+(define current-linea-s-exp-readtable (make-parameter default-linea-s-exp-readtable))
+
+(define (readtable-or-proc->readtable rtop)
+  (cond [(readtable? rtop) rtop]
+        [(procedure? rtop) (rtop)]
+        [(not rtop) (make-readtable rtop)]
+        [else (error 'linea-internal
+                     "readtable-or-proc->readtable error -- this shouldn't happen")]))
+
+(define (make-linea-read-funcs
+         #:line-readtable [line-readtable current-linea-line-readtable]
+         #:s-exp-readtable [s-exp-readtable current-linea-s-exp-readtable]
+         #:line-avoid [line-avoid current-linea-line-avoid-list])
 
   (define (linea-read-syntax src in)
     (read-and-ignore-hspace! in)
@@ -31,15 +53,20 @@
     weird.  Looking at the first character is brittle and crappy, but I'm
     not sure a better way to do it right now.
     |#
-    (let ([peeked (peek-char in)])
-      (cond [(member peeked line-avoid)
-             (let ([s (parameterize ([current-readtable inner-readtable])
+    (let* ([peeked (peek-char in)]
+           [avoid-list (if (procedure? line-avoid)
+                           (line-avoid)
+                           line-avoid)])
+      (cond [(member peeked avoid-list)
+             (let ([s (parameterize ([current-readtable (readtable-or-proc->readtable
+                                                         s-exp-readtable)])
                         (read-syntax src in))])
                (datum->syntax #f (list '#%linea-not-line s)))]
             [(equal? #\; peeked)
              (begin (read-line-comment (read-char in) in)
                     (linea-read-syntax src in))]
-            [else (parameterize ([current-readtable outer-readtable])
+            [else (parameterize ([current-readtable (readtable-or-proc->readtable
+                                                     line-readtable)])
                     (linea-read-line-syntax src in))])))
 
   (define (linea-read in)
@@ -108,9 +135,6 @@
                (read-and-ignore-hspace! port))
         (void))))
 
-(define linea-inside-paren-readtable
-  (udelimify #f))
-
 (define read-dash
   ;; don't read as a number for things like `-i`
   (case-lambda
@@ -119,11 +143,11 @@
     [(ch port src line col pos)
      (cond
        [(regexp-match-peek #px"^\\d+" port)
-        (parameterize ([current-readtable (make-readtable line-readtable
+        (parameterize ([current-readtable (make-readtable (current-readtable)
                                                           #\- #\- #f)])
           (read-syntax/recursive (object-name port) port ch))]
        [else
-        (parameterize ([current-readtable (make-readtable line-readtable
+        (parameterize ([current-readtable (make-readtable (current-readtable)
                                                           #\- #\a #f)])
           (read-syntax/recursive (object-name port) port ch))])]))
 
@@ -167,15 +191,15 @@
                   ;#\# #\a #f
                   ))
 
-(define line-readtable
+(define default-linea-line-readtable
   (make-list-delim-readtable
-   #\[ #\] #:inside-readtable linea-inside-paren-readtable
+   #\[ #\] #:inside-readtable default-linea-s-exp-readtable
    #:base-readtable
    (make-list-delim-readtable
-    #\{ #\} #:inside-readtable linea-inside-paren-readtable
+    #\{ #\} #:inside-readtable default-linea-s-exp-readtable
     #:base-readtable
     (make-list-delim-readtable
-     #\( #\) #:inside-readtable linea-inside-paren-readtable
+     #\( #\) #:inside-readtable default-linea-s-exp-readtable
      #:base-readtable
      (make-string-delim-readtable
       #\◸ #\◹ #:wrapper '#%upper-triangles
@@ -190,5 +214,39 @@
          #\◣ #\◢ #:wrapper '#%full-lower-triangles
          #:base-readtable
          (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
+(define current-linea-line-readtable (make-parameter default-linea-line-readtable))
+
 
 (define-values (linea-read-syntax linea-read) (make-linea-read-funcs))
+
+(define (readtable-add-linea-escape
+         l-delim r-delim
+         #:base-readtable [base-readtable (current-linea-s-exp-readtable)]
+         #:wrapper [wrapper #f]
+         #:line-readtable [line-readtable current-linea-line-readtable]
+         #:s-exp-readtable [s-exp-readtable current-linea-s-exp-readtable]
+         #:line-avoid [line-avoid current-linea-line-avoid-list]
+         )
+
+  (define-values (l-read-syntax l-read)
+    (make-linea-read-funcs
+     #:line-readtable line-readtable
+     #:s-exp-readtable s-exp-readtable
+     #:line-avoid line-avoid))
+
+  (define wrapper-base
+    (syntax-parser
+      [(e ...) #`(#,(datum->syntax #f '#%linea-expressions-begin) e ...)]))
+  (define (final-wrapper stx)
+    (let ([linea-form (wrapper-base stx)])
+      (cond [(symbol? wrapper) (datum->syntax #f (list wrapper linea-form))]
+            [(procedure? wrapper) (wrapper linea-form)]
+            [else linea-form])))
+
+  (make-string-delim-readtable
+   l-delim r-delim
+   #:base-readtable base-readtable
+   #:string-read-syntax l-read-syntax
+   #:whole-body-readers? #f
+   #:wrapper final-wrapper))
+
