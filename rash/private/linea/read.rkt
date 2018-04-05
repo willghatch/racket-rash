@@ -80,26 +80,41 @@
 
 (define (linea-read-line-syntax src in)
   ;; the current-readtable must already be parameterized to the line-readtable
+  (define (reverse/filter-newlines rlist)
+    ;; Reverse the list, but also:
+    ;; Filter out any newline symbols, and transform any symbols that
+    ;; start with newline character to not have it.
+    ;; This is to make the backslash escape newlines in the source.
+    (define (rec originals dones)
+      (if (null? originals)
+          dones
+          (syntax-parse (car originals)
+            ;; just a newline symbol
+            [(~datum \
+                     )
+             (rec (cdr originals) dones)]
+            [x:id
+             (let* ([str (symbol->string (syntax->datum #'x))]
+                    [matched (regexp-match #px"\n+(.+)" str)]
+                    [filtered (if matched
+                                  (datum->syntax #'x (string->symbol (cadr matched)))
+                                  #'x)])
+               (rec (cdr originals) (cons filtered dones)))]
+            [else (rec (cdr originals) (cons (car originals) dones))])))
+    (rec rlist '()))
+
   (define (rec rlist)
     (let ([output (read-syntax src in)])
       (cond [(and (eof-object? output) (null? rlist))
              output]
             [(eof-object? output)
              (datum->syntax #f (cons '#%linea-line
-                                     (reverse rlist)))]
+                                     (reverse/filter-newlines rlist)))]
             [(linea-newline-token? (syntax-e output))
              (if (null? rlist)
                  (linea-read-syntax src in)
                  (datum->syntax output (cons '#%linea-line
-                                             (reverse rlist))))]
-            ;; Check if we got a symbol that is equal to just a newline character.
-            ;; This happens when the newline is escaped.
-            ;; TODO - this is bad.  I really need a multi-character readtable
-            ;; key.  If the first character after the newline is not a space, then
-            ;; the newline is read as part of the symbol name!
-            [(equal? (syntax-e output) '\
-                     )
-             (rec rlist)]
+                                             (reverse/filter-newlines rlist))))]
             [else (rec (cons output rlist))])))
   (rec '()))
 
