@@ -23,20 +23,3 @@ by running
 
 See also the [shell-pipeline](https://github.com/willghatch/racket-shell-pipeline)
 library that contains most of the actual meat of the Rash language.
-
-
-Completion
-----------
-
-Tab completion and line editing is enabled in the `readline` branch.
-It depends on the git version of Racket's `readline-lib` ffi library.
-To use it, run `raco pkg upgrade --clone readline-lib` (run it in a
-directory where you want to have the readline package git repo) to get
-the latest readline package.  Say "yes" to also cloning the `readline`
-and `readline-doc` packages, since they are in the same git repo.
-Then check out the `readline` branch of rash (`raco pkg upgrade
---clone rash` if you used `raco pkg install rash`) and maybe run `raco
-setup`.
-
-Once the next Racket release is made (in or around January 2018), the
-readline branch will be merged and be on by default.
