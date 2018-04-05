@@ -6,12 +6,17 @@
  #%linea-line
  #%linea-not-line
  #%linea-expressions-begin
- default-line-macro
+
  define-line-macro
+ with-default-line-macro
+ splicing-with-default-line-macro
+
+ default-line-macro
  )
 
 (require
  racket/stxparam
+ racket/splicing
  (for-syntax
   "private/line-macro-detect.rkt"
   racket/base
@@ -47,3 +52,37 @@
                         stx)))
 
 (define-syntax-parameter default-line-macro #'erroring-default-line-macro)
+
+(define-syntax (with-default-line-macro stx)
+  (syntax-parse stx
+    [(_ new-default:line-macro e ...+)
+     #'(syntax-parameterize ([default-line-macro #'new-default])
+         e ...)]))
+
+(define-syntax (splicing-with-default-line-macro stx)
+  (syntax-parse stx
+    [(_ new-default:line-macro e ...+)
+     #'(splicing-syntax-parameterize ([default-line-macro #'new-default])
+         e ...)]))
+
+(module+ test
+  (require rackunit)
+  (define-line-macro app (syntax-parser [(_ op e ...) #'(#%app op e ...)]))
+  (define-line-macro rpn-app (syntax-parser [(_ e ... op) #'(#%app op e ...)]))
+
+  (check-equal? (with-default-line-macro
+                  app
+                  (#%linea-expressions-begin
+                   (#%linea-line + 4 5 6)))
+                15)
+  (check-equal? (with-default-line-macro
+                  app
+                  (#%linea-expressions-begin
+                   (#%linea-line rpn-app 4 5 6 +)))
+                15)
+  (check-equal? (splicing-with-default-line-macro
+                  app
+                  (#%linea-expressions-begin
+                   (#%linea-line + 4 5 6)))
+                15)
+  )
