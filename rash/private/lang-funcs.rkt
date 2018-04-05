@@ -242,18 +242,28 @@ But how can it be done in a way that let those arguments affect the reader?
                                          #:context stx
                                          #:no-duplicates? #t))
 
-                (with-syntax ([parsed-rash-code (linea-read-syntax-string rest-stx)]
-                              [input (opref tab '#:in #'mk-input)]
+                (with-syntax ([input (opref tab '#:in #'mk-input)]
                               [output (opref tab '#:out #'mk-output)]
                               [err-output (opref tab '#:err #'mk-err-output)]
                               [default-starter (opref tab '#:default-starter
                                                       #'#'mk-default-starter)]
                               [line-macro (opref tab '#:default-line-macro
                                                  #'#'mk-line-macro)])
-                  #'(rash-expressions-begin (input output err-output
-                                                   default-starter
-                                                   line-macro)
-                                            parsed-rash-code))])))]))
+                  (syntax-parse rest-stx
+                    #:literals (#%linea-expressions-begin)
+                    ;; This is the case where reading was done up-front
+                    [(#%linea-expressions-begin e (... ...))
+                     #'(rash-expressions-begin (input output err-output
+                                                      default-starter
+                                                      line-macro)
+                                               (#%linea-expressions-begin e (... ...)))]
+                    ;; This is the case where code was given as a string
+                    [(arg:str (... ...))
+                     (with-syntax ([parsed-rash-code (linea-read-syntax-string rest-stx)])
+                       #'(rash-expressions-begin (input output err-output
+                                                        default-starter
+                                                        line-macro)
+                                                 parsed-rash-code))]))])))]))
   )
 
 (define-syntax rash
