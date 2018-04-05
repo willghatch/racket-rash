@@ -105,10 +105,6 @@
                                             (exn->string err)
                                             err)))
            (sleep 0.01))]
-        [(and (pipeline? last-ret)
-              (pipeline-ends-with-unix-segment? last-ret))
-         ;; successful unix pipes just have a boring status code
-         (void)]
         [(pipeline? last-ret)
          (print-ret-maybe (pipeline-return last-ret) ret-number)]
         [(void? last-ret)
