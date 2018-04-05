@@ -25,12 +25,13 @@
 
 (struct linea-newline-token ())
 
+;; Some current-X definitions that are created here with a bogus initial value
+;; so that they can be referenced before their real initial value is created.
+(define current-linea-line-readtable (make-parameter #f))
+(define current-linea-s-exp-readtable (make-parameter #f))
+
 (define default-linea-line-avoid-list '(#\())
 (define current-linea-line-avoid-list (make-parameter default-linea-line-avoid-list))
-
-(define default-linea-s-exp-readtable
-  (udelimify #f))
-(define current-linea-s-exp-readtable (make-parameter default-linea-s-exp-readtable))
 
 (define (readtable-or-proc->readtable rtop)
   (cond [(readtable? rtop) rtop]
@@ -191,34 +192,6 @@
                   ;#\# #\a #f
                   ))
 
-(define default-linea-line-readtable
-  (make-list-delim-readtable
-   #\[ #\] #:inside-readtable default-linea-s-exp-readtable
-   #:base-readtable
-   (make-list-delim-readtable
-    #\{ #\} #:inside-readtable default-linea-s-exp-readtable
-    #:base-readtable
-    (make-list-delim-readtable
-     #\( #\) #:inside-readtable default-linea-s-exp-readtable
-     #:base-readtable
-     (make-string-delim-readtable
-      #\◸ #\◹ #:wrapper '#%upper-triangles
-      #:base-readtable
-      (make-string-delim-readtable
-       #\◺ #\◿ #:wrapper '#%lower-triangles
-       #:base-readtable
-       (make-string-delim-readtable
-        #\◤ #\◥ #:wrapper '#%full-upper-triangles
-        #:base-readtable
-        (make-string-delim-readtable
-         #\◣ #\◢ #:wrapper '#%full-lower-triangles
-         #:base-readtable
-         (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
-(define current-linea-line-readtable (make-parameter default-linea-line-readtable))
-
-
-(define-values (linea-read-syntax linea-read) (make-linea-read-funcs))
-
 (define (readtable-add-linea-escape
          l-delim r-delim
          #:base-readtable [base-readtable (current-linea-s-exp-readtable)]
@@ -250,3 +223,46 @@
    #:whole-body-readers? #f
    #:wrapper final-wrapper))
 
+(define default-linea-s-exp-readtable
+  (readtable-add-linea-escape
+   #\◸ #\◹ #:wrapper '#%upper-triangles
+   #:base-readtable
+   (readtable-add-linea-escape
+    #\◺ #\◿ #:wrapper '#%lower-triangles
+    #:base-readtable
+    (readtable-add-linea-escape
+     #\◤ #\◥ #:wrapper '#%full-upper-triangles
+     #:base-readtable
+     (readtable-add-linea-escape
+      #\◣ #\◢ #:wrapper '#%full-lower-triangles
+      #:base-readtable
+      (udelimify #f))))))
+
+(define default-linea-line-readtable
+  (make-list-delim-readtable
+   #\[ #\] #:inside-readtable default-linea-s-exp-readtable
+   #:base-readtable
+   (make-list-delim-readtable
+    #\{ #\} #:inside-readtable default-linea-s-exp-readtable
+    #:base-readtable
+    (make-list-delim-readtable
+     #\( #\) #:inside-readtable default-linea-s-exp-readtable
+     #:base-readtable
+     (readtable-add-linea-escape
+      #\◸ #\◹ #:wrapper '#%upper-triangles
+      #:base-readtable
+      (readtable-add-linea-escape
+       #\◺ #\◿ #:wrapper '#%lower-triangles
+       #:base-readtable
+       (readtable-add-linea-escape
+        #\◤ #\◥ #:wrapper '#%full-upper-triangles
+        #:base-readtable
+        (readtable-add-linea-escape
+         #\◣ #\◢ #:wrapper '#%full-lower-triangles
+         #:base-readtable
+         (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
+
+(define-values (linea-read-syntax linea-read) (make-linea-read-funcs))
+
+(current-linea-s-exp-readtable default-linea-s-exp-readtable)
+(current-linea-line-readtable default-linea-line-readtable)

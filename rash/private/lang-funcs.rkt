@@ -47,6 +47,7 @@
   syntax/keyword
   racket/base
   syntax/parse
+  "linea/line-macro.rkt"
   "linea/read.rkt"
   "linea/read-syntax-string.rkt"
   udelim
@@ -55,6 +56,7 @@
   shell/private/misc-utils
 
   (for-syntax
+   "linea/line-macro.rkt"
    "linea/read.rkt"
    "linea/read-syntax-string.rkt"
    syntax/wrap-modbeg
@@ -252,7 +254,7 @@ But how can it be done in a way that let those arguments affect the reader?
                   (syntax-parse rest-stx
                     #:literals (#%linea-expressions-begin)
                     ;; This is the case where reading was done up-front
-                    [(#%linea-expressions-begin e (... ...))
+                    [((#%linea-expressions-begin e (... ...)))
                      #'(rash-expressions-begin (input output err-output
                                                       default-starter
                                                       line-macro)
