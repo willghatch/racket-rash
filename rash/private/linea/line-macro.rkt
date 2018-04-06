@@ -4,7 +4,7 @@
 
 (provide
  #%linea-line
- #%linea-not-line
+ #%linea-s-exp
  #%linea-expressions-begin
 
  define-line-macro
@@ -40,9 +40,9 @@
 
 (define-syntax #%linea-expressions-begin (make-rename-transformer #'begin))
 
-;;; #%linea-not-line is just a pass-through -- it's what wraps normal Racket forms
+;;; #%linea-s-exp is just a pass-through -- it's what wraps normal Racket forms
 ;;; when they are completely escaped from the line syntax.
-(define-syntax (#%linea-not-line stx)
+(define-syntax (#%linea-s-exp stx)
   (syntax-parse stx [(_ e) #'e]))
 
 (define-line-macro erroring-default-line-macro

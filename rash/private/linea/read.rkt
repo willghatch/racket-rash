@@ -62,7 +62,7 @@
              (let ([s (parameterize ([current-readtable (readtable-or-proc->readtable
                                                          s-exp-readtable)])
                         (read-syntax src in))])
-               (datum->syntax #f (list '#%linea-not-line s)))]
+               (datum->syntax #f (list '#%linea-s-exp s)))]
             [(equal? #\; peeked)
              (begin (read-line-comment (read-char in) in)
                     (linea-read-syntax src in))]
