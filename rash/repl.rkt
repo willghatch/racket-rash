@@ -9,6 +9,7 @@
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing
+ racket/stxparam
  racket/port
 
  basedir
@@ -26,9 +27,16 @@
 (define readline-stdin (current-input-port))
 
 (define-line-macro run-pipeline/ret-obj
-  (syntax-parser [(_ arg ...) #'(run-pipeline &pipeline-ret arg ...)]))
+  (syntax-parser [(_ arg ...)
+                  ;; Apparently splicing-syntax-parameterize is leaking through here somehow, and wrapping with a let protects this.
+                  #'(let ()
+                      (syntax-parameterize ([default-line-macro #'run-pipeline])
+                        (run-pipeline &pipeline-ret arg ...)))]))
 (define-line-macro run-pipeline/logic/ret-obj
-  (syntax-parser [(_ arg ...) #'(run-pipeline/logic &pipeline-ret arg ...)]))
+  (syntax-parser [(_ arg ...)
+                  #'(let ()
+                      (syntax-parameterize ([default-line-macro #'run-pipeline/logic])
+                        (run-pipeline/logic &pipeline-ret arg ...)))]))
 
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.
