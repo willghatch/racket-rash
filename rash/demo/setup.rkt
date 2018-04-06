@@ -45,6 +45,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
     ;; And we want it to work as a first-order function.
     [_ #'(λ args (apply values args))]))
 
+(define-syntax #%hash-braces (make-rename-transformer #'rash))
 (define-syntax #%upper-triangles (make-rename-transformer #'rash))
 (define-syntax #%lower-triangles (make-rename-transformer #'rash/wired))
 

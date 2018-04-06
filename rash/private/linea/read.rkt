@@ -211,6 +211,7 @@
          l-delim r-delim
          #:base-readtable [base-readtable (current-linea-s-exp-readtable)]
          #:wrapper [wrapper #f]
+         #:as-dispatch-macro? [as-dispatch-macro? #f]
          #:line-readtable [line-readtable current-linea-line-readtable]
          #:s-exp-readtable [s-exp-readtable current-linea-s-exp-readtable]
          #:line-avoid [line-avoid current-linea-line-avoid-list]
@@ -234,6 +235,7 @@
   (make-string-delim-readtable
    l-delim r-delim
    #:base-readtable base-readtable
+   #:as-dispatch-macro? as-dispatch-macro?
    #:string-read-syntax l-read-syntax
    #:whole-body-readers? #f
    #:wrapper final-wrapper))
@@ -251,31 +253,44 @@
      (readtable-add-linea-escape
       #\◣ #\◢ #:wrapper '#%full-lower-triangles
       #:base-readtable
-      (udelimify #f))))))
+      (readtable-add-linea-escape
+       #\{ #\}
+       #:as-dispatch-macro? #t
+       #:wrapper '#%hash-braces
+       #:base-readtable
+       (readtable-add-linea-escape
+        #\{ #\}
+        #:base-readtable
+        (udelimify #f))))))))
 
 (define default-linea-line-readtable
   (make-list-delim-readtable
    #\[ #\] #:inside-readtable default-linea-s-exp-readtable
    #:base-readtable
    (make-list-delim-readtable
-    #\{ #\} #:inside-readtable default-linea-s-exp-readtable
+    #\( #\) #:inside-readtable default-linea-s-exp-readtable
     #:base-readtable
-    (make-list-delim-readtable
-     #\( #\) #:inside-readtable default-linea-s-exp-readtable
+    (readtable-add-linea-escape
+     #\◸ #\◹ #:wrapper '#%upper-triangles
      #:base-readtable
      (readtable-add-linea-escape
-      #\◸ #\◹ #:wrapper '#%upper-triangles
+      #\◺ #\◿ #:wrapper '#%lower-triangles
       #:base-readtable
       (readtable-add-linea-escape
-       #\◺ #\◿ #:wrapper '#%lower-triangles
+       #\◤ #\◥ #:wrapper '#%full-upper-triangles
        #:base-readtable
        (readtable-add-linea-escape
-        #\◤ #\◥ #:wrapper '#%full-upper-triangles
+        #\◣ #\◢ #:wrapper '#%full-lower-triangles
         #:base-readtable
         (readtable-add-linea-escape
-         #\◣ #\◢ #:wrapper '#%full-lower-triangles
+         #\{ #\}
+         #:as-dispatch-macro? #t
+         #:wrapper '#%hash-braces
          #:base-readtable
-         (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim)))))))))
+         (readtable-add-linea-escape
+          #\{ #\}
+          #:base-readtable
+          (make-string-delim-readtable #\« #\» #:base-readtable line-readtable/pre-delim))))))))))
 
 (define-values (linea-read-syntax linea-read) (make-linea-read-funcs))
 
