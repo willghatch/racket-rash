@@ -15,6 +15,7 @@
  ;; Short names
  \|
  \|>
+ \|>>
  _
 
  &&
@@ -38,7 +39,8 @@
   ))
 
 (define-syntax \| (make-rename-transformer #'=unix-pipe=))
-(define-syntax \|> (make-rename-transformer #'=object-pipe=))
+(define-syntax \|> (make-rename-transformer #'=basic-object-pipe=))
+(define-syntax \|>> (make-rename-transformer #'=object-pipe=))
 (define-syntax _ (make-rename-transformer #'current-pipeline-argument))
 
 (define-syntax && (make-rename-transformer #'and/success))
