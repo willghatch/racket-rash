@@ -14,5 +14,5 @@
                ;; temporarily
                "text-table"
                ))
-(define version "0.1")
+(define version "0.2")
 
