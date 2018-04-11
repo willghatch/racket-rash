@@ -13,11 +13,14 @@ rash
 @bold{Rash}, @italic{adj} 1.  Hurrying into action or assertion without due caution and regardless of prudence, hasty, reckless, precipitate.  “@italic{A rash programmer is likely to produce shell scripts.}”
 
 
+
 I made a quick demo recording of an interactive repl
 @hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
+It's a little out of date.  I should make a new and better one.
 
 Also I gave a talk at RacketCon 2017 about it, which can be viewed
 @hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
+There have been some changes since the talk was given, but the core ideas are the same.
 
 
 @section{Stability}
@@ -48,13 +51,13 @@ ls | grep foobar
 ;; We can make all sorts of interesting piplines that include
 ;; external processes and racket functions
 ;; See the run-pipeline docs for more information.
-ls |> string-upcase | cowsay
+ls |>> string-upcase | cowsay
 
 ;; Note that the pipe (|) character is normal in the
 ;; Rash reader, unlike the default Racket reader.
-;; In normal Racket, you would type \| or \|>.
+;; In normal Racket, you would type \| or \|>>.
 ;; | is actually short for =unix-pipe=.
-;; |> is short for =object-pipe=.
+;; |>> is short for =object-pipe=.
 ;; By convention, pipeline operators are named with = signs.
 ;; Because they sort of look like pipes.  =I= =guess=.
 ;; I have made a few handy pipeline operators in the
@@ -102,7 +105,7 @@ ls (list '-l (if (even? (random 2)) '-a '-h)) | grep foobar
 ;; But =unix-pipe= has a convenience to add a parser
 ;; with the #:as flag.
 (require json)
-echo "[1, 2, 3]" #:as read-json |> map add1
+echo "[1, 2, 3]" #:as read-json |>> map add1
 
 ;; The =unix-pipe= also supports some things you might expect
 ;; in a Unix shell -- ~ expansion, $ENVIRONMENT_VARIABLE
@@ -115,13 +118,12 @@ cp ~/my-dir/*.rkt $HOME/$my-new-dir/
 ;; Now ls has color.
 ls $XDG_CONFIG_HOME
 
-;; If you want to break up a long line, you can comment
-;; out the newline like so.  I will add \ to escape the
-;; newline like other shell languages, but I haven't yet
-;; because I think the way I'll add it is gross, but
-;; sooner or later I will definitely add it.
-ls -laH /sys/class/power_supply/BAT0 | grep now #|
-|# |> string-upcase | cowsay
+;; If you want to break up a long line, you can escape
+;; the newline with a backslash.  Or you can use a
+;; multiline comment.
+ls -laH /sys/class/power_supply/BAT0 \
+   | grep now #|
+|# |>> string-upcase | cowsay
 
 ;; If you want to turn one line into two logical lines like
 ;; this bash snippet: `ls ; cd ..`. too bad.
@@ -132,6 +134,17 @@ ls -laH /sys/class/power_supply/BAT0 | grep now #|
 ;; This when a command in the middle of the pipeline
 ;; is unsuccessful.  There are some flags for controlling
 ;; the specific behavior.
+
+;; Braces switch reading to line-mode.
+;; They are enabled in line-mode itself and in s-expression-mode.
+;; Line-macros can use them for blocks.
+in-dir /tmp {
+  ;; print "in /tmp"
+  echo in (current-directory)
+  ;; You could do more things in /tmp
+  ;; and when this block is done current-directory
+  ;; will be back to its previous value.
+}
 
 }|
 
@@ -193,7 +206,7 @@ The line syntax has no special control flow forms -- when I'm ready to write con
 #lang rash
 
 (if want-capitals?
-    (rash «ls -l |> string-upcase»)
+    (rash «ls -l |>> string-upcase»)
     (rash «ls -l»))
 }|
 

@@ -29,6 +29,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
  racket/port
  racket/function
  file/glob
+ shell/utils/bourne-expansion-utils
  (for-syntax
   racket/base
   racket/syntax
@@ -140,5 +141,14 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 ;; note that grep returns 1 when it finds nothing, which is normally considered an error
 (define-simple-pipeline-alias grep "grep" #:success (list 1))
 
-
+(define-line-macro in-dir
+  (syntax-parser
+    [(_ dirs body)
+     #`(let ([edirs #,(dollar-expand-syntax #'dirs #:glob-expand? #t)])
+         (if (list? edirs)
+             (for/list ([d edirs])
+               (parameterize ([current-directory (and (directory-exists? d) d)])
+                 body))
+             (parameterize ([current-directory (and (directory-exists? edirs) edirs)])
+               body)))]))
 
