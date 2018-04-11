@@ -4,8 +4,8 @@
  "main.rkt"
  (submod "private/lang-funcs.rkt" for-repl)
  "private/repl-namespace.rkt"
- "private/linea/line-macro.rkt"
- "private/linea/read.rkt"
+ linea/line-macro
+ linea/read
  "private/option-app.rkt"
  "private/rashrc-lib.rkt"
  racket/splicing

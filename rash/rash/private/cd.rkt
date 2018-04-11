@@ -5,7 +5,7 @@
  )
 
 (require
- "linea/line-macro.rkt"
+ linea/line-macro
  (only-in shell/pipeline path-string-symbol?)
  racket/contract
  shell/utils/bourne-expansion-utils

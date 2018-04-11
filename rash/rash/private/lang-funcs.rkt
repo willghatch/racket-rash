@@ -8,7 +8,7 @@
  cd
 
  (all-from-out shell/pipeline-macro)
- (all-from-out "linea/line-macro.rkt")
+ (all-from-out linea/line-macro)
 
  make-rash-reader-submodule
  define-rash-module-begin
@@ -35,9 +35,9 @@
  racket/string
  racket/port
  "cd.rkt"
- "linea/line-macro.rkt"
- "linea/read.rkt"
- "linea/read-syntax-string.rkt"
+ linea/line-macro
+ linea/read
+ linea/read-syntax-string
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
  syntax/parse
  syntax/wrap-modbeg
@@ -47,18 +47,18 @@
   syntax/keyword
   racket/base
   syntax/parse
-  "linea/line-macro.rkt"
-  "linea/read.rkt"
-  "linea/read-syntax-string.rkt"
+  linea/line-macro
+  linea/read
+  linea/read-syntax-string
   udelim
   racket/port
   syntax/strip-context
   shell/private/misc-utils
 
   (for-syntax
-   "linea/line-macro.rkt"
-   "linea/read.rkt"
-   "linea/read-syntax-string.rkt"
+   linea/line-macro
+   linea/read
+   linea/read-syntax-string
    syntax/wrap-modbeg
    racket/base
    syntax/parse
@@ -146,7 +146,7 @@ But how can it be done in a way that let those arguments affect the reader?
            this-module-path
            #:read-syntax linea-read-syntax
            #:read linea-read
-           (require rash/private/linea/read)))]))
+           (require linea/read)))]))
 
 (define-syntax (identity-macro stx)
   (syntax-parse stx
@@ -188,7 +188,7 @@ But how can it be done in a way that let those arguments affect the reader?
                [(_ arg (... ...))
                 #'(wrap-modbeg-name
                    (module configure-runtime racket/base
-                     (require rash/private/linea/read
+                     (require linea/read
                               rash/private/lang-funcs
                               this-mod-path)
                      (current-read-interaction
