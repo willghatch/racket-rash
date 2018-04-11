@@ -202,6 +202,11 @@ Like @racket[=basic-object-pipe/form=], except that when not used as a pipeline 
 
 To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @code{(arg ...)} must be equivalent to a function application form and not a macro invocation form.
 }
+@defform[#:kind "pipeline-operator" (\|> arg ...+)]{
+Alias for @racket[=basic-object-pipe=].
+
+Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
+}
 
 @defform[#:kind "pipeline-operator" (=object-pipe/expression= arg ...+)]{
 Like @racket[=basic-object-pipe/expression=], but when it receives a port as an argument, it converts it to a string.
@@ -212,10 +217,10 @@ Like @racket[=basic-object-pipe/form=], but when it receives a port as an argume
 @defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
 }
-@defform[#:kind "pipeline-operator" (\|> arg ...+)]{
+@defform[#:kind "pipeline-operator" (\|>> arg ...+)]{
 Alias for @racket[=object-pipe=].
 
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
+Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>>}.
 }
 
 @defidform[#:kind "pipeline-operator"
