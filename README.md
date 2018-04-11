@@ -21,5 +21,5 @@ locally by running `raco docs rash`.  You can install the git version
 by running 
 `git clone https://github.com/willghatch/racket-rash rash && cd rash && raco pkg install`
 
-See also the [shell-pipeline](https://github.com/willghatch/racket-shell-pipeline)
-library that contains most of the actual meat of the Rash language.
+
+This repo also contains the [shell-pipeline](https://github.com/willghatch/racket-shell-pipeline) and linea packages.  They mostly support Rash itself, so they live in the same repo.
