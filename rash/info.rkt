@@ -1,4 +1,17 @@
 #lang info
 
-(define racket-launcher-names '("rash-repl"))
-(define racket-launcher-libraries '("repl.rkt"))
+(define collection 'multi)
+(define deps '(("base" #:version "6.12")
+               "basedir"
+               "shell-pipeline"
+               "udelim"
+               "scribble-lib"
+               "scribble-doc"
+               "racket-doc"
+               "rackunit-lib"
+               "readline-lib"
+               ;; temporarily
+               "text-table"
+               ))
+(define version "0.1")
+
