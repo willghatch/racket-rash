@@ -23,7 +23,9 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  =obj-if-def/unix-if-undef=
  =obj-if-def/globbing-unix-if-undef=
 
+ =map=
  =filter=
+ =foldl=
  )
 
 (provide lsl)
@@ -36,6 +38,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  racket/stream
  racket/string
  file/glob
+ racket/stxparam
  (for-syntax
   racket/base
   syntax/parse
@@ -195,6 +198,23 @@ then it needs to standardize the output...
                        (u-pipeline-member-spec
                         (list (u-alias-func
                                (λ () (flatten (list 'cmd narg ...)))))))))]))]))
+
+(define-pipeline-operator =map=
+  #:joint (syntax-parser
+            [(_ arg ...)
+             (expand-pipeline-arguments
+              #'(arg ...)
+              #'iter-arg
+              (syntax-parser
+                [(#t narg ...)
+                 #'(object-pipeline-member-spec (λ (prev-ret)
+                                                  (map (λ (iter-arg) (narg ...))
+                                                       prev-ret)))]
+                [(#f narg ...)
+                 #'(object-pipeline-member-spec (λ (prev-ret)
+                                                  (map (λ (iter-arg) (narg ... iter-arg))
+                                                       prev-ret)))]))]))
+
 (define-pipeline-operator =filter=
   #:joint (syntax-parser
             [(_ arg ...)
@@ -210,3 +230,15 @@ then it needs to standardize the output...
                  #'(object-pipeline-member-spec (λ (prev-ret)
                                                   (filter (λ (iter-arg) (narg ... iter-arg))
                                                           prev-ret)))]))]))
+(define-pipeline-operator =foldl=
+  #:joint (syntax-parser
+            [(_ accum-name accum-expr arg ...+)
+             #'(object-pipeline-member-spec
+                (λ (prev-ret)
+                  (foldl (λ (iter-arg accum-name)
+                           (syntax-parameterize ([current-pipeline-argument
+                                                  (make-rename-transformer #'iter-arg)])
+                             (arg ...)))
+                         accum-expr
+                         prev-ret)))]))
+
