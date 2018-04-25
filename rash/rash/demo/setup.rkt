@@ -37,7 +37,7 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
   ))
 
 ;; convenient short name for identity line-macro and function
-(define-line-macro id
+(define-line-macro val
   (syntax-parser
     ;; pass through the normal case
     [(_ e) #'e]

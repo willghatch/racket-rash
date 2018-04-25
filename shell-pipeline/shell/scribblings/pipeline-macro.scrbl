@@ -2,6 +2,9 @@
 
 @(require
 (for-label shell/pipeline-macro
+           (except-in racket/base _)
+           racket/list
+           (only-in shell/demo/more-pipeline-operators =map= =filter=)
            (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
            ))
 
@@ -25,7 +28,7 @@ library.  It is designed for running pipelines of external processes (which pass
 
 Here are some quick examples:
 
-@verbatim{
+@codeblock{
 ;; Pipe the output of ls to grep.
 (run-pipeline =unix-pipe= ls -l =unix-pipe= grep foo)
 
@@ -35,7 +38,7 @@ Here are some quick examples:
 
 We can also pipeline objects.  Object pipelines are full of functions instead of process specifications.
 
-@verbatim{
+@codeblock{
 ;; This will return 2
 (run-pipeline =object-pipe= list 1 2 3 =object-pipe= second)
 
@@ -45,7 +48,7 @@ We can also pipeline objects.  Object pipelines are full of functions instead of
 
 We can mix the two:
 
-@verbatim{
+@codeblock{
 ;; Capitalized ls output.  =object-pipe= automatically converts ports to strings.
 (run-pipeline % ls -l %> string-upcase)
 }
@@ -86,17 +89,19 @@ The pipeline-member-specs are transformed according to the pipeline operators gi
 
 At the time of writing I'm not really sure what to write here, so have an example:
 
-@(racketblock (run-pipeline =object-pipe= list 1 2 3
-                            =for/list= + 1 current-pipeline-argument
-                            =for/list= + 1))
+@codeblock{(run-pipeline =object-pipe= list 1 2 3
+                         =map= + 1 current-pipeline-argument
+                         =map= + 1)}
 
-This returns @(racketblock (list 3 4 5)).  Notice that current-pipeline-argument is placed automatically for the second =for/list= operator -- it could have been left off of the other one as well, but I wanted to show what identifier is sneakily added.
+This returns @(racketblock (list 3 4 5)).  Notice that @racket[current-pipeline-argument] is placed automatically for the second =map= operator -- it could have been left off of the other one as well, but I wanted to show what identifier is sneakily added.
 
 If we instead run
-@(racketblock (run-pipeline =object-pipe= list 1 2 3
-                            =for/list= + 1 current-pipeline-argument
-                            =for/list= + 1
-                            &bg))
+@codeblock{
+(run-pipeline =object-pipe= list 1 2 3
+              =map= + 1 current-pipeline-argument
+              =map= + 1
+              &bg)
+}
 we will get a pipeline object back.  Conceptually it is still running when it is returned, though in this case it's likely finished by the time we can inspect it.  We can use @racket[pipeline?], @racket[pipeline-success?], @racket[pipeline-return], etc on it.
 
 }
@@ -158,7 +163,7 @@ TODO - env modification
 @defform[#:kind "pipeline-operator" (=quoting-basic-unix-pipe= options ... args ...+)]{
 Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that are identifiers.  All non-identifier arguments (notably parenthesized forms) are not quoted, and thus you can unquote by using parentheses.
 
-@verbatim|{
+@codeblock|{
 (define x "/etc")
 (define-syntax id (syntax-parser [(_ x) #'x]))
 
@@ -174,17 +179,19 @@ After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=
 
 However, if the first argument is a pipeline alias defined with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias], then the operator from that alias is swapped in instead, skipping everything else that this operator would normally do.
 
-@verbatim|{
+@codeblock|{
 (run-pipeline =unix-pipe= echo $HOME/*.rkt)
 (define-simple-pipeline-alias d 'ls '--color=auto)
 (define dfdir 'dotfiles)
 (run-pipeline =unix-pipe= d $HOME/$dfdir)
 }|
+
+Usually @racket[\|] is used instead.
 }
 @defform[#:kind "pipeline-operator" (\| arg ...+)]{
 Alias for @racket[=unix-pipe=].
 
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
+Note that the backslash is required in the normal racket reader because @bold{|} is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|}.
 }
 
 @defform[#:kind "pipeline-operator" (=basic-object-pipe/expression= e)]{
@@ -201,11 +208,13 @@ As with other object pipes, when used as a pipeline starter it generates a lambd
 Like @racket[=basic-object-pipe/form=], except that when not used as a pipeline starter, if the @racket[current-pipeline-argument] is not used within the arguments, it is appended as the last argument.
 
 To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @code{(arg ...)} must be equivalent to a function application form and not a macro invocation form.
+
+Usually @racket[\|>] is used instead.
 }
 @defform[#:kind "pipeline-operator" (\|> arg ...+)]{
 Alias for @racket[=basic-object-pipe=].
 
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
+Note that the backslash is required in the normal racket reader because @bold{|} is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
 }
 
 @defform[#:kind "pipeline-operator" (=object-pipe/expression= arg ...+)]{
@@ -216,11 +225,13 @@ Like @racket[=basic-object-pipe/form=], but when it receives a port as an argume
 }
 @defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
+
+Usually @racket[\|>>] is used instead.
 }
 @defform[#:kind "pipeline-operator" (\|>> arg ...+)]{
 Alias for @racket[=object-pipe=].
 
-Note that the backslash is required in the normal racket reader because | is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>>}.
+Note that the backslash is required in the normal racket reader because @bold{|} is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>>}.
 }
 
 @defidform[#:kind "pipeline-operator"
@@ -228,7 +239,7 @@ Note that the backslash is required in the normal racket reader because | is nor
 Syntax parameter determining which pipeline operator is inserted when a @racket[run-pipeline] form doesn't explicitly start with one.
 }
 
-I've written various other pipeline operators that are a little more exciting and that are currently in the demo directory of the repository.  I'll eventually polish them up and put them somewhere stable.  They include things like unix pipes that automatically glob things, unix pipes that have lexically scoped alias resolution, =filter=, =for/list=, =for/stream=,=for/list/unix-arg=,=for/list/unix-input=...
+I've written various other pipeline operators that are a little more exciting and that are currently in the demo directory of the repository.  I'll eventually polish them up and put them somewhere stable.  They include things like unix pipes that automatically glob things, unix pipes that have lexically scoped alias resolution, =filter=, =map=, =for/stream=,=for/list/unix-arg=,=for/list/unix-input=...
 
 @subsection{Defining Pipeline Operators}
 
@@ -248,13 +259,13 @@ Example uses are in the demo directory in the repository.
 }
 
 
-@defform[(pipeop name syntax-parser-clauses ...+)]{
-The name of this will probably change.  And maybe it will go away entirely.  I'm not sure yet.
-
-@racket[pipeop] is a more streamlined version of @racket[define-pipeline-operator].  It defines a pipeline operator where both @racket[#:start] and @racket[#:joint] are the same.  The syntax transformer used is basically @code{(syntax-parser syntax-parser-clauses ...)}.  I made this because I thought it would be a convenient way to be able to swiftly define a new pipeline even interactively in the Rash repl.
-
-Example uses are in the demo directory.
-}
+@;@defform[(pipeop name syntax-parser-clauses ...+)]{
+@;The name of this will probably change.  And maybe it will go away entirely.  I'm not sure yet.
+@;
+@;@racket[pipeop] is a more streamlined version of @racket[define-pipeline-operator].  It defines a pipeline operator where both @racket[#:start] and @racket[#:joint] are the same.  The syntax transformer used is basically @code{(syntax-parser syntax-parser-clauses ...)}.  I made this because I thought it would be a convenient way to be able to swiftly define a new pipeline even interactively in the Rash repl.
+@;
+@;Example uses are in the demo directory.
+@;}
 
 
 @defform[(define-pipeline-alias name transformer)]{
@@ -262,7 +273,7 @@ Defines an alias macro recognized by @racket[=unix-pipe=] and maybe others.
 
 @racket[transformer] must be a syntax transformer function, and must return a syntax object that starts with a pipeline operator.
 
-@verbatim|{
+@codeblock|{
 ;; Unix `find` has to take the directory first, but we want
 ;; to always add the -type f flag at the end.
 (define-pipeline-alias find-f
@@ -270,15 +281,15 @@ Defines an alias macro recognized by @racket[=unix-pipe=] and maybe others.
     [(_ arg ...) #'(=unix-pipe= find arg ... -type f)]))
 
 ;; these are equivalent
-(run-pipeline =unix-pipe= find-f .)
-(run-pipeline =unix-pipe= find . -type f)
+(run-pipeline =unix-pipe= find-f ".")
+(run-pipeline =unix-pipe= find "." -type f)
 }|
 }
 
 @defform[(define-simple-pipeline-alias name cmd arg ...)]{
 Simple sugar for @racket[define-pipeline-alias].  It defines an alias transformer that uses @racket[=unix-pipe=].
 
-@verbatim|{
+@codeblock|{
 (define-simple-pipeline-alias ls 'ls '--color=auto)
 ;; these are equivalent
 (run-pipeline =unix-pipe= d -l $HOME)
@@ -288,6 +299,8 @@ Simple sugar for @racket[define-pipeline-alias].  It defines an alias transforme
 
 @defform[#:id current-pipeline-argument current-pipeline-argument]{
 The name of the implicit argument for object pipes.  The default is an error, and pipe operators that accept it must set it up using @racket[expand-pipeline-arguments] or @racket[syntax-parameterize].
+
+Usually @racket[_] is used instead.
 }
 @defform[#:id _ _]{
 Alias for @racket[current-pipeline-argument].  It's an underscore, if you're having trouble telling which of the many horizontal line characters it is since it's all alone right there in that bar.

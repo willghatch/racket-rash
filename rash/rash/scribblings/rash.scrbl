@@ -1,249 +1,178 @@
 #lang scribble/manual
 
-@title[#:tag "rash"]{RASH: RAcket SHell Library}
+@title[#:tag "rash"]{Rash: The Reckless Racket Shell}
 @author+email["William Hatch" "william@hatch.uno"]
 
 @defmodule[rash]
 @(require
+(for-syntax
+racket/base
+syntax/parse
+)
 (for-label
 rash
+(only-in rash/demo/setup in-dir =map= =filter= =foldl=)
+(except-in racket/base _ do)
+racket/port
+syntax/parse
 (prefix-in shell/pipeline-macro/ shell/pipeline-macro)
 ))
 
+@(define-syntax (irash stx)
+   (syntax-parse stx
+     [(_ e1 e ...)
+      #`(codeblock #:keep-lang-line? #f
+                   #,(datum->syntax #'e1 "#lang rash")
+                   "\n" e1 e ...)]))
+
 @bold{Rash}, @italic{adj} 1.  Hurrying into action or assertion without due caution and regardless of prudence, hasty, reckless, precipitate.  “@italic{A rash programmer is likely to produce shell scripts.}”
-
-
-
-I made a quick demo recording of an interactive repl
-@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
-It's a little out of date.  I should make a new and better one.
-
-Also I gave a talk at RacketCon 2017 about it, which can be viewed
-@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
-There have been some changes since the talk was given, but the core ideas are the same.
-
 
 @section{Stability}
 
-Rash is not entirely stable.  It's still missing features, and there are some names and APIs I want to re-visit.  It's in active development.
+Rash is not stable.
 
-However, I use it as my default shell on my laptop, and already like it much better than Bash.  I also never launch the Racket repl anymore because Rash does everything the repl does.  Try it out, and please report bugs and feedback to me!  (Note that at the time of writing, completion and line editing work but are in the readline branch waiting for the next upstream release of the readline package that it relies on.)
+But it's getting closer, and it's definitely usable as an interactive shell/repl.
 
-@section{RASH Guide}
+@section{Rash Guide}
 
-Rash is a language and library for shell programming.  It provides a nice line-based syntax that make many shell interactions feel similar to other common shells, and provides easy program pipelining by re-providing from
-@secref["pipeline-macro"
-        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
+Rash is a shell language embedded in Racket.  It has a concrete syntax that is amenable to quick and easy interactions without lots of punctuation overhead.  It aims to allow shell-style interaction and programming to be freely mixed with more general-purpose Racket code.  Like shells you can use it as a day-to-day interface for computing, run programs, wire processes together, etc.  You can copy interactive code into a file and have a working script.  Then you can generalize from there.  However, you have access to all of Racket, its data structures, its libraries, its macro system, and its other DSLs as you make your scripts more general.  Also it allows shell-style process wrangling to be mixed with Racket code, pipelines of functions that pass objects, and much more.  You can gradually move between shell-style Rash code and more normal and general Racket code in different parts of a script, or throw verbatim interactions directly into existing programs as you explore the solution space.
 
-Here is a quick example to show what it looks like:
+@; TODO - section links for shell/pipeline-macro and linea
+@;Rash is essentially the combination of two parts:  the shell/pipeline-macro library, which provides a DSL for pipelining processes and Racket functions, and the Linea reader, which provides a line-oriented alternative way to write s-expressions.
 
-@verbatim|{
+Here follows a quick overview that assumes some knowledge of shell languages like Bash as well as Racket.
+
+Rash can do the sorts of things you expect from shell languages, and a lot of cues for syntax have been taken from traditional Bourne-derived shells.  The following program works as you would expect.@margin-note{Note that Rash is not remotely Posix Shell compliant.}
+
+@codeblock{
 #lang rash
-
-;; the beginning and end of lines act like parens
-run-pipeline ls | grep foobar
-
-;; Every line starts with a line-macro.
-;; If it doesn't have one, a default is inserted.
-;; This default is, by default, run-pipeline.
-ls | grep foobar
-
-;; We can make all sorts of interesting piplines that include
-;; external processes and racket functions
-;; See the run-pipeline docs for more information.
-ls |>> string-upcase | cowsay
-
-;; Note that the pipe (|) character is normal in the
-;; Rash reader, unlike the default Racket reader.
-;; In normal Racket, you would type \| or \|>>.
-;; | is actually short for =unix-pipe=.
-;; |>> is short for =object-pipe=.
-;; By convention, pipeline operators are named with = signs.
-;; Because they sort of look like pipes.  =I= =guess=.
-;; I have made a few handy pipeline operators in the
-;; demo directory of the shell-pipeline library.
-;; At some point I'll put the most useful ones in the standard
-;; exports of the library.  But you can also make your own.
-
-;; Inside a pipeline you can use parentheses
-;; to escape to Racket.
-;; Here we compute the arguments to `ls`.
-ls (list '-l (if (even? (random 2)) '-a '-h)) | grep foobar
-
-;; If a line starts with a parenthesis, it is
-;; treated as a normal Racket form -- no line macro
-;; nonsense.
-(define (add6 x) (+ 6 x))
-(require racket/match)
-
-;; This creates one potential ambiguity:
-;; If you really want parens at the start of a
-;; line with an implicit line macro.
-;; For example, here we want to compute which
-;; compiler to use:
-;;
-;; WRONG
-;; (if use-clang? 'clang 'gcc) -o foo foo.c
-;;
-;; We can use another type of paren, like a bracket
-;; or brace.  It's a bit of an ugly hack, but
-;; the convenience of allowing parens to make
-;; normal racket forms is worth it.
-;;
-;; RIGHT
-(define use-clang? (even? (random 2)))
-[if use-clang? 'clang 'gcc] -o foo foo.c
-;; But this could potentially change in the future.
-;; I'm considering making a line that starts with any type of
-;; paren be a non-line-macro line.  So you would have to
-;; explicitly add a line-macro or the starter pipe.
-| (if use-clang? 'clang 'gcc) -o foo foo.c
-
-;; Pipelines can pass objects as well as byte streams.
-;; The =unix-pipe= operator returns a port, and the
-;; =object-pipe= automatically converts it to a string.
-;; But =unix-pipe= has a convenience to add a parser
-;; with the #:as flag.
-(require json)
-echo "[1, 2, 3]" #:as read-json |>> map add1
-
-;; The =unix-pipe= also supports some things you might expect
-;; in a Unix shell -- ~ expansion, $ENVIRONMENT_VARIABLE
-;; expansion, glob expansion, and $local-variable expansion.
-(define my-new-dir "my-new-dir")
-cp ~/my-dir/*.rkt $HOME/$my-new-dir/
-
-;; The =unix-pipe= also supports aliases.
-(define-simple-pipeline-alias ls 'ls '--color=auto)
-;; Now ls has color.
-ls $XDG_CONFIG_HOME
-
-;; If you want to break up a long line, you can escape
-;; the newline with a backslash.  Or you can use a
-;; multiline comment.
-ls -laH /sys/class/power_supply/BAT0 \
-   | grep now #|
-|# |>> string-upcase | cowsay
-
-;; If you want to turn one line into two logical lines like
-;; this bash snippet: `ls ; cd ..`. too bad.
-;; I'm considering adding something to break up a line, but
-;; I haven't decided how I want to do it yet.
-
-;; When a pipeline is unsuccessful, an exception is thrown.
-;; This when a command in the middle of the pipeline
-;; is unsuccessful.  There are some flags for controlling
-;; the specific behavior.
-
-;; Braces switch reading to line-mode.
-;; They are enabled in line-mode itself and in s-expression-mode.
-;; Line-macros can use them for blocks.
-in-dir /tmp {
-  ;; print "in /tmp"
-  echo in (current-directory)
-  ;; You could do more things in /tmp
-  ;; and when this block is done current-directory
-  ;; will be back to its previous value.
+cd project-directory
+echo How many Racket files do we have?
+ls *.rkt | wc -l
 }
 
-}|
+You can use Racket functions in pipelines.
 
-We can use rash not only by using #lang rash, but also by using the @racket[rash] macro in any other language:
+@irash{
+;; This returns the hostname as a string in all caps
+cat /etc/hostname |> port->string |> string-upcase
+}
 
-@verbatim|{
-#lang racket
-(require rash)
-(rash "ls -l")
-}|
+Pipelines pass objects.  When a process pipeline segment is next to a function pipeline segment, it passes a port to the function segment.  When a function segment is followed by a process segment, the return value of the function segment is printed to the stdin of the process.
 
-The macro reads the string at compile time and turns it into syntax-objects with proper hygiene information, so within the rash code you can refer to variables in scope at the @racket[rash] use site.  But normal strings are inconvenient -- they require escaping to write many things, and they don't provide enough information to get exact location information.  I use string delimiters from the udelim package instead:
+The |>> operator is like the |> operator except that if it receives a port it converts it to a string automatically.  So the above example can be simplified as:
 
-@verbatim|{
-#lang udelim racket
-(require rash)
-(rash «ls -l»)
+@irash{
+cat /etc/hostname |>> string-upcase
+}
 
-;; These weird strings are especially useful for nesting.
-;; You don't have to quote anything, just balance the delimiters.
-(rash «cat (rash «which myscript.rkt»)»)
-}|
+You can also make pipelines composed entirely of Racket functions.
 
-See the udelim docs for more detailed information on the string delimiters (particularly @racket[make-string-delim-readtable]).  The extra delimiters provided by @racket[make-udelim-readtable] are enabled by default in #lang rash and inside the @racket[rash] macro.
+@irash{
+|> directory-list |> map delete-file
+}
 
-@verbatim|{
-#lang udelim racket
-(require rash)
+Pipelines always start with an operator, and if none is specified the @racket[default-pipeline-starter] is inserted.  Pipeline operators are user-definable with @racket[define-pipeline-operator].  Defining new operators can help make common patterns shorter, simpler, and flatter.  For instance the @racket[=map=] operator wraps the @racket[map] function, allowing you to specify just the body of a lambda.
 
-;; The rash macro is like a `begin`.
-(rash «ls -l
-       cd ..
-       cowsay "hello"»)
+@irash{
+;; These two are the same.
+|> list 1 2 3 |> map (λ (x) + 2 x)
+|> list 1 2 3 =map= + 2
+}
 
-;; It splices into definition contexts like begin
-(rash «(define foo 5)
-       ;; assume def is a line macro that defines things
-       ;; and uses do-line-macro.
-       def rktfiles find . -regex rkt$
-       »)
-(+ foo 7)
-(display rktfiles)
-}|
+Pipeline operators are macros, and therefore can play any of the tricks that macros generally can in Racket.  The | operator can auto-quote symbols, turn asterisks into glob expansion code, etc.  The |> operator can detect whether the @racket[current-pipeline-argument] is used and insert it automatically.
 
-One convenient thing to do is use other udelim string delimiters that produce #%identifiers.
+If you put parentheses in the middle of a pipeline, you escape to normal Racket code.
 
-@verbatim|{
-#lang rash
-(define-syntax #%upper-triangles (make-rename-transformer #'rash))
-;; Now you can invoke the Rash macro just by using ◸◹ as parens.
+@irash{
+;; This will either show hidden files or give a long listing
+ls (if (even? (random 2)) '-l '-a)
+}
 
-;; I am always using this pattern in shells to see what I wrote in my scripts
-cat ◸which myscript.rkt◹
-}|
+Lines of code in Rash are command pipelines by default, but there are key words called line-macros that can change the behavior arbitrarily.
+@margin-note{Line-macros can be used to make C-like control-flow forms like for, try/catch, etc, to make one-off non-pipeline forms like @racket[cd], or even to make entirely new and different line-oriented languages.}
 
-The line syntax has no special control flow forms -- when I'm ready to write control flow, I'm ready to write a parenthesis.  So just use normal Racket control flow forms, and use @racket[rash] or @racket[make-rash-transformer] to get back into rash.
+@irash{
+in-dir $HOME/project {
+  make clean
+}
+}
 
-@verbatim|{
-#lang rash
+For instance, @racket[in-dir] executes code with @racket[current-directory] parameterized based on its first argument.  Note that logical rash lines don't necessarily line-up with physical lines.  Newlines can be escaped with a backslash, commented out with multiline comments, and if they are inside parentheses or braces they are handled by the recursive read.
 
-(if want-capitals?
-    (rash «ls -l |>> string-upcase»)
-    (rash «ls -l»))
-}|
+@irash{
+echo This is \
+     all #|
+     |# one (string-append
+             "logical"
+             "line")
+}
 
-Since normal Racket code essentially always starts with parens, we can use #lang rash in place of languages that use the normal reader for a lot of things -- it's almost a superset of functionality.  The one thing that breaks when switching to #lang rash is identifiers or other non-parenthesized code at the top level of a module.  But the only real reason to do that is to print the value of a variable, which can easily be done by wrapping in parens or using a line macro.
+Braces trigger a recursive line-mode read.  They are available in line-mode as well as in the embedded s-expression mode.  So they can be used to create blocks in line-mode as with the above @racket[in-dir] example, or be used to escape from the s-expression world to line-mode.
 
-@verbatim|{
-#lang racket/base
+Note that subprocess pipelines are connected to stdout and stdin in the REPL and at the top level of @tt{#lang rash}.  The most common thing you want when embedding some Rash code is for subprocess output to be converted to a string.  Using @code{#{}} switches to line-mode with defaults changed so that subprocess output is converted to a string and passed through @racket[string-trim].
 
-(define (foo x)
-  (* 37.25 x))
-(define bar (foo 22))
+@irash{
+;; I do this a lot when I don't remember what a script does
+cat #{which my-script.rkt}
+}
 
-;; get the value
-bar
-}|
+TODO - how to more generally parameterize such settings.
 
-Can translate to
+Every line in Rash is actually a line-macro.  If a line does not start with a line-macro name explicitly, @racket[default-line-macro] is inserted.  By default this is @racket[run-pipeline] in Rash.
 
-@verbatim|{
-#lang rash
+TODO - actually the default is run-pipeline/logic, which I haven't documented yet, which adds && and ||.
 
-(define (foo x)
-  (* 37.25 x))
-(define bar (foo 22))
+You can also write normal parenthesized Racket code.  If the first (non-whitespace) character on a line is an open parenthesis, the line is read as normal Racket code and no line-macro is inserted.
 
-(define-line-macro id (syntax-parser [(_ e) #'e]))
-id bar
-;; or you could do this
-;; (values bar)
-}|
+@irash{
+(define flag '-l)
+ls $flag
+}
 
-#lang rash differs from #lang racket in its treatment of top-level expressions.  #lang racket prints the result of top-level expressions, but I hate that.  #lang rash does not print the value of top-level expressions, so you should explicitly print any racket forms.  If #lang rash did print results of top-level expressions, you would get pipeline results (eg. 0 when a unix pipeline is successful), and that could be annoying.
+Note that practically all Racket code starts with an open-paren, so Rash is almost a superset of normal Racket.  The only thing lost is top-level non-parenthesized code, which is really only useful to see the value of a variable.  Most programs in @tt{#lang racket/base} could be switched to @tt{#lang rash} and still function identically, and I never launch the Racket repl anymore because rash-repl is both a shell and a full Racket repl.
 
-Rash is also useful as an interactive repl that feels like a nice mix between a normal Racket repl and an interactive Bash shell.
+@irash{
+(define x 1234)
+;; Now let's see the value of x.
+;; We can't just write `x`, but we can do any of these:
+(values x)
+|> values x
+echo $x
+val x
+}
+
+Avoiding line-macros by starting with a paren causes an annoying inconsistency -- you can't have a line-macro auto-inserted if the first argument to the line macro is a parenthesized form.
+
+@irash{
+;; We want to choose a compiler at runtime.
+run-pipeline (if use-clang? 'clang 'gcc) -o prog prog.c
+;; If we leave off the line-macro name, it will not be inserted
+;; because the line starts with a parenthesis
+(if use-clang? 'clang 'gcc) -o prog prog.c
+}
+
+This problem can be fixed by prepending the line-macro name or by using brackets instead of parentheses.  The issue doesn't come up much in practice, and it's a small sacrifice for the convenience of having both normal Racket s-expressions and Rash lines.
+
+What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured.  There are probably more things I should say.  But you can read the references for Rash, @racket[run-pipeline], and Linea.  (Rash is really just a combination of Linea and the Shell Pipeline library.)  I will replace this with better documentation soon, but I wrote this up quickly to replace the even worse and terribly out-of-date documentation that was here before.
+
+TODO - add Linea documentation.
 
 
-@section{RASH Reference}
+
+
+@;@section{Media}
+@;I made a quick demo recording of an interactive repl
+@;@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
+@;It's a little out of date.  I should make a new and better one.
+@;
+@;Also I gave a talk at RacketCon 2017 about it, which can be viewed
+@;@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
+@;There have been some changes since the talk was given, but the core ideas are the same.
+
+
+
+@section{Rash Reference}
 
 Note that all the pipeline stuff (@racket[run-pipeline],
 @racket[=unix-pipe=], @racket[=object-pipe=],
@@ -252,7 +181,11 @@ Note that all the pipeline stuff (@racket[run-pipeline],
         #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 module.
 
+TODO - rash configuration forms, reader modification...
+
 @defform[(rash options ... codestring)]{
+Deprecated.
+
 Read @racket[codestring] as rash code.
 
 Options:
@@ -274,6 +207,8 @@ Note that the input/output/error-output have different defaults for the rash mac
 }
 
 @defform[(make-rash-transformer options ...)]{
+Deprecated.
+
 This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like @racket[rash], but with different default values for the available options.
 
 @(racketblock
@@ -290,38 +225,31 @@ This takes all the same options as @racket[rash], but doesn't take a code string
 @;  (make-rash-module-begin-transformer #:default-starter #'=basic-object-pipe=)))
 @;}
 
-TODO - finish make-rash-reader-submodule and document it -- it should be like @racket[make-rash-transformer] only in should essentially create a #lang.
+@;TODO - finish make-rash-reader-submodule and document it -- it should be like @racket[make-rash-transformer] only in should essentially create a #lang.
 Note that the default #lang rash has its input/output/error-output as stdin/stdout/stderr, which is different than the rash macro.
 
-things to document:
-
-rash/wired
 
 
-
-from linea:
+@; TODO - this is from linea, probably move it:
 
 @defform[(define-line-macro name transformer-expr)]{
 
-Defines a line-macro (the type of macro that is required at the start of a rash line).
+Defines a line-macro (the type of macro that overrides the behavior of a rash line).
 
-@verbatim|{
+@codeblock|{
 #lang rash
-
+(require (for-syntax racket/base syntax/parse))
 (define-line-macro my-for
-  (λ (stx)
-    (syntax-parse stx
-      [(_ i:id from-expr body ...+)
-       #'(for ([i from-expr])
-           (body ...))])))
+  (syntax-parser
+    [(_ i:id (~datum in) from:id ... (~datum do) body:expr)
+     #'(for ([i (list 'from ...)])
+          body)]))
 
-my-for f (list "file1.txt" "file2.txt") ◸rm (id f)◹
+my-for f in file1.txt file2.txt do {
+  rm $f
+}
 }|
 
-}
-
-@defform[(do-line-macro maybe-line-macro arg ...)]{
-Run the arguments as if they are a rash line.  If the first argument is a line macro the line is essentially left as-is.  Otherwise the @racket[default-line-macro] is inserted.
 }
 
 @defform[#:id default-line-macro default-line-macro]{
@@ -330,9 +258,9 @@ Syntax parameter used to determine which line macro to place when one is not exp
 TODO - example setting and what is the default.
 }
 
-docs about reader
+@; TODO - docs about reader
 
-how to change the inside/outside readtable
+@; TODO - how to change the inside/outside readtable
 
 @defform[#:kind "line-macro" (cd directory)]{
 Change directory to given directory.  The directory is quoted, so just put a literal path or a string.
@@ -360,12 +288,12 @@ First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level 
 A few nice things (like stderr highlighting) are in a demo-rc file you can require.  To do so, add this to $HOME/.config/rash/rashrc:
 
 @verbatim|{
-(require rash/demo/demo-rc.rkt)
+(require rash/demo/demo-rc)
 }|
 
 (Rash actually follows the XDG basedir standard -- you can have rashrc.rkt or rashrc files in any directory of $XDG_CONFIG_HOME or $XDG_CONFIG_DIRS, and the rash repl will load all of them)
 
-The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit (or something like that) instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly, so for instance typing @tt{λ} turns into @tt{Î»}.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}).
+The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit (or something like that) instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}).
 
 All the following repl functions are not stable.
 
@@ -394,11 +322,71 @@ Keywords optionally given:
 }
 
 
-@section{Demo stuff}
+@;@section{Demo stuff}
+@;
+@;I have some proof-of-concept pipes and things in the demo directories of the rash and shell-pipeline repositories.  Eventually some of the good stuff from them will probably be improved and moved into the main modules.  But you can check them out for ideas of some things you might do.
+@;
+@;To use the demo, @code{(require rash/demo/setup)}.  Also look at the file to see some examples.
+@;
 
-I have some proof-of-concept pipes and things in the demo directories of the rash and shell-pipeline repositories.  Eventually some of the good stuff from them will probably be improved and moved into the main modules.  But you can check them out for ideas of some things you might do.
+@section{Demo stuff reference}
 
-To use the demo, @code{(require rash/demo/setup)}.  Also look at the file to see some examples.
+I've written various pipeline operators and line macros that I use, but I haven't decided what should be in the default language yet.  So for now they are sitting in a demo directory.  But I need some examples.  So here I'm documenting a bit.
+
+Use it with @tt{(require rash/demo/setup)}.
+@(declare-exporting rash/demo/setup)
+
+
+@defform[#:kind "pipeline-operator" (=map= arg ...)]{
+Sugar to flatten mapping.
+
+Eg.
+
+@irash{
+|> list 1 2 3 4 =map= + _ 1
+}
+is equivalent to
+@irash{
+(map (λ (x) (+ x 1)) (list 1 2 3 4))
+}
+
+The @racket[_] argument is appended to @racket[=map=]'s argument list if it is not written explicitly.
+}
+
+@defform[#:kind "pipeline-operator" (=filter= arg ...)]{
+Sugar to flatten filtering.
+
+Eg.
+
+@irash{
+|> list 1 2 3 4 =filter= even?
+}
+is equivalent to
+@irash{
+(filter (λ (x) (even? x)) (list 1 2 3 4))
+}
+
+The @racket[_] argument is appended to @racket[=filter=]'s argument list if it is not written explicitly.
+}
+
+
+@defform[#:kind "line-macro" (in-dir directory body)]{
+Dollar and glob expands the @racket[directory], then executes the @racket[body] with @racket[current-directory] parameterized to the result of expanding @racket[directory].  If glob expansion returns multiple results, the body is executed once for each of them.
+
+Eg.
+
+@irash{
+in-dir $HOME/projects/* {
+  make clean
+  make
+}
+}
+}
+
+@defform[#:kind "line-macro" (val expression)]{
+Simply returns the @racket[expression].  This is just to work around not having access to top-level unparenthesized variables.
+}
+
 
 
 @section{Code and License}
