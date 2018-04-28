@@ -48,19 +48,19 @@
 (define-line-macro erroring-default-line-macro
   (λ (stx)
     (raise-syntax-error 'erroring-default-line-macro
-                        "Currently the default line macro is just an error."
+                        "No line-macro was specified as the default for the top-level in this module.  Probably you want the #%module-begin of your language to do that."
                         stx)))
 
 (define-syntax-parameter default-line-macro #'erroring-default-line-macro)
 
-(define-syntax (with-default-line-macro stx)
-  (syntax-parse stx
+(define-line-macro with-default-line-macro
+  (syntax-parser
     [(_ new-default:line-macro e ...+)
      #'(syntax-parameterize ([default-line-macro #'new-default])
          e ...)]))
 
-(define-syntax (splicing-with-default-line-macro stx)
-  (syntax-parse stx
+(define-line-macro splicing-with-default-line-macro
+  (syntax-parser
     [(_ new-default:line-macro e ...+)
      #'(splicing-syntax-parameterize ([default-line-macro #'new-default])
          e ...)]))

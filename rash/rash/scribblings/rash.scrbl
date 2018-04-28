@@ -156,8 +156,13 @@ This problem can be fixed by prepending the line-macro name or by using brackets
 
 What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured.  There are probably more things I should say.  But you can read the references for Rash, @racket[run-pipeline], and Linea.  (Rash is really just a combination of Linea and the Shell Pipeline library.)  I will replace this with better documentation soon, but I wrote this up quickly to replace the even worse and terribly out-of-date documentation that was here before.
 
-TODO - add Linea documentation.
+Linea documentation:
+@secref["linea"
+        #:doc '(lib "linea/scribblings/linea.scrbl")]
 
+Pipeline macro documentation:
+@secref["pipeline-macro"
+        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 
 
 
