@@ -10,4 +10,7 @@
 
 (printf "adding: ~a\n" (+ x y z))
 
+(begin {echo this has a closing delimiter: '"}"})
+(begin {echo this has an opening delimiter '"{"})
+
 ls

@@ -33,6 +33,8 @@
 (define default-linea-line-avoid-list '(#\())
 (define current-linea-line-avoid-list (make-parameter default-linea-line-avoid-list))
 
+(define currently-innermost-linea-end-delim (make-parameter #f))
+
 (define (readtable-or-proc->readtable rtop)
   (cond [(readtable? rtop) rtop]
         [(procedure? rtop) (rtop)]
@@ -68,7 +70,7 @@
                     (linea-read-syntax src in))]
             [else (parameterize ([current-readtable (readtable-or-proc->readtable
                                                      line-readtable)])
-                    (linea-read-line-syntax src in))])))
+                    (linea-read-one-line src in linea-read-syntax))])))
 
   (define (linea-read in)
     (let ([out (linea-read-syntax #f in)])
@@ -78,7 +80,7 @@
 
   (values linea-read-syntax linea-read))
 
-(define (linea-read-line-syntax src in)
+(define (linea-read-one-line src in outer-linea-read-func)
   ;; the current-readtable must already be parameterized to the line-readtable
   (define (reverse/filter-newlines rlist)
     ;; Reverse the list, but also:
@@ -103,19 +105,25 @@
             [else (rec (cdr originals) (cons (car originals) dones))])))
     (rec rlist '()))
 
+  (define (finalize rlist)
+    (datum->syntax #f (cons '#%linea-line
+                            (reverse/filter-newlines rlist))))
+
   (define (rec rlist)
-    (let ([output (read-syntax src in)])
-      (cond [(and (eof-object? output) (null? rlist))
-             output]
-            [(eof-object? output)
-             (datum->syntax #f (cons '#%linea-line
-                                     (reverse/filter-newlines rlist)))]
-            [(linea-newline-token? (syntax-e output))
-             (if (null? rlist)
-                 (linea-read-syntax src in)
-                 (datum->syntax output (cons '#%linea-line
-                                             (reverse/filter-newlines rlist))))]
-            [else (rec (cons output rlist))])))
+    (read-and-ignore-hspace! in)
+    ;; Don't read on to the closing delimiter -- it would cause an error.
+    (if (equal? (peek-char in)
+                (currently-innermost-linea-end-delim))
+        (finalize rlist)
+        (let ([output (read-syntax src in)])
+          (cond [(and (eof-object? output) (null? rlist))
+                 output]
+                [(eof-object? output) (finalize rlist)]
+                [(linea-newline-token? (syntax-e output))
+                 (if (null? rlist)
+                     (outer-linea-read-func src in)
+                     (finalize rlist))]
+                [else (rec (cons output rlist))]))))
   (rec '()))
 
 
@@ -223,22 +231,44 @@
      #:s-exp-readtable s-exp-readtable
      #:line-avoid line-avoid))
 
-  (define wrapper-base
-    (syntax-parser
-      [(e ...) #`(#,(datum->syntax #f '#%linea-expressions-begin) e ...)]))
-  (define (final-wrapper stx)
-    (let ([linea-form (wrapper-base stx)])
-      (cond [(symbol? wrapper) (datum->syntax #f (list wrapper linea-form))]
-            [(procedure? wrapper) (wrapper linea-form)]
-            [else linea-form])))
+  (define (finalize rlist)
+    (let ([pre-wrapped (datum->syntax #f (cons '#%linea-expressions-begin
+                                               (reverse rlist)))])
+      (cond [(symbol? wrapper) (datum->syntax #f (list wrapper pre-wrapped))]
+            [(procedure? wrapper) (wrapper pre-wrapped)]
+            [else pre-wrapped])))
 
-  (make-string-delim-readtable
-   l-delim r-delim
-   #:base-readtable base-readtable
-   #:as-dispatch-macro? as-dispatch-macro?
-   #:string-read-syntax l-read-syntax
-   #:whole-body-readers? #f
-   #:wrapper final-wrapper))
+  (define (l-read-syntax* src port)
+    (define (rec rlist)
+      (read-and-ignore-hspace! port)
+      (if (equal? (peek-char port)
+                  r-delim)
+          (begin (read-char port)
+                 (finalize rlist))
+          (rec
+           (cons (parameterize ([currently-innermost-linea-end-delim r-delim])
+                   (l-read-syntax src port))
+                 rlist))))
+    (rec '()))
+
+  (define l-delim-read
+    (case-lambda
+      [(ch port)
+       (syntax->datum (l-delim-read ch port #f #f #f #f))]
+      [(ch port src line col pos)
+       (l-read-syntax* src port)]))
+
+  (define r-delim-read
+    (case-lambda
+      [(ch port)
+       (syntax->datum (r-delim-read ch port #f #f #f #f))]
+      [(ch port src line col pos)
+       (error 'linea-read "Unexpected closing delimiter: ~a" r-delim)]))
+
+  (make-readtable
+   base-readtable
+   r-delim 'terminating-macro r-delim-read
+   l-delim (if as-dispatch-macro? 'dispatch-macro 'terminating-macro) l-delim-read))
 
 (define default-linea-s-exp-readtable
   (readtable-add-linea-escape

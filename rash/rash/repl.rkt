@@ -60,7 +60,7 @@
   (let* ([next-input (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                                      [exn:break:terminate? (λ (e) (clean/exit))]
                                      [exn? (λ (e) (eprintf "~a\n" e)
-                                              #`(%%linea-racket-line (void)))])
+                                              #`(void))])
                        (linea-read-syntax (object-name readline-stdin)
                                           readline-stdin))]
          [exit? (if (equal? next-input eof) (exit) #f)])
