@@ -9,6 +9,7 @@
 
  (all-from-out shell/pipeline-macro)
  (all-from-out linea/line-macro)
+ (all-from-out linea/defaults)
 
  make-rash-reader-submodule
  define-rash-module-begin
@@ -36,6 +37,7 @@
  racket/port
  "cd.rkt"
  linea/line-macro
+ linea/defaults
  linea/read
  linea/read-syntax-string
  (only-in shell/private/pipeline-macro-parse rash-set-defaults)
@@ -48,6 +50,7 @@
   racket/base
   syntax/parse
   linea/line-macro
+  linea/defaults
   linea/read
   linea/read-syntax-string
   udelim
@@ -57,6 +60,7 @@
 
   (for-syntax
    linea/line-macro
+   linea/defaults
    linea/read
    linea/read-syntax-string
    syntax/wrap-modbeg
