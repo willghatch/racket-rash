@@ -82,22 +82,25 @@ These are essentially a bunch of proof-of-concept pipeline operators.
              #'(=object-pipe= cmd arg ...)
              #'(=globbing-basic-unix-pipe= cmd arg ...))])
 
+(define (cur-obj-standin)
+  (error 'cur-obj-standin "this shouldn't happen..."))
+
 (define-pipeline-operator =fors=
   #:joint
   (syntax-parser
     [( _ for-macro arg ...+)
      (expand-pipeline-arguments
       #'(arg ...)
-      #'for-iter
+      #'cur-obj-standin
       (syntax-parser
         [(#t narg ...)
          #'(object-pipeline-member-spec (λ (prev-ret)
-                                          (for-macro ([for-iter prev-ret])
+                                          (for-macro ([cur-obj-standin prev-ret])
                                                      (narg ...))))]
         [(#f narg ...)
          #'(object-pipeline-member-spec (λ (prev-ret)
-                                          (for-macro ([for-iter prev-ret])
-                                                     (narg ... for-iter))))]))]))
+                                          (for-macro ([cur-obj-standin prev-ret])
+                                                     (narg ... cur-obj-standin))))]))]))
 
 (pipeop =for/list= [(_ arg ...+) #'(=fors= for/list arg ...)])
 (pipeop =for/stream= [(_ arg ...+) #'(=fors= for/list arg ...)])
@@ -120,11 +123,11 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                      [(parg ...) (datum->syntax #f pargs)])
          (expand-pipeline-arguments
           #'((quote-if-id-not-current-arg parg) ...)
-          #'for-iter
+          #'cur-obj-standin
           (syntax-parser
             [(#t narg ...)
              #'(object-pipeline-member-spec (λ (prev-ret)
-                                              (for/list ([for-iter prev-ret])
+                                              (for/list ([cur-obj-standin prev-ret])
                                                 (run-pipeline
                                                  &out out-transformer
                                                  =basic-unix-pipe=
@@ -132,13 +135,13 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                                                  narg ...))))]
             [(#f narg ...)
              #'(object-pipeline-member-spec (λ (prev-ret)
-                                              (for/list ([for-iter prev-ret])
+                                              (for/list ([cur-obj-standin prev-ret])
                                                 (run-pipeline
                                                  &out out-transformer
                                                  =basic-unix-pipe=
                                                  kwarg ...
                                                  narg ...
-                                                 for-iter))))]))))]))
+                                                 cur-obj-standin))))]))))]))
 (define-pipeline-operator =for/list/unix-input=
   #:joint
   (syntax-parser
@@ -184,16 +187,18 @@ then it needs to standardize the output...
                      [x:id #'(quote x)]
                      [e #'e])
                    (syntax->list #'(arg ...)))
-              #'pipe-arg
+              #'cur-obj-standin
               (syntax-parser
                 [(#f narg ...) #'(=aliasing-unix-pipe= cmd narg ...)]
                 [(#t narg ...)
-                 #'(let ([pipe-arg #f])
+                 #'(let ([cur-obj-standin #f])
                      (composite-pipeline-member-spec
                       (list
                        (object-pipeline-member-spec
                         (λ (in)
-                          (begin (set! pipe-arg (if (input-port? in) (port->string in) in))
+                          (begin (set! cur-obj-standin (if (input-port? in)
+                                                           (port->string in)
+                                                           in))
                                  "")))
                        (u-pipeline-member-spec
                         (list (u-alias-func
@@ -204,32 +209,36 @@ then it needs to standardize the output...
             [(_ arg ...)
              (expand-pipeline-arguments
               #'(arg ...)
-              #'iter-arg
+              #'cur-obj-standin
               (syntax-parser
                 [(#t narg ...)
-                 #'(object-pipeline-member-spec (λ (prev-ret)
-                                                  (map (λ (iter-arg) (narg ...))
-                                                       prev-ret)))]
+                 #'(object-pipeline-member-spec
+                    (λ (prev-ret)
+                      (map (λ (cur-obj-standin) (narg ...))
+                           prev-ret)))]
                 [(#f narg ...)
-                 #'(object-pipeline-member-spec (λ (prev-ret)
-                                                  (map (λ (iter-arg) (narg ... iter-arg))
-                                                       prev-ret)))]))]))
+                 #'(object-pipeline-member-spec
+                    (λ (prev-ret)
+                      (map (λ (cur-obj-standin) (narg ... cur-obj-standin))
+                           prev-ret)))]))]))
 
 (define-pipeline-operator =filter=
   #:joint (syntax-parser
             [(_ arg ...)
              (expand-pipeline-arguments
               #'(arg ...)
-              #'iter-arg
+              #'cur-obj-standin
               (syntax-parser
                 [(#t narg ...)
-                 #'(object-pipeline-member-spec (λ (prev-ret)
-                                                  (filter (λ (iter-arg) (narg ...))
-                                                          prev-ret)))]
+                 #'(object-pipeline-member-spec
+                    (λ (prev-ret)
+                      (filter (λ (cur-obj-standin) (narg ...))
+                              prev-ret)))]
                 [(#f narg ...)
-                 #'(object-pipeline-member-spec (λ (prev-ret)
-                                                  (filter (λ (iter-arg) (narg ... iter-arg))
-                                                          prev-ret)))]))]))
+                 #'(object-pipeline-member-spec
+                    (λ (prev-ret)
+                      (filter (λ (cur-obj-standin) (narg ... cur-obj-standin))
+                              prev-ret)))]))]))
 (define-pipeline-operator =foldl=
   #:joint (syntax-parser
             [(_ accum-name accum-expr arg ...+)
