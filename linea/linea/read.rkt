@@ -33,8 +33,6 @@
 (define default-linea-line-avoid-list '(#\())
 (define current-linea-line-avoid-list (make-parameter default-linea-line-avoid-list))
 
-(define currently-innermost-linea-end-delim (make-parameter #f))
-
 (define (readtable-or-proc->readtable rtop)
   (cond [(readtable? rtop) rtop]
         [(procedure? rtop) (rtop)]
@@ -42,10 +40,21 @@
         [else (error 'linea-internal
                      "readtable-or-proc->readtable error -- this shouldn't happen")]))
 
+
 (define (make-linea-read-funcs
          #:line-readtable [line-readtable current-linea-line-readtable]
          #:s-exp-readtable [s-exp-readtable current-linea-s-exp-readtable]
          #:line-avoid [line-avoid current-linea-line-avoid-list])
+  (make-linea-read-funcs/with-end-delim #:line-readtable line-readtable
+                                        #:s-exp-readtable s-exp-readtable
+                                        #:line-avoid line-avoid))
+;;; The end delimiter for an embedded list read must be set so that internal
+;;; functions can see it.
+(define (make-linea-read-funcs/with-end-delim
+         #:line-readtable [line-readtable current-linea-line-readtable]
+         #:s-exp-readtable [s-exp-readtable current-linea-s-exp-readtable]
+         #:line-avoid [line-avoid current-linea-line-avoid-list]
+         #:end-delim [end-delim #f])
 
   (define (linea-read-syntax src in)
     (read-and-ignore-hspace! in)
@@ -70,7 +79,7 @@
                     (linea-read-syntax src in))]
             [else (parameterize ([current-readtable (readtable-or-proc->readtable
                                                      line-readtable)])
-                    (linea-read-one-line src in linea-read-syntax))])))
+                    (linea-read-one-line src in linea-read-syntax end-delim))])))
 
   (define (linea-read in)
     (let ([out (linea-read-syntax #f in)])
@@ -80,7 +89,7 @@
 
   (values linea-read-syntax linea-read))
 
-(define (linea-read-one-line src in outer-linea-read-func)
+(define (linea-read-one-line src in outer-linea-read-func end-delim)
   ;; the current-readtable must already be parameterized to the line-readtable
   (define (reverse/filter-newlines rlist)
     ;; Reverse the list, but also:
@@ -106,14 +115,19 @@
     (rec rlist '()))
 
   (define (finalize rlist)
-    (datum->syntax #f (cons '#%linea-line
-                            (reverse/filter-newlines rlist))))
+    (if (null? rlist)
+        ;; The list can only be empty if we're in a context where there are
+        ;; delimiters and a list is being read.  In that case, return #f
+        ;; to signal that there are empty trailing lines in the delimiter.
+        #f
+        (datum->syntax #f (cons '#%linea-line
+                                (reverse/filter-newlines rlist)))))
 
   (define (rec rlist)
     (read-and-ignore-hspace! in)
     ;; Don't read on to the closing delimiter -- it would cause an error.
     (if (equal? (peek-char in)
-                (currently-innermost-linea-end-delim))
+                end-delim)
         (finalize rlist)
         (let ([output (read-syntax src in)])
           (cond [(and (eof-object? output) (null? rlist))
@@ -226,14 +240,19 @@
          )
 
   (define-values (l-read-syntax l-read)
-    (make-linea-read-funcs
+    (make-linea-read-funcs/with-end-delim
      #:line-readtable line-readtable
      #:s-exp-readtable s-exp-readtable
-     #:line-avoid line-avoid))
+     #:line-avoid line-avoid
+     #:end-delim r-delim))
 
   (define (finalize rlist)
     (let ([pre-wrapped (datum->syntax #f (cons '#%linea-expressions-begin
-                                               (reverse rlist)))])
+                                               ;; filter out #f, the signal from
+                                               ;; linea-read-one-line that there
+                                               ;; are trailing empty lines within
+                                               ;; delimiters.
+                                               (reverse (filter (λ(x)x) rlist))))])
       (cond [(symbol? wrapper) (datum->syntax #f (list wrapper pre-wrapped))]
             [(procedure? wrapper) (wrapper pre-wrapped)]
             [else pre-wrapped])))
@@ -246,8 +265,7 @@
           (begin (read-char port)
                  (finalize rlist))
           (rec
-           (cons (parameterize ([currently-innermost-linea-end-delim r-delim])
-                   (l-read-syntax src port))
+           (cons (l-read-syntax src port)
                  rlist))))
     (rec '()))
 
@@ -295,10 +313,10 @@
 
 (define default-linea-line-readtable
   (make-list-delim-readtable
-   #\[ #\] #:inside-readtable default-linea-s-exp-readtable
+   #\[ #\] #:inside-readtable current-linea-s-exp-readtable
    #:base-readtable
    (make-list-delim-readtable
-    #\( #\) #:inside-readtable default-linea-s-exp-readtable
+    #\( #\) #:inside-readtable current-linea-s-exp-readtable
     #:base-readtable
     (readtable-add-linea-escape
      #\◸ #\◹ #:wrapper '#%upper-triangles
@@ -326,3 +344,53 @@
 
 (current-linea-s-exp-readtable default-linea-s-exp-readtable)
 (current-linea-line-readtable default-linea-line-readtable)
+
+
+[module+ test
+  (require rackunit)
+  (define (get-s-exp-table) s-exp-table)
+  (define (get-line-table) line-table)
+  (define s-exp-table (readtable-add-linea-escape
+                       #\◸ #\◹
+                       #:base-readtable #f
+                       #:line-readtable get-line-table
+                       #:s-exp-readtable get-s-exp-table))
+  (define line-table (readtable-add-linea-escape
+                      #\◸ #\◹
+                      #:base-readtable default-linea-line-readtable
+                      #:line-readtable get-line-table
+                      #:s-exp-readtable get-s-exp-table))
+
+  (parameterize ([current-readtable s-exp-table]
+                 [current-linea-line-readtable line-table]
+                 [current-linea-s-exp-readtable s-exp-table])
+    (let ([port (open-input-string "Testing
+                                    (hello 1 2)
+                                    ◸hello 1 2◹
+                                    ◸
+                                      a b c
+                                      d e f
+                                    ◹
+                                    ◸
+                                      a (b ◸c◹) d
+                                      (testing 123)
+                                    ◹
+                                    ")])
+      (check-equal? (syntax->datum (read-syntax "t1a" port))
+                    'Testing)
+      (check-equal? (syntax->datum (read-syntax "t1b" port))
+                    '(hello 1 2))
+      (check-equal? (syntax->datum (read-syntax "t1c" port))
+                    '(#%linea-expressions-begin (#%linea-line hello 1 2)))
+      (check-equal? (syntax->datum (read-syntax "t1d" port))
+                    '(#%linea-expressions-begin (#%linea-line a b c)
+                                                (#%linea-line d e f)))
+      (check-equal? (syntax->datum (read-syntax "t1e" port))
+                    '(#%linea-expressions-begin
+                      (#%linea-line a
+                                    (b (#%linea-expressions-begin (#%linea-line c)))
+                                    d)
+                      (#%linea-s-exp (testing 123))))
+      (check-pred eof-object? (read-syntax "t1f" port))
+      ))
+  ]
