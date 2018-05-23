@@ -260,13 +260,14 @@
   (define (l-read-syntax* src port)
     (define (rec rlist)
       (read-and-ignore-hspace! port)
-      (if (equal? (peek-char port)
-                  r-delim)
-          (begin (read-char port)
-                 (finalize rlist))
-          (rec
-           (cons (l-read-syntax src port)
-                 rlist))))
+      (define c (peek-char port))
+      (cond [(equal? c r-delim) (begin (read-char port)
+                                       (finalize rlist))]
+            [(eof-object? c) (error 'read-syntax
+                                    "missing closing delimiter ~a"
+                                    r-delim)]
+            [else (rec (cons (l-read-syntax src port)
+                             rlist))]))
     (rec '()))
 
   (define l-delim-read
@@ -393,4 +394,6 @@
                       (#%linea-s-exp (testing 123))))
       (check-pred eof-object? (read-syntax "t1f" port))
       ))
+  (check-exn exn? (λ () (linea-read-syntax 'input (open-input-string "ls (foo"))))
+  (check-exn exn? (λ () (linea-read-syntax 'input (open-input-string "ls #{echo"))))
   ]
