@@ -1,6 +1,9 @@
 #lang racket/base
+
+(provide repl-namespace)
+
 (require
- "../main.rkt"
+ rash
  (for-syntax
   racket/base
   syntax/parse
@@ -50,5 +53,3 @@ numbering schemes...
 
 (define-namespace-anchor ns-a)
 (define repl-namespace (namespace-anchor->namespace ns-a))
-(provide repl-namespace)
-(provide repl-default-pipeline-starter)
