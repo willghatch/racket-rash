@@ -150,6 +150,15 @@ But how can it be done in a way that let those arguments affect the reader?
            this-module-path
            #:read-syntax linea-read-syntax
            #:read linea-read
+           #:info (λ (key defval default)
+                    (case key
+                      [(color-lexer)
+                       (dynamic-require 'syntax-color/default-lexer
+                                        'default-lexer)]
+                      [(drracket:submit-predicate)
+                       (dynamic-require 'rash/private/drracket-submit-predicate
+                                        'submit-predicate)]
+                      [else (default key defval)]))
            (require linea/read)))]))
 
 (define-syntax (identity-macro stx)
