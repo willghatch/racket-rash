@@ -221,7 +221,7 @@
   (if (pipeline-member-process? m)
       (when (pipeline-member-running? m)
         (subprocess-kill (pipeline-member-subproc-or-thread m) #t)
-        (set-box! (pipeline-member-killed-box #t)))
+        (set-box! (pipeline-member-killed-box m) #t))
       (let ([thread (pipeline-member-subproc-or-thread m)])
         (when (not (thread-dead? thread))
           (kill-thread (pipeline-member-subproc-or-thread m))

@@ -34,6 +34,7 @@
   [pipeline-running? (-> pipeline? any/c)]
   [pipeline-return (-> pipeline? any/c)]
   [pipeline-wait (-> pipeline? any/c)]
+  [pipeline-kill (-> pipeline? any/c)]
   [pipeline-start-ms (-> pipeline? any/c)]
   [pipeline-end-ms (-> pipeline? any/c)]
   )
@@ -70,7 +71,16 @@
 (define (object-pipeline-member-success? m)
   (object-pipeline-member-wait m)
   (not (unbox (object-pipeline-member-err-box m))))
+(define (object-pipeline-member-kill m)
+  (kill-thread (object-pipeline-member-thread m))
+  (set-box! (object-pipeline-member-err-box m)
+            (with-handlers ([(λ _ #t) (λ (e) e)])
+              (error 'run-pipeline "pipeline killed"))))
 
+(define (pipeline-segment-kill seg)
+  (if (u-pipeline? seg)
+      (u-pipeline-kill seg)
+      (object-pipeline-member-kill seg)))
 (define (pipeline-segment-wait seg)
   (if (u-pipeline? seg)
       (u-pipeline-wait seg)
@@ -107,7 +117,7 @@
         [else (unbox (object-pipeline-member-err-box seg))]))
 
 (struct pipeline
-  (manager-thread segment-box start-ms end-ms-box cleaner-thread)
+  (manager-thread segment-box start-ms end-ms-box cleaner-thread kill-flag-box)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -136,6 +146,11 @@
           (pipeline-segment-ret (car (unbox (pipeline-segment-box pl)))))
       (for/or ([pm (reverse (unbox (pipeline-segment-box pl)))])
         (and (not (pipeline-segment-success? pm)) (pipeline-segment-error pm)))))
+
+(define (pipeline-kill pl)
+  (set-box! (pipeline-kill-flag-box pl) #t)
+  (for ([pm (unbox (pipeline-segment-box pl))])
+    (pipeline-segment-kill pm)))
 
 (define (pipeline-ends-with-unix-segment? pl)
   (and (pipeline? pl)
@@ -259,6 +274,7 @@
   ;; TODO - check all specs before doing anything (IE resolve all aliases, check that all executables exist)
   ;; TODO - arguments for strict/lazy/permissive success, bg, default err-port (including individual string-ports for exceptions), environment extension, environment replacement, etc
   (define seg-box (box '()))
+  (define kill-flag-box (box #f))
 
   (define final-out-port (if (or (output-port? final-out-transformer)
                                  (u-path-string-symbol? final-out-transformer)
@@ -291,7 +307,9 @@
 
   (define (runner-func)
     (define (rec last-seg specs)
-      (cond [(and (null? specs)
+      (cond [(unbox kill-flag-box)
+             (void)]
+            [(and (null? specs)
                   (or (u-pipeline? last-seg)
                       object-to-out)
                   out-transform)
@@ -341,7 +359,7 @@
   (define pipeline-almost
     (pipeline (thread runner-func) seg-box
               (current-inexact-milliseconds) end-ms-box
-              #f))
+              #f kill-flag-box))
 
   (define cleaner-thread
     (thread (λ ()
