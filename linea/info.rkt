@@ -1,6 +1,5 @@
 #lang info
 
-(define collection 'multi)
 (define deps '("base"
                "udelim"
                "rackunit-lib"

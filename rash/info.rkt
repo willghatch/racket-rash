@@ -1,6 +1,8 @@
 #lang info
 
-(define collection 'multi)
+(define racket-launcher-names '("rash-repl"))
+(define racket-launcher-libraries '("repl.rkt"))
+
 (define deps '(("base" #:version "6.12")
                "basedir"
                "shell-pipeline"
@@ -14,5 +16,6 @@
                ;; temporarily
                "text-table"
                ))
+
 (define version "0.2")
 
