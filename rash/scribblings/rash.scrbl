@@ -281,7 +281,7 @@ Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-mac
 
 @section{Interactive Use}
 
-You can run the repl by running @code{racket -l rash/repl}.  An executable named @code{rash-repl} is installed in Racket's bin directory, so if you have it on your path you can run @code{rash-repl} instead.  It has no line editing currently, so it's a little nicer if you run it with the rlwrap command.  (readline support, including basic tab completion, is written, but depends on features in the development version of Racket's readline FFI library.)
+You can run the repl by running @code{racket -l rash/repl}.  An executable named @code{rash-repl} is installed in Racket's bin directory, so if you have it on your path you can run @code{rash-repl} instead.
 
 Various details of the repl will change over time.
 

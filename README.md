@@ -25,4 +25,4 @@ And here's a quick demo video (also slightly out of date):
 
 
 
-This repo also contains the [shell-pipeline](https://github.com/willghatch/racket-shell-pipeline) and linea packages.  They mostly support Rash itself, so they live in the same repo.
+This repo also contains the shell-pipeline and linea packages.  They mostly support Rash itself, so they live in the same repo.
