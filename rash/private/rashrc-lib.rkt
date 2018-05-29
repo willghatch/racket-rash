@@ -1,24 +1,26 @@
 #lang racket/base
 
 (provide current-prompt-function)
-(provide current-result-print-default-function)
 (provide
  complete-paths
  complete-namespaced
  composite-complete
  cwd-hack-box
+ current-rash-top-level-print-formatter
  )
 
-(require racket/date)
-(require shell/mixed-pipeline)
-(require shell/utils/bourne-expansion-utils)
-(require (prefix-in sp- shell/pipeline))
-(require "rashrc-git-stuff.rkt")
-(require racket/exn)
-(require racket/list)
-(require racket/string)
-(require readline/pread)
-(require readline/readline)
+(require
+ racket/date
+ shell/mixed-pipeline
+ shell/utils/bourne-expansion-utils
+ (prefix-in sp- shell/pipeline)
+ "top-level-print.rkt"
+ "rashrc-git-stuff.rkt"
+ racket/list
+ racket/string
+ readline/pread
+ readline/readline
+ )
 
 (require (for-syntax racket/base racket/string))
 (define-syntax (fail-if-not-6.12+ stx)
@@ -86,31 +88,9 @@
                   (map path->string (append possibles dir-exists-possibles))))))))
 
 (define (print-ret-maybe last-ret ret-number)
-  (define (pre)
-    (printf "Result ~a:\n" ret-number))
-  (cond [(exn? last-ret)
-         (begin (pre)
-                (eprintf "~a\n" last-ret)
-                ;; let any filtering output finish
-                (sleep 0.01))]
-        [(and (pipeline? last-ret)
-              (pipeline-running? last-ret))
-         (pre)
-         (printf "~a\n" last-ret)]
-        [(and (pipeline? last-ret)
-              (not (pipeline-success? last-ret)))
-         (pre)
-         (let ([err (pipeline-return last-ret)])
-           (eprintf "~a\n" (format "~a" (if (exn? err)
-                                            (exn->string err)
-                                            err)))
-           (sleep 0.01))]
-        [(pipeline? last-ret)
-         (print-ret-maybe (pipeline-return last-ret) ret-number)]
-        [(void? last-ret)
-         (void)]
-        [else (pre)
-              ({current-result-print-default-function} last-ret)]))
+  (let ([str ((current-rash-top-level-print-formatter) last-ret)])
+    (when (not (equal? str ""))
+      (printf "Result ~a:\n~a\n" ret-number str))))
 
 
 ;; TODO - use a library for these functions?
@@ -188,5 +168,3 @@
 (define current-prompt-function (make-parameter (if windows?
                                                     lame-prompt
                                                     basic-prompt)))
-(define current-result-print-default-function
-  (make-parameter (λ (result) (printf "~s\n" result))))

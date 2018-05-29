@@ -25,7 +25,7 @@ set-default-pipeline-starter! |
 
 (define real-stderr (current-error-port))
 (current-error-port (highlighting-output-port (current-output-port)))
-(current-result-print-default-function
+#;(current-result-print-default-function
  (print-table-list-specially
   (current-result-print-default-function)))
 

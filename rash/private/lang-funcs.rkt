@@ -10,6 +10,7 @@
  (all-from-out shell/pipeline-macro)
  (all-from-out linea/line-macro)
  (all-from-out linea/defaults)
+ (all-from-out "top-level-print.rkt")
 
  make-rash-reader-submodule
  define-rash-module-begin
@@ -36,6 +37,7 @@
  racket/string
  racket/port
  "cd.rkt"
+ "top-level-print.rkt"
  linea/line-macro
  linea/defaults
  linea/read
@@ -161,9 +163,10 @@ But how can it be done in a way that let those arguments affect the reader?
                       [else (default key defval)]))
            (require linea/read)))]))
 
-(define-syntax (identity-macro stx)
-  (syntax-parse stx
-    [(_ e) #'e]))
+(define (rash-top-level-print v)
+  (let ([str ((current-rash-top-level-print-formatter) v)])
+    (when (not (equal? str ""))
+      (displayln str))))
 
 (define-syntax (define-rash-module-begin stx)
   (syntax-parse stx
@@ -183,7 +186,7 @@ But how can it be done in a way that let those arguments affect the reader?
                                          #'(raise-syntax-error
                                             'make-rash-module-begin-transformer
                                             "expected #:this-module-path argument."))]
-                   [top-level-wrap (opref tab '#:top-level-wrap #'identity-macro)]
+                   [top-level-wrap (opref tab '#:top-level-wrap #'rash-top-level-print)]
                    [mk-input (opref tab '#:in #'(current-input-port))]
                    [mk-output (opref tab '#:out #'(current-output-port))]
                    [mk-err-output (opref tab '#:err #'(current-error-port))]
@@ -216,7 +219,8 @@ But how can it be done in a way that let those arguments affect the reader?
                                        mk-err-output
                                        #'mk-default-starter
                                        #'mk-default-line-macro)
-                                      e)]))))))
+                                      e)])))))
+                     (current-print rash-top-level-print))
                    (rash-expressions-begin (mk-input
                                             mk-output
                                             mk-err-output
