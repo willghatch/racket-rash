@@ -42,7 +42,12 @@ If you want to help, there are various things you might do:
 General Todos (written more for my memory than for something readable by others)
 --------------------------------------------------------------------------------
 
+* do double syntax-local-introduce for transformers so pipeline expansion is more properly hygienic
+
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
+
+* make &bg work in run-pipeline macro
+** also the other &arguments
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
 ** the forms for setting these (eg. the rash macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
@@ -56,11 +61,17 @@ General Todos (written more for my memory than for something readable by others)
 * look through TODO comments
 
 * better drracket integration
-** fix interactions window -- it was working (though not great) before but then I broke it.
 ** write a lexer for coloring, maybe
+** how can I set the color lexer for the interactions window?
 
 * make #lang rash/bash-env or something that uses bash syntax for environment variables and aliases
 ** it will be nice just as a configuration bridge so you can share a fair amount of config with bash
+
+* rash macro -- don't have the same macro for embedding code strings and just setting configuration.  There should be a separate configuration macro that the rash macro uses, and the rash macro should only be used for embedding code in strings.
+
+* Linea could use a line separator like “;” in bash.
+
+* readline-lib -- I can reliably make rash-repl go to 100% cpu by launching a terminal with rash, running rash, running zsh, running rash, running rash, then xkill-ing the window.  But only when I have readline enabled.
 
 misc
 ----
@@ -71,18 +82,44 @@ misc
 About interactive shells
 ------------------------
 
-* job control -- see TODO file for shell-pipeline package.
-
 * discoverability
 ** the default prompt should help with discoverability -- maybe say the command to get help, look up docs, etc.  Something like «type HELP START» in LoE.
+** maybe the default prompt could on its first run print a random fortune-like tip message, like in so many video games?
 ** how can interactive features be more discoverable than just being listed in the docs/tutorial?
 ** in the short term this probably doesn't matter much, but long term it would be nice.
+** help line-macro
+*** there should be one -- «help foo» should probably do a variety of things to get «foo» docs -- look for racket docs, man pages, info pages, or have custom help.
+*** «help» and «help help» should give info about the help command itself.
+
+* things that still bug me in my interactive shell
+** <() is still missing
+** running with modified environment
+*** a good workaround is `env FOO=bar cmd ...` -- so this isn't the highest priority...
+** stack traces from rash repl when a pipeline returns nonzero
+*** I want to get the message from an exception in the repl, and sometimes the stack trace UP TO the repl, but I don't want to see anything about the repl loop or anything.
+** issues with SHELL not being posix compatible
+*** vim has some issue starting -- I run it and it seems like it exits immediately.  Then I hit C-d to exit the shell and it pulls up vim.  Then I exit vim and things seem to be back to normal!
+*** Is there a better variable to set than SHELL to say "this is a rash repl"?
+
+* prompt
+** I should get info about the current directory path like I do in zsh, but I should use more styles for more info (or at least make that optional).  eg. ownership/group/other, read/write/none, mount points, git repo roots, size would be cool but too expensive.
+** I need to make all the computation about extra info in the prompt be done with a timeout...
+** I should also have options to compress the path in different ways
+*** compress $HOME to ~, maybe also allow configurable lists of paths and shorthands
+*** allow a max length, and compress path to one letter per dir, eg ~/r/c/c/the-last-dir-spell-out-long-maybe
 
 
 Documentation
 -------------
 
-Maybe at some point there should be a section for Racketeers unfamiliar with Rash or shells in general, and a section for people familiar with shells to but unfamiliar with Racket.
+* Maybe at some point there should be a section for Racketeers unfamiliar with Rash or shells in general, and a section for people familiar with shells to but unfamiliar with Racket.
+* define-pipeline-operator #:operator option
+* =pipeline-segment= and macros to create first-class pipeline segments
+* pipeline/logic macro && ||
+* #:object-to-out
+* I probably need to comment my macros better
+* I need an example table, eg. comparing “how to do X” in rash vs other shells.  Maybe also how to do them in shell/pipeline.
+* Feature comparison table (vs other shells)?
 
 Line Editing
 ------------
@@ -102,13 +139,38 @@ Bugs
 
 
 
-TODOs merged hastily from shell-pipeline's previously separate repo:
+shell-pipeline
+--------------
+
+* pipeline operators
+*** what operators really should be the base set?
+** =unix-pipe=
+*** The basic one for completeness, and the cool default one
+** =object-pipe=
+*** =object-pipe/expression=
+**** This one really needs a shorthand, because it's particularly useful as a starter like cat -- eg {=object-pipe/expression= x |> do-something-to-x |> etc}
+**** maybe |e> or =e=.  |e> could also have |e>> that is like |>> to |>.  But =e= might be more like general named operators, and therefore better.
+*** |> and friends that use the expand-pipeline-argument function are sort of dumb for not accepting macros.  Is there a good way to resolve the tension between allowing macros and auto-detecting whether the argument is used?
+** =pipeline-segment=
+*** IE accept a first-class pipeline definition segment (IE compound-member-spec [or unix or object member spec])
+** sequence pipes -- =filter= =map= =foldX=
+*** what is the right way to make a fold pipe?  =foldl= init-val body-f body-arg1 body-arg2 ... ---- the current-pipeline-arg can be the iterative argument, but what name for the accumulator?
+** infix math pipe
+** operator that just accepts first-class pipeline specs (IE maybe sugar over =composite-pipe= to give it a better interface, or maybe it's fine as is)
+*** I need a form that makes it easy to define first-class pipeline specs
+**** But this has issues with the start vs joint difference.  But I'm less confident that the difference is really necessary, since you can use an optional argument with a flag for a default value instead.
 
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
-* improve dollar-expansion -- eg. maybe don't always expand to a string, so I can use $funcname at the head of a unix pipe for unix-style functions in pipelines.
+* improve dollar-expansion 
+** maybe support $() as an escape to lisp
+** add ${foo/from/to} or something for quick string replacement
+** my biggest question is whether to make it be more like posix shells and have ${} be posix-style or whether to make it match reading and make $() and ${} be escapes to racket...
+*** If I make it configurable, I could eg have ◸◹ etc in the dollar escape reader, so probably the best thing would be just escapes to reading racket that support various implicit macros.
+** should some aspect of dollar expansion be in object pipes?
 
-* mixed/pipeline pipeline-kill
+* splicing -- instead of just splicing lists, unix pipelines should splice any sequence
+** generally, I need good convenient ways to access the command line, even easier than racket/cmdline for basic usage.
 
 * pipeline send signal?  eg. to send sighup when rash is killed so that some programs (eg nohup) can decide whether or not they should die.
 
@@ -147,16 +209,29 @@ TODOs merged hastily from shell-pipeline's previously separate repo:
 
 * Currently each object segment runs in its own thread, but maybe they should always run in the manager thread instead.  That way they can eg. mutate the environment, and that can be an easy way to implement whole-pipeline environment changes.  Also it will lower threading overhead.  However, it is the way it is currently so that the manager thread can (in some future day) catch a signal to suspend for job control.
 
+* shell/pipeline same-thread-func -- this should be removed, it was a hack to allow cd to be a pipeline function and it's obsolete.
 
-less important TODO items, which may wait until version 2
----------------------------------------------------------
+* #:in-to-object 
+** -- basically so &< FILE will still do something when a pipeline starts with an object member.  
+** But it would need to have the port tracked to make sure it's closed.  It may be a bad idea to use at all unless I can get it to be automatically closed since it's a file-system port (but will executors will probably do this)
+
+* parsing/formats
+** want parsers for all major unix file types (eg. : separated, etc -- there should be a generic one, and then specialized ones for eg. /etc/passwd that knows what the fields are)
+** want a parsing framework like caml-shcaml shtreams that includes a structured format AND the original line -- eg. for filtering and being able to pass the original back unedited
+** want a standard object format for pipelining from eg. sys admin commands
+*** how should it print in the prompt printer?
+*** maybe this should be based on row types?
 
 * bg issues
 ** what does it mean to run with stdin in the background unless I have job control?
 ** maybe the default input port should be allowed to be some function that determines what input it gets based on things like whether it's in the background or not?
 
-
 * a custom exn type for unix pipeline failures?
+
+* ulimit and other resource limiting things for subprocesses and pipeline threads -- how can I go about doing that?
+
+Job Control
+-----------
 
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?  But this is a pretty standard shell feature for job control.
 
@@ -167,9 +242,11 @@ less important TODO items, which may wait until version 2
 ** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
 ** When Racket gets SIGHUP the main thread generates exn:break:hang-up, and for SIGQUIT it generates exn:break:terminate.  So a handler around the main repl loop can propogate SIGHUP to any jobs (except disowned ones) and quit gracefully.
 
+** for object pipelines, when C-c is hit in the terminal, only the main thread gets it.
+** for the repl, I need to have a handler specifically for user-break that will send signals to the current pipeline if one is running.
+*** maybe every expression should be evaluated in a new thread?  But then I couldn't mutate parameters.  Aha, but I remember that I tacitly run all pipelines as bg, so I can have the handler on the code that waits for the pipeline.  Of course, I need to clear up how bg works with actual background processes -- this has terminal signalling in it.
+** for mixed pipelines, job control is harder -- I don't want the shell itself in the same process group as the pipeline processes.  Maybe if I have job control on I can fix this by having a special extra subprocess for the in-racket parts to go through?  When that process gets a signal, it can communicate via pipe or something to the racket process about what signal it got.
+
 * bg pipeline disowning?
 ** This is really only reasonable for external-proccess-only pipelines, and I'm not sure how reasonable it is on Windows.
 
-* ulimit and other resource limiting things for subprocesses and pipeline threads -- how can I go about doing that?
-
-* initial input-port transformer to try to solve readline-port issues -- there doesn't seem to be any way to get the real stdin port from the readline port, so this is hopeless for the moment.
