@@ -14,7 +14,7 @@ set-default-pipeline-starter! |
  (all-from-out rash/demo/setup)
  (all-from-out rash/private/rashrc-lib)
  (all-from-out rash/demo/ps-wrapper)
- real-stderr
+ ;real-stderr
  )
 
 (require
@@ -23,8 +23,10 @@ set-default-pipeline-starter! |
  rash/demo/ps-wrapper
  )
 
-(define real-stderr (current-error-port))
-(current-error-port (highlighting-output-port (current-output-port)))
+;(define real-stderr (current-error-port))
+;(current-error-port (highlighting-output-port (current-output-port)))
+
+
 #;(current-result-print-default-function
  (print-table-list-specially
   (current-result-print-default-function)))
