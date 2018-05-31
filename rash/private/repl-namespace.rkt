@@ -3,7 +3,7 @@
 (provide repl-namespace)
 
 (require
- rash
+ "../main.rkt"
  (for-syntax
   racket/base
   syntax/parse
