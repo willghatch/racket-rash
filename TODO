@@ -230,6 +230,9 @@ shell-pipeline
 
 * ulimit and other resource limiting things for subprocesses and pipeline threads -- how can I go about doing that?
 
+* have easy forms for doing dollar, glob, etc expansion, and document them
+* add a regex glob form
+
 Job Control
 -----------
 
