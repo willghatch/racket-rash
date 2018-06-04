@@ -330,3 +330,12 @@ Same as @racket[shell/mixed-pipeline/pipeline-start-ms]
 Same as @racket[shell/mixed-pipeline/pipeline-end-ms]
 }
 
+
+@section{Demo stuff reference}
+@(declare-exporting shell/demo/more-pipeline-operators)
+These things are documented in the Rash documentation, but I'm adding these definitions to not have broken links...
+
+You can get these with @verbatim{(require rash/demo/setup)}
+
+@defform[#:kind "pipeline-operator" (=map= arg ...)]{}
+@defform[#:kind "pipeline-operator" (=filter= arg ...)]{}

@@ -3,7 +3,7 @@
 @title[#:tag "rash"]{Rash: The Reckless Racket Shell}
 @author+email["William Hatch" "william@hatch.uno"]
 
-@defmodule[rash]
+@defmodulelang[rash]
 @(require
 (for-syntax
 racket/base
@@ -160,17 +160,17 @@ This problem can be fixed by prepending the line-macro name or by using brackets
 
 What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured.  There are probably more things I should say.  But you can read the references for Rash, @racket[run-pipeline], and Linea.  (Rash is really just a combination of Linea and the Shell Pipeline library.)  I will replace this with better documentation soon, but I wrote this up quickly to replace the even worse and terribly out-of-date documentation that was here before.
 
-Linea documentation:
-@secref["linea"
-        #:doc '(lib "linea/scribblings/linea.scrbl")]
+While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].
 
-Pipeline macro documentation:
-@secref["pipeline-macro"
-        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+Rash is primarily a combination of two libraries --
+@secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")]
+and the
+@secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
+You should read their documentation as well if you want a more thorough understanding or Rash.
+
 
 Also, for those who just want to pipeline subprocesses in a Racket program using a lispy syntax, you probably want the shell/pipeline library, a basic component of Rash that can be used on its own:
-@secref["pipeline"
-        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+@secref["pipeline" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 
 
 
@@ -187,11 +187,14 @@ Also, for those who just want to pipeline subprocesses in a Racket program using
 
 @section{Rash Reference}
 
-Note that all the pipeline stuff (@racket[run-pipeline],
+Note that all the pipeline things (@racket[run-pipeline],
 @racket[=unix-pipe=], @racket[=object-pipe=],
 @racket[define-pipeline-operator], etc) are documented in the
-@secref["pipeline-macro"
-        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+@secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+module.
+
+All the things about reading and line-macros (@racket[define-line-macro], @racket[#%linea-line], etc) are documented in the
+@secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")]
 module.
 
 TODO - rash configuration forms, reader modification...
