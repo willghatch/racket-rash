@@ -75,6 +75,8 @@ You can also make pipelines composed entirely of Racket functions.
 Pipelines always start with an operator, and if none is specified the @racket[default-pipeline-starter] is inserted.  Pipeline operators are user-definable with @racket[define-pipeline-operator].  Defining new operators can help make common patterns shorter, simpler, and flatter.  For instance the @racket[=map=] operator wraps the @racket[map] function, allowing you to specify just the body of a lambda.
 
 @irash{
+;; =map= is in the demo file still
+(require rash/demo/setup)
 ;; These two are the same.
 |> list 1 2 3 |> map (λ (x) + 2 x)
 |> list 1 2 3 =map= + 2
@@ -93,6 +95,8 @@ Lines of code in Rash are command pipelines by default, but there are key words 
 @margin-note{Line-macros can be used to make C-like control-flow forms like for, try/catch, etc, to make one-off non-pipeline forms like @racket[cd], or even to make entirely new and different line-oriented languages.}
 
 @irash{
+;; in-dir is in the demo file still
+(require rash/demo/setup)
 in-dir $HOME/project {
   make clean
 }
