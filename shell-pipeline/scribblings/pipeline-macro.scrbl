@@ -22,8 +22,7 @@ The base set of pipeline operators is likely to change, and some of the names I 
 @section{shell/pipeline-macro guide}
 
 This module is a macro DSL wrapper around the
-@secref["mixed-pipeline"
-        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+@secref["mixed-pipeline" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 library.  It is designed for running pipelines of external processes (which pass each other ports) and Racket functions (which pass each other objects).  It does this with a very flat syntax and user-definable pipeline operators, which provide a lot of convenient sugar for making pipelines shorter.  It is particularly tailored for use in a line-based syntax, like that of the Rash language.
 
 Here are some quick examples:

@@ -37,9 +37,6 @@ But it's getting closer, and it's definitely usable as an interactive shell/repl
 
 Rash is a shell language embedded in Racket.  It has a concrete syntax that is amenable to quick and easy interactions without lots of punctuation overhead.  It aims to allow shell-style interaction and programming to be freely mixed with more general-purpose Racket code.  Like shells you can use it as a day-to-day interface for computing, run programs, wire processes together, etc.  You can copy interactive code into a file and have a working script.  Then you can generalize from there.  However, you have access to all of Racket, its data structures, its libraries, its macro system, and its other DSLs as you make your scripts more general.  Also it allows shell-style process wrangling to be mixed with Racket code, pipelines of functions that pass objects, and much more.  You can gradually move between shell-style Rash code and more normal and general Racket code in different parts of a script, or throw verbatim interactions directly into existing programs as you explore the solution space.
 
-@; TODO - section links for shell/pipeline-macro and linea
-@;Rash is essentially the combination of two parts:  the shell/pipeline-macro library, which provides a DSL for pipelining processes and Racket functions, and the Linea reader, which provides a line-oriented alternative way to write s-expressions.
-
 Here follows a quick overview that assumes some knowledge of shell languages like Bash as well as Racket.
 
 Rash can do the sorts of things you expect from shell languages, and a lot of cues for syntax have been taken from traditional Bourne-derived shells.  The following program works as you would expect.@margin-note{Note that Rash is not remotely Posix Shell compliant.}
@@ -91,7 +88,7 @@ If you put parentheses in the middle of a pipeline, you escape to normal Racket 
 ls (if (even? (random 2)) '-l '-a)
 }
 
-Lines of code in Rash are command pipelines by default, but there are key words called line-macros that can change the behavior arbitrarily.
+Lines of code in Rash are command pipelines by default, but there are key words called @racket[line-macro]s that can change the behavior arbitrarily.
 @margin-note{Line-macros can be used to make C-like control-flow forms like for, try/catch, etc, to make one-off non-pipeline forms like @racket[cd], or even to make entirely new and different line-oriented languages.}
 
 @irash{
@@ -117,6 +114,8 @@ Braces trigger a recursive line-mode read.  They are available in line-mode as w
 Note that subprocess pipelines are connected to stdout and stdin in the REPL and at the top level of @tt{#lang rash}.  The most common thing you want when embedding some Rash code is for subprocess output to be converted to a string.  Using @code{#{}} switches to line-mode with defaults changed so that subprocess output is converted to a string and passed through @racket[string-trim].
 
 @irash{
+;; #%hash-braces is provided by the demo library right now...
+(require rash/demo/setup)
 ;; I do this a lot when I don't remember what a script does
 cat #{which my-script.rkt}
 }
@@ -143,6 +142,7 @@ Note that practically all Racket code starts with an open-paren, so Rash is almo
 (values x)
 |> values x
 echo $x
+(require rash/demo/setup)
 val x
 }
 
@@ -152,36 +152,36 @@ Avoiding line-macros by starting with a paren causes an annoying inconsistency -
 ;; We want to choose a compiler at runtime.
 run-pipeline (if use-clang? 'clang 'gcc) -o prog prog.c
 ;; If we leave off the line-macro name, it will not be inserted
-;; because the line starts with a parenthesis
+;; because the line starts with a parenthesis.
+;; This will probably cause an error!
 (if use-clang? 'clang 'gcc) -o prog prog.c
 }
 
-This problem can be fixed by prepending the line-macro name or by using brackets instead of parentheses.  The issue doesn't come up much in practice, and it's a small sacrifice for the convenience of having both normal Racket s-expressions and Rash lines.
-
-What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured.  There are probably more things I should say.  But you can read the references for Rash, @racket[run-pipeline], and Linea.  (Rash is really just a combination of Linea and the Shell Pipeline library.)  I will replace this with better documentation soon, but I wrote this up quickly to replace the even worse and terribly out-of-date documentation that was here before.
-
-While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].
+This problem can be fixed by prepending the line-macro name or by using [square] brackets instead of parentheses.  The issue doesn't come up much in practice, and it's a small sacrifice for the convenience of having both normal Racket s-expressions and Rash lines.
 
 Rash is primarily a combination of two libraries --
-@secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")]
-and the
-@secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
+@secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")],
+which will explain the details of the line-oriented concrete syntax, and the
+@secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")],
+which will explain the details of the @racket[run-pipeline] macro and pipeline operators.
 You should read their documentation as well if you want a more thorough understanding or Rash.
 
+What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured per-pipeline, or using aliases (eg. whether other exit codes besides 0 are successful, whether to check for success in subprocesses in the middle of a pipeline, etc).  There are probably more things I should say.  But probably the best way forward from here is to read the @racket[run-pipeline] macro documentation.
 
 Also, for those who just want to pipeline subprocesses in a Racket program using a lispy syntax, you probably want the shell/pipeline library, a basic component of Rash that can be used on its own:
 @secref["pipeline" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 
+While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].  Note that requiring the rash module will not affect the reader, so the line-oriented syntax will not be available unless you take steps to use it too.
 
 
-@;@section{Media}
-@;I made a quick demo recording of an interactive repl
-@;@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
-@;It's a little out of date.  I should make a new and better one.
-@;
-@;Also I gave a talk at RacketCon 2017 about it, which can be viewed
-@;@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
-@;There have been some changes since the talk was given, but the core ideas are the same.
+@section{Media}
+I made a quick demo recording of an interactive repl
+@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
+It's a little out of date.  I should make a new and better one.
+
+Also I gave a talk at RacketCon 2017 about it, which can be viewed
+@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
+There have been various changes since the talk was given, but the core ideas are the same.  The biggest change since then is that embedding the line-syntax is encouraged with braces in the Linea syntax rather than string embedding.
 
 
 
@@ -197,10 +197,10 @@ All the things about reading and line-macros (@racket[define-line-macro], @racke
 @secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")]
 module.
 
-TODO - rash configuration forms, reader modification...
+TODO: document forms for configuring Rash besides the rash macro, document forms for creating customized versions of #lang rash (including reader modifications, default line-macro and pipeline operator, bindings available...), etc
 
 @defform[(rash options ... codestring)]{
-Deprecated.
+Semi-deprecated.
 
 Read @racket[codestring] as rash code.
 
@@ -223,7 +223,7 @@ Note that the input/output/error-output have different defaults for the rash mac
 }
 
 @defform[(make-rash-transformer options ...)]{
-Deprecated.
+Semi-deprecated.
 
 This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like @racket[rash], but with different default values for the available options.
 
@@ -247,10 +247,6 @@ Note that the default #lang rash has its input/output/error-output as stdin/stdo
 
 
 
-@; TODO - docs about reader
-
-@; TODO - how to change the inside/outside readtable
-
 @defform[#:kind "line-macro" (cd directory)]{
 Change directory to given directory.  The directory is quoted, so just put a literal path or a string.
 
@@ -261,6 +257,12 @@ Eventually this will be replaced by a better version, but it should be backwards
 
 @defform[#:kind "line-macro" (run-pipeline arg ...)]{
 Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-macro.
+}
+
+@defparam[current-rash-top-level-print-formatter formatter (-> any/c string?)]{
+Determines how expressions at the top of #lang rash modules (IE forms that aren't definitions) and expressions in the Rash REPL are printed.  Note that it doesn't actually do the printing -- it returns a string, which is then printed by the implicit printing wraps at the top of a module or (probably) by the @racket[current-prompt-function].
+
+The default takes the result out of terminated pipelines to print rather than the pipeline object itself.  I plan to change the default.  But the idea of having this parameter is that you can set up your repl to print things in a more useful way, and then have it print the same way in a #lang rash script.
 }
 
 @section{Interactive Use}
@@ -305,18 +307,12 @@ The given function's arity is tested to see if it receives various keywords, so 
 
 Keywords optionally given:
 
-@racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.
+@racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.  The default prompt function formats the return value with @racket[current-rash-top-level-print-formatter] before printing it.
 
-@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[return-n].
+@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[return-n].  The default prompt function prints the number of the result before printing the result itself.
 }
 
 
-@;@section{Demo stuff}
-@;
-@;I have some proof-of-concept pipes and things in the demo directories of the rash and shell-pipeline repositories.  Eventually some of the good stuff from them will probably be improved and moved into the main modules.  But you can check them out for ideas of some things you might do.
-@;
-@;To use the demo, @code{(require rash/demo/setup)}.  Also look at the file to see some examples.
-@;
 
 @section{Demo stuff reference}
 

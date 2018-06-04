@@ -22,10 +22,9 @@ Some specific things that may change are the names of keyword arguments to run-p
 @section{shell/mixed-pipeline guide}
 
 This is the runtime library behind
-@secref["pipeline-macro"
-#:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
+@secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")].
 
-Everything from this module is also provided by the pipeline-macro library, except @racket[run-pipeline], which is shadowed by @racket[shell/pipeline-macro/run-pipeline].
+Everything from this module is also provided by the pipeline-macro library, except @racket[run-pipeline], which is shadowed by @racket[shell/pipeline-macro/run-pipeline].  This library is primarily of interest for its functions for inspecting pipeline objects that represent running (or finished) pipelines.
 
 @section{shell/mixed-pipeline reference}
 
