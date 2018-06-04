@@ -175,11 +175,13 @@ Detects if @racket[x] is a struct with @racket[prop:line-macro].  You probably d
 
 
 @subsection{#lang linea}
-@(declare-exporting linea)
+@defmodulelang[linea]
 
-Like @tt{#lang s-exp}, you can use @tt{#lang linea} to read the linea notation.
+Similar to @racketmod[s-exp]
 
-mylank.rkt:
+You can use @racketmod[linea] to read a module with custom language bindings using the linea notation.  Here is an example:
+
+mylang.rkt:
 @codeblock{
 #lang racket/base
 (require linea/defaults linea/line-macro
