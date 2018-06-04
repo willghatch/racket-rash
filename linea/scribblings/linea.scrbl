@@ -73,11 +73,11 @@ reads as:
 
 @section{Linea Reference}
 
-@subsection{linea/default}
-@(declare-exporting linea/default)
+@subsection{linea/defaults}
+@(declare-exporting linea/defaults)
 
 TODO:
- #%hash-braces
+ #%hash-braces -- currently #%hash-braces are not defined by default, but they are defined if you (require rash/demo/setup)...
 
 @defform[(#%linea-expressions-begin e ...)]{
 Simply a rename-transformer for @racket[begin].
