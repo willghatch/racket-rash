@@ -207,8 +207,9 @@ with-default-line-macro print-quoted-list {
   ;; prints '(hello world)
   hello world
 }
-
 }
+
+Be sure that the module you name at the top-level provides a binding for #%linea-line, #%linea-s-exp, and #%linea-expressions-begin, in addition to other #% identifiers that a module needs (eg. #%module-begin, #%app, ...).
 
 @subsection{linea/read}
 @(declare-exporting linea/read)
