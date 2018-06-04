@@ -164,6 +164,10 @@ Pipeline macro documentation:
 @secref["pipeline-macro"
         #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 
+Also, for those who just want to pipeline subprocesses in a Racket program using a lispy syntax, you probably want the shell/pipeline library, a basic component of Rash that can be used on its own:
+@secref["pipeline"
+        #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
+
 
 
 @;@section{Media}
