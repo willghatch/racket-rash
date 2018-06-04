@@ -38,7 +38,7 @@ finwe feanor fingolfin finarfin
 beren (and) \
   luthien tinuviel
 
-(huon (vs) werewolf-sauron)
+(huan (vs) werewolf-sauron)
 
 manwe orome {
   varda yavanna
@@ -56,7 +56,7 @@ reads as:
   (#%module-begin
     (#%linea-line finwe feanor fingolfin finarfin)
     (#%linea-line beren (and) luthien tinuviel)
-    (#%linea-s-exp (huon (vs) werewold-sauron))
+    (#%linea-s-exp (huan (vs) werewold-sauron))
     (#%linea-line
      manwe
      orome
