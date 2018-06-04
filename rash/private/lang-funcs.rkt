@@ -163,10 +163,15 @@ But how can it be done in a way that let those arguments affect the reader?
                       [else (default key defval)]))
            (require linea/read)))]))
 
-(define (rash-top-level-print v)
-  (let ([str ((current-rash-top-level-print-formatter) v)])
-    (when (not (equal? str ""))
-      (displayln str))))
+(define (rash-top-level-print . vs)
+  (for ([v vs])
+    (let ([str ((current-rash-top-level-print-formatter) v)])
+      (when (not (equal? str ""))
+        (displayln str)))))
+(define-syntax (wrap-rash-top-level-print stx)
+  (syntax-parse stx
+    [(_ e ...)
+     #'(call-with-values (λ () e ...) rash-top-level-print)]))
 
 (define-syntax (define-rash-module-begin stx)
   (syntax-parse stx
@@ -186,7 +191,7 @@ But how can it be done in a way that let those arguments affect the reader?
                                          #'(raise-syntax-error
                                             'make-rash-module-begin-transformer
                                             "expected #:this-module-path argument."))]
-                   [top-level-wrap (opref tab '#:top-level-wrap #'rash-top-level-print)]
+                   [top-level-wrap (opref tab '#:top-level-wrap #'wrap-rash-top-level-print)]
                    [mk-input (opref tab '#:in #'(current-input-port))]
                    [mk-output (opref tab '#:out #'(current-output-port))]
                    [mk-err-output (opref tab '#:err #'(current-error-port))]

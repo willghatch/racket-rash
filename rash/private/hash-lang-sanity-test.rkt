@@ -14,3 +14,6 @@
 (begin {echo this has an opening delimiter '"{"})
 
 ls
+
+echo Top-level multiple values:
+(values 1 2 3)
