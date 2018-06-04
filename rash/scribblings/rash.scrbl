@@ -243,33 +243,6 @@ Note that the default #lang rash has its input/output/error-output as stdin/stdo
 
 
 
-@; TODO - this is from linea, probably move it:
-
-@defform[(define-line-macro name transformer-expr)]{
-
-Defines a line-macro (the type of macro that overrides the behavior of a rash line).
-
-@codeblock|{
-#lang rash
-(require (for-syntax racket/base syntax/parse))
-(define-line-macro my-for
-  (syntax-parser
-    [(_ i:id (~datum in) from:id ... (~datum do) body:expr)
-     #'(for ([i (list 'from ...)])
-          body)]))
-
-my-for f in file1.txt file2.txt do {
-  rm $f
-}
-}|
-
-}
-
-@defform[#:id default-line-macro default-line-macro]{
-Syntax parameter used to determine which line macro to place when one is not explicitly given.
-
-TODO - example setting and what is the default.
-}
 
 @; TODO - docs about reader
 

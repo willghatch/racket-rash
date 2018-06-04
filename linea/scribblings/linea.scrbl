@@ -83,7 +83,7 @@ TODO:
 Simply a rename-transformer for @racket[begin].
 }
 @defform[(#%linea-line starter e ...)]{
-If @racket[starter] is a @racket[line-macro?], then it acts as #'(starter e ...).  If @racket[starter] is not a @racket[line-macro?], then the current default (as set by @racket[with-default-line-macro]) is inserted in place of @racket[#%linea-line].
+If @racket[starter] is a @racket[line-macro], then it acts as #'(starter e ...).  If @racket[starter] is not a @racket[line-macro], then the current default (as set by @racket[with-default-line-macro]) is inserted in place of @racket[#%linea-line].
 }
 @defform[(#%linea-s-exp e)]{
 This is just a pass-through -- @(racket (#%linea-s-exp foo)) simply turns into @(racket foo).
@@ -93,15 +93,34 @@ This is just a pass-through -- @(racket (#%linea-s-exp foo)) simply turns into @
 @(declare-exporting linea/line-macro)
 
 @defform[(define-line-macro name transformer)]{
-Defines @racket[name] to be a @racket[line-macro?] with @racket[transformer] as its syntax transformer.  Note that identifiers defined by @racket[define-line-macro] can be used both as line-macros and normal macros and behave the same either way.
+Defines @racket[name] to be a @racket[line-macro] with @racket[transformer] as its syntax transformer.  Note that identifiers defined by @racket[define-line-macro] can be used both as line-macros and normal macros and behave the same either way.
 
 @codeblock[#:keep-lang-line? #f]{
 #lang linea racket/base
 ;; in a language like Rash that uses the Linea reader...
+(require (for-syntax racket/base syntax/parse))
 (define-line-macro basic-app
   (syntax-parser [(_ e ...) #'(#%app e ...)]))
+
 basic-app println "hello world"
+
+(define-line-macro my-for
+  (syntax-parser
+    [(_ i:id (~datum in) from:id ... (~datum do) body:expr)
+     #'(for ([i (list 'from ...)])
+          body)]))
+
+my-for f in file1.txt file2.txt do {
+  basic-app println f
 }
+}
+
+}
+
+@defform[#:id default-line-macro default-line-macro]{
+Syntax parameter used to determine which line macro to place when one is not explicitly given.
+
+Use @racket[with-default-line-macro] to set it for a region of code.
 }
 
 @defform[#:kind "line-macro" (with-default-line-macro new-default-line-macro body ...)]{
@@ -128,7 +147,31 @@ Like @racket[with-default-line-macro], only the bodies are spliced into the surr
 
 @subsection{linea/line-macro-prop}
 @(declare-exporting linea/line-macro-prop)
-TODO: prop:line-macro line-macro?
+
+@defform[#:kind "syntax class" #:id line-macro line-macro]{
+Syntax class for matching line macros.  These are matched by @racket[#%linea-line] to determine whether to insert a default line interpretation.
+}
+
+@defthing[prop:line-macro struct-type-property?]{
+You can define your own structs that are line macros and maybe other things too with @racket[prop:line-macro].  If you make a struct with this property and it is the @racket[syntax-local-value] of an identifier, then it will match the @racket[line-macro] syntax class.
+
+The property should hold a procedure that takes a struct instance as its first argument and a syntax object as its second argument.
+
+@codeblock[#:keep-lang-line? #f]{
+#lang racket/base
+(struct my-line-macro-struct
+  (transformer)
+  #:property prop:line-macro (λ (inst . args)
+                               (apply
+                                (my-line-macro-struct-transformer inst)
+                                args)))
+}
+}
+
+@defproc[(line-macro? [x any/c]) any/c]{
+Detects if @racket[x] is a struct with @racket[prop:line-macro].  You probably don't want to use this directly, use the @racket[line-macro] syntax class.
+}
+
 
 
 @subsection{#lang linea}

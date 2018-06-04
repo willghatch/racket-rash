@@ -13,6 +13,7 @@
   (provide
    prop:line-macro
    line-macro?
+   line-macro
    ))
 
 (require syntax/parse)
