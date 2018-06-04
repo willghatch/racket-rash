@@ -63,6 +63,7 @@ General Todos (written more for my memory than for something readable by others)
 * better drracket integration
 ** write a lexer for coloring, maybe
 ** how can I set the color lexer for the interactions window?
+** maybe I can use some print handler hook in drracket to give a shell-style prompt when in the drracket interactions window.
 
 * make #lang rash/bash-env or something that uses bash syntax for environment variables and aliases
 ** it will be nice just as a configuration bridge so you can share a fair amount of config with bash
