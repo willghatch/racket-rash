@@ -33,10 +33,10 @@
     [(lm:line-macro arg ...)
      (let ([slv (syntax-local-value #'lm)])
        (let ([transform (linea-line-macro-ref slv)])
-             (cond [(procedure? transform) (transform slv stx)]
-                   [(number? transform) ({vector-ref (struct->vector slv)
-                                                   (add1 transform)}
-                                       stx)])))]))
+         (cond [(procedure? transform) (transform slv stx)]
+               [(number? transform) ({vector-ref (struct->vector slv)
+                                                 (add1 transform)}
+                                     stx)])))]))
 
 (struct line-macro-struct
   (transformer)
