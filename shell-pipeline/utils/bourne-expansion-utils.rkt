@@ -68,7 +68,7 @@
   (define dollar-regexp-str (regexp-quote dollar-str))
   (define dollar-regexp (pregexp dollar-regexp-str))
   (define dollar-id-end-regexp (pregexp (string-append dollar-regexp-str
-                                                       "|\\s|/")))
+                                                       "|\\s|/|:")))
 
   (define (dollar-var-str->var-ref str glob-protect-maybe)
     (let ([ref
@@ -167,7 +167,7 @@
   (define dollar-regexp-str (regexp-quote dollar-str))
   (define dollar-regexp (pregexp dollar-regexp-str))
   (define dollar-id-end-regexp (pregexp (string-append dollar-regexp-str
-                                                       "|\\s|/")))
+                                                       "|\\s|/|:")))
   (define (dollar-var-str->var-ref str old-stx glob-protect-maybe)
     (with-syntax ([ref (if (equal? str (string-upcase str))
                            #`(envar #,(datum->syntax old-stx str old-stx))
