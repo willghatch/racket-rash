@@ -144,7 +144,9 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 (define-line-macro in-dir
   (syntax-parser
     [(_ dirs:id body)
-     #`(in-dir #,(dollar-expand-syntax #'dirs #:glob-expand? #t) body)]
+     #`(in-dir (values #,(dollar-expand-syntax #'dirs #:glob-expand? #t)) body)]
+    [(_ dirs:str body)
+     #`(in-dir (values #,(dollar-expand-syntax #'dirs #:glob-expand? #t)) body)]
     [(_ dirs body)
      #`(let* ([edirs dirs]
               [err (λ (p) (error 'in-dir "directory doesn't exist: ~a" p))]
