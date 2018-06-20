@@ -72,16 +72,14 @@
                      (eval-syntax
                       (parameterize ([current-namespace repl-namespace])
                         (namespace-syntax-introduce
-                         #`(splicing-with-redirections
-                            #:in real-stdin
-                            #:out (current-output-port)
-                            #:err (current-error-port)
-                            (splicing-syntax-parameterize
-                                ([default-line-macro #'run-pipeline/logic/ret-obj]
-                                 ;; TODO - make configurable
-                                 [default-pipeline-starter
-                                   #'repl-default-pipeline-starter])
-                              #,next-input)))))))
+                         #`(splicing-with-default-line-macro
+                            run-pipeline/logic/ret-obj
+                            (splicing-with-redirections
+                             #:in real-stdin
+                             #:out (current-output-port)
+                             #:err (current-error-port)
+                             #:starter repl-default-pipeline-starter
+                             #,next-input)))))))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -108,10 +106,10 @@
                      #:in real-stdin
                      #:out (current-output-port)
                      #:err (current-error-port)
-                     (splicing-syntax-parameterize
-                         ([default-line-macro #'run-pipeline/logic/ret-obj])
-                       #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
-                                      (open-input-file rcfile))))))))
+                     (splicing-with-default-line-macro
+                      run-pipeline/logic/ret-obj
+                      #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
+                                     (open-input-file rcfile))))))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?

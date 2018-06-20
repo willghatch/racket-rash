@@ -8,7 +8,8 @@
    pipeline-start-segment
    pipeline-joint-segment
    run-pipeline
-   default-pipeline-starter
+   with-redirections
+   splicing-with-redirections
    ))
 
 (provide
@@ -17,7 +18,6 @@
  run-pipeline
  with-redirections
  splicing-with-redirections
- default-pipeline-starter
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
@@ -85,11 +85,11 @@
                         &strict &permissive &lazy &lazy-timeout)))))
 
 ;; TODO - maybe these should be used by mixed-pipeline as well?
-(define-syntax-parameter rash-default-in
+(define-syntax-parameter default-pipeline-in
   (syntax-parser [_ #'(open-input-string "")]))
-(define-syntax-parameter rash-default-out
+(define-syntax-parameter default-pipeline-out
   (syntax-parser [_ #'(λ (x) (string-trim (port->string x)))]))
-(define-syntax-parameter rash-default-err-out
+(define-syntax-parameter default-pipeline-err-out
   (syntax-parser [_ #''string-port]))
 
 (define-syntax (with-redirections* stx)
@@ -97,16 +97,20 @@
     [(_ parameterization-form
         (~or (~optional (~seq #:in in))
              (~optional (~seq #:out out))
-             (~optional (~seq #:err err)))
+             (~optional (~seq #:err err))
+             (~optional (~seq #:starter starter:pipe-starter-op)))
         ...
         body:expr ...+)
      (let* ([set-in (and (attribute in)
-                         #'(rash-default-in (λ (stx) (quote-syntax in))))]
+                         #'(default-pipeline-in (λ (stx) (quote-syntax in))))]
             [set-out (and (attribute out)
-                          #'(rash-default-out (λ (stx) (quote-syntax out))))]
+                          #'(default-pipeline-out (λ (stx) (quote-syntax out))))]
             [set-err (and (attribute err)
-                          #'(rash-default-err-out (λ (stx) (quote-syntax err))))]
-            [parameterizations #`(#,@(filter (λ(x)x) (list set-in set-out set-err)))])
+                          #'(default-pipeline-err-out (λ (stx) (quote-syntax err))))]
+            [set-starter (and (attribute starter)
+                              #'(default-pipeline-starter (quote-syntax starter)))]
+            [parameterizations
+             #`(#,@(filter (λ(x)x) (list set-in set-out set-err set-starter)))])
        #`(parameterization-form
           #,parameterizations
           body ...))]))
@@ -114,7 +118,8 @@
   (syntax-parse stx
     [(_ (and (~or (~optional (~seq #:in in))
                   (~optional (~seq #:out out))
-                  (~optional (~seq #:err err)))
+                  (~optional (~seq #:err err))
+                  (~optional (~seq #:starter starter:pipe-starter-op)))
              opt)
         ...
         body ...+)
@@ -123,7 +128,8 @@
   (syntax-parse stx
     [(_ (and (~or (~optional (~seq #:in in))
                   (~optional (~seq #:out out))
-                  (~optional (~seq #:err err)))
+                  (~optional (~seq #:err err))
+                  (~optional (~seq #:starter starter:pipe-starter-op)))
              opt)
         ...
         body ...+)
@@ -258,7 +264,7 @@
                                                    =>
                                                    (λ (f) (dollar-expand-syntax f))]
                                                   ;; TODO - respect outer macro default
-                                                  [else #'rash-default-in])
+                                                  [else #'default-pipeline-in])
                                       'out #,(cond [(attribute s-out)]
                                                    [(attribute e-out)]
                                                    [(or (attribute s->)
@@ -277,11 +283,11 @@
                                                     (λ (f) #`(list #,(dollar-expand-syntax f)
                                                                    'append))]
                                                    ;; TODO - respect outer macro default
-                                                   [else  #'rash-default-out])
+                                                   [else  #'default-pipeline-out])
                                       'err #,(cond [(attribute s-err)]
                                                    [(attribute s-err)]
                                                    ;; TODO - respect outer macro default
-                                                   [else #'rash-default-err-out])
+                                                   [else #'default-pipeline-err-out])
                                       'object-to-out #,(if (or (attribute s-out)
                                                                (attribute e-out)
                                                                (attribute s->)

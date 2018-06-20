@@ -228,7 +228,7 @@ Semi-deprecated.
 This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like @racket[rash], but with different default values for the available options.
 
 @(racketblock
-(define-syntax my-rash (make-rash-transformer #:default-starter #'=basic-object-pipe=)))
+(define-syntax my-rash (make-rash-transformer #:default-starter =basic-object-pipe=)))
 }
 
 @;@defform[(make-rash-module-begin-transformer options ...)]{

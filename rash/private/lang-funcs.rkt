@@ -104,11 +104,11 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-syntax-parameterize ([default-pipeline-starter default-starter]
-                                        [default-line-macro line-macro])
-           (splicing-with-redirections
-            #:in in-eval #:out out-eval #:err err-eval
-            e ...)))]))
+         (splicing-with-default-line-macro
+          line-macro
+          (splicing-with-redirections
+           #:in in-eval #:out out-eval #:err err-eval #:starter default-starter
+           e ...)))]))
 
 
 #|
@@ -222,15 +222,15 @@ But how can it be done in a way that let those arguments affect the reader?
                                       (mk-input
                                        mk-output
                                        mk-err-output
-                                       #'mk-default-starter
-                                       #'mk-default-line-macro)
+                                       mk-default-starter
+                                       mk-default-line-macro)
                                       e)])))))
                      (current-print rash-top-level-print))
                    (rash-expressions-begin (mk-input
                                             mk-output
                                             mk-err-output
-                                            #'mk-default-starter
-                                            #'mk-default-line-macro)
+                                            mk-default-starter
+                                            mk-default-line-macro)
                                            arg (... ...)))]))))]))
 
 (begin-for-syntax
@@ -266,13 +266,18 @@ But how can it be done in a way that let those arguments affect the reader?
                                          #:context stx
                                          #:no-duplicates? #t))
 
-                (with-syntax ([input (opref tab '#:in #'mk-input)]
-                              [output (opref tab '#:out #'mk-output)]
-                              [err-output (opref tab '#:err #'mk-err-output)]
-                              [default-starter (opref tab '#:default-starter
-                                                      #'#'mk-default-starter)]
-                              [line-macro (opref tab '#:default-line-macro
-                                                 #'#'mk-line-macro)])
+                (with-syntax ([input
+                               (opref tab '#:in (quote-syntax mk-input))]
+                              [output
+                               (opref tab '#:out (quote-syntax mk-output))]
+                              [err-output
+                               (opref tab '#:err (quote-syntax mk-err-output))]
+                              [default-starter
+                                (opref tab '#:default-starter
+                                       (quote-syntax mk-default-starter))]
+                              [line-macro
+                               (opref tab '#:default-line-macro
+                                      (quote-syntax mk-line-macro))])
                   (syntax-parse rest-stx
                     #:literals (#%linea-expressions-begin)
                     ;; This is the case where reading was done up-front
