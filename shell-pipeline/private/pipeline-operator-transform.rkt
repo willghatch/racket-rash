@@ -8,22 +8,22 @@
           "pipeline-operator-detect.rkt"
           ))
 
-(define-syntax (rash-transform-starter-segment stx)
+(define-syntax (transform-starter-segment stx)
   (syntax-parse stx
-    [(tr op:pipe-starter-op arg:not-pipeline-op ...)
-     (let* ([transformed (rash-pipeline-starter-transform #'(op arg ...))])
+    [(tr op:pipeline-starter arg:not-pipeline-op ...)
+     (let* ([transformed (pipeline-starter-transform #'(op arg ...))])
        (syntax-parse transformed
          ;; If the transformed result is another pipeline operator, try again
-         [(op:pipe-starter-op arg:not-pipeline-op ...)
+         [(op:pipeline-starter arg:not-pipeline-op ...)
           #'(tr op arg ...)]
          [_ transformed]))]))
 
-(define-syntax (rash-transform-joiner-segment stx)
+(define-syntax (transform-joint-segment stx)
   (syntax-parse stx
-    [(tr op:pipe-joiner-op arg:not-pipeline-op ...)
-     (let* ([transformed (rash-pipeline-joiner-transform #'(op arg ...))])
+    [(tr op:pipeline-joint arg:not-pipeline-op ...)
+     (let* ([transformed (pipeline-joint-transform #'(op arg ...))])
        (syntax-parse transformed
          ;; If the transformed result is another pipeline operator, try again
-         [(op:pipe-joiner-op arg:not-pipeline-op ...)
+         [(op:pipeline-joint arg:not-pipeline-op ...)
           #'(tr op arg ...)]
          [_ transformed]))]))

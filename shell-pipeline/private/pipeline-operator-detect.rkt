@@ -3,67 +3,67 @@
 ;; struct properties and syntax classes for defining and detecting pipeline operators
 
 (provide
- prop:rash-pipeline-starter
- rash-pipeline-starter?
- rash-pipeline-starter-transform
+ prop:pipeline-starter
+ pipeline-starter?
+ pipeline-starter-transform
 
- prop:rash-pipeline-joiner
- rash-pipeline-joiner?
- rash-pipeline-joiner-transform
+ prop:pipeline-joint
+ pipeline-joint?
+ pipeline-joint-transform
 
- pipe-starter-op
- pipe-joiner-op
+ pipeline-starter
+ pipeline-joint
  not-pipeline-op
 
- rash-pipeline-operator
+ pipeline-operator
  )
 
 (require syntax/parse)
 
 
-(define-values (prop:rash-pipeline-starter
-                rash-pipeline-starter?
-                rash-pipeline-starter-ref)
-  (make-struct-type-property 'rash-pipeline-starter))
-(define-values (prop:rash-pipeline-joiner
-                rash-pipeline-joiner?
-                rash-pipeline-joiner-ref)
-  (make-struct-type-property 'rash-pipeline-joiner))
+(define-values (prop:pipeline-starter
+                pipeline-starter?
+                pipeline-starter-ref)
+  (make-struct-type-property 'pipeline-starter))
+(define-values (prop:pipeline-joint
+                pipeline-joint?
+                pipeline-joint-ref)
+  (make-struct-type-property 'pipeline-joint))
 
-(define-syntax-class pipe-starter-op
+(define-syntax-class pipeline-starter
   (pattern op:id
-           #:when (rash-pipeline-starter? (syntax-local-value #'op (λ () #f)))))
-(define-syntax-class pipe-joiner-op
+           #:when (pipeline-starter? (syntax-local-value #'op (λ () #f)))))
+(define-syntax-class pipeline-joint
   (pattern op:id
-           #:when (rash-pipeline-joiner? (syntax-local-value #'op (λ () #f)))))
+           #:when (pipeline-joint? (syntax-local-value #'op (λ () #f)))))
 (define-syntax-class not-pipeline-op
-  (pattern (~and (~not x:pipe-joiner-op)
-                 (~not x:pipe-starter-op))))
+  (pattern (~and (~not x:pipeline-joint)
+                 (~not x:pipeline-starter))))
 
 
-(define (rash-pipeline-starter-transform op-form)
+(define (pipeline-starter-transform op-form)
   (syntax-parse op-form
-    [(op:pipe-starter-op arg:not-pipeline-op ...)
+    [(op:pipeline-starter arg:not-pipeline-op ...)
      (let ([slv (syntax-local-value #'op (λ () #f))])
-       (let ([starter (rash-pipeline-starter-ref slv)])
+       (let ([starter (pipeline-starter-ref slv)])
              (cond [(procedure? starter) (starter slv op-form)]
                    [(number? starter) ({vector-ref (struct->vector slv)
                                                    (add1 starter)}
                                        op-form)])))]))
-(define (rash-pipeline-joiner-transform op-form)
+(define (pipeline-joint-transform op-form)
   (syntax-parse op-form
-    [(op:pipe-joiner-op arg:not-pipeline-op ...)
+    [(op:pipeline-joint arg:not-pipeline-op ...)
      (let ([slv (syntax-local-value #'op (λ () #f))])
-       (let ([joiner (rash-pipeline-joiner-ref slv)])
-             (cond [(procedure? joiner) (joiner slv op-form)]
-                   [(number? joiner) ({vector-ref (struct->vector slv)
-                                                   (add1 joiner)}
+       (let ([joint (pipeline-joint-ref slv)])
+             (cond [(procedure? joint) (joint slv op-form)]
+                   [(number? joint) ({vector-ref (struct->vector slv)
+                                                   (add1 joint)}
                                        op-form)])))]))
 
 
-(struct rash-pipeline-operator
-  (as-starter as-joiner outside-rash-macro)
+(struct pipeline-operator
+  (as-starter as-joint outside-rash-macro)
   #:transparent
-  #:property prop:rash-pipeline-starter (struct-field-index as-starter)
-  #:property prop:rash-pipeline-joiner (struct-field-index as-joiner)
+  #:property prop:pipeline-starter (struct-field-index as-starter)
+  #:property prop:pipeline-joint (struct-field-index as-joint)
   #:property prop:procedure (struct-field-index outside-rash-macro))

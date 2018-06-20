@@ -98,7 +98,7 @@
         (~or (~optional (~seq #:in in))
              (~optional (~seq #:out out))
              (~optional (~seq #:err err))
-             (~optional (~seq #:starter starter:pipe-starter-op)))
+             (~optional (~seq #:starter starter:pipeline-starter)))
         ...
         body:expr ...+)
      (let* ([set-in (and (attribute in)
@@ -119,7 +119,7 @@
     [(_ (and (~or (~optional (~seq #:in in))
                   (~optional (~seq #:out out))
                   (~optional (~seq #:err err))
-                  (~optional (~seq #:starter starter:pipe-starter-op)))
+                  (~optional (~seq #:starter starter:pipeline-starter)))
              opt)
         ...
         body ...+)
@@ -129,7 +129,7 @@
     [(_ (and (~or (~optional (~seq #:in in))
                   (~optional (~seq #:out out))
                   (~optional (~seq #:err err))
-                  (~optional (~seq #:starter starter:pipe-starter-op)))
+                  (~optional (~seq #:starter starter:pipeline-starter)))
              opt)
         ...
         body ...+)
@@ -304,7 +304,7 @@
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
-    [(_ do-macro starter:pipe-starter-op args:not-pipeline-op ... rest ...)
+    [(_ do-macro starter:pipeline-starter args:not-pipeline-op ... rest ...)
      #'(rash-pipeline-splitter/joints do-macro ([starter args ...]) (rest ...))]
     [(rps do-macro iargs:not-pipeline-op ...+ rest ...)
      #`(rps do-macro
@@ -316,19 +316,19 @@
     [(rpsj do-macro (done-parts ...) ())
      #'(do-macro done-parts ...)]
     [(rpsj do-macro (done-parts ...)
-           (op:pipe-joiner-op arg:not-pipeline-op ... rest ...))
+           (op:pipeline-joint arg:not-pipeline-op ... rest ...))
      #'(rpsj do-macro (done-parts ... [op arg ...]) (rest ...))]))
 
 (define-syntax (run-split-pipe stx)
   (syntax-parse stx
-    [(_ (starter startarg ...) (joiner joinarg ...) ...)
+    [(_ (starter startarg ...) (joint joinarg ...) ...)
      #'(rash-do-transformed-pipeline
         #:bg (ropt 'bg) #:return-pipeline-object (ropt 'pipeline-ret)
         #:in (ropt 'in) #:out (ropt 'out) #:err (ropt 'err)
         #:strictness (ropt 'strictness) #:lazy-timeout (ropt 'lazy-timeout)
         #:object-to-out (ropt 'object-to-out)
-        (rash-transform-starter-segment starter startarg ...)
-        (rash-transform-joiner-segment joiner joinarg ...) ...)]))
+        (transform-starter-segment starter startarg ...)
+        (transform-joint-segment joint joinarg ...) ...)]))
 
 
 (define (rash-do-transformed-pipeline #:bg bg
@@ -349,12 +349,12 @@
 
 (define-syntax (first-class-split-pipe/start stx)
   (syntax-parse stx
-    [(_ (starter startarg ...) (joiner joinarg ...) ...)
+    [(_ (starter startarg ...) (joint joinarg ...) ...)
      #'(mp:composite-pipeline-member-spec
-        (list (rash-transform-starter-segment starter startarg ...)
-              (rash-transform-joiner-segment joiner joinarg ...) ...))]))
+        (list (transform-starter-segment starter startarg ...)
+              (transform-joint-segment joint joinarg ...) ...))]))
 (define-syntax (first-class-split-pipe/joint stx)
   (syntax-parse stx
-    [(_ (joiner joinarg ...) ...+)
+    [(_ (joint joinarg ...) ...+)
      #'(mp:composite-pipeline-member-spec
-        (list (rash-transform-joiner-segment joiner joinarg ...) ...))]))
+        (list (transform-joint-segment joint joinarg ...) ...))]))

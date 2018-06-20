@@ -21,8 +21,8 @@
       #'e1)]))
 
 (define-syntax default-pipeline-starter-macro
-  (rash-pipeline-operator default-pipeline-error
-                          default-pipeline-error
-                          default-pipeline-error))
+  (pipeline-operator default-pipeline-error
+                     default-pipeline-error
+                     default-pipeline-error))
 
 (define-syntax-parameter default-pipeline-starter #'default-pipeline-starter-macro)

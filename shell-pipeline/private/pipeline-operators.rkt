@@ -62,11 +62,11 @@
 
 (define-syntax (define-pipeline-operator/no-kw stx)
   (syntax-parse stx
-    [(def name as-starter as-joiner outside-of-rash)
+    [(def name as-starter as-joint outside-of-rash)
      #'(define-syntax name
-         (rash-pipeline-operator
+         (pipeline-operator
           as-starter
-          as-joiner
+          as-joint
           outside-of-rash))]))
 
 (define-syntax (define-pipeline-operator stx)
@@ -93,7 +93,7 @@
                                      (syntax->datum #'name)
                                      "Can't be used as a pipeline starter operator"
                                      stx)))]
-                   [joiner (or (and (attribute j-impl) #'j-impl)
+                   [joint (or (and (attribute j-impl) #'j-impl)
                                (and (attribute o-impl) #'o-impl)
                                #'(λ (stx)
                                    (raise-syntax-error
@@ -116,7 +116,7 @@
              #'(begin
                  (define-for-syntax parsername o-impl)
                  (define-pipeline-operator/no-kw name parsername parsername nmacro)))
-           #'(define-pipeline-operator/no-kw name starter joiner nmacro)))]))
+           #'(define-pipeline-operator/no-kw name starter joint nmacro)))]))
 
 (define-syntax (pipeop stx)
   (syntax-parse stx
@@ -202,16 +202,16 @@ re-appended).
 (define-pipeline-operator =composite-pipe=
   #:start
   (syntax-parser
-    [(_ (start-op:pipe-starter-op start-arg:not-pipeline-op ...)
-        (join-op:pipe-joiner-op join-arg:not-pipeline-op ...) ...)
+    [(_ (start-op:pipeline-starter start-arg:not-pipeline-op ...)
+        (join-op:pipeline-joint join-arg:not-pipeline-op ...) ...)
      #'(composite-pipeline-member-spec
-        (list (rash-transform-starter-segment start-op start-arg ...)
-              (rash-transform-joiner-segment join-op join-arg ...) ...))])
+        (list (transform-starter-segment start-op start-arg ...)
+              (transform-joint-segment join-op join-arg ...) ...))])
   #:joint
   (syntax-parser
-    [(_ (op:pipe-joiner-op arg:not-pipeline-op ...) ...+)
+    [(_ (op:pipeline-joint arg:not-pipeline-op ...) ...+)
      #'(composite-pipeline-member-spec
-        (list (rash-transform-joiner-segment op arg ...) ...))]))
+        (list (transform-joint-segment op arg ...) ...))]))
 
 ;; operator for receiving first-class segments (IE possibly-composite member specs)
 (define-pipeline-operator =pipeline-segment=
