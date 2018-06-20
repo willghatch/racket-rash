@@ -114,26 +114,37 @@
        #`(parameterization-form
           #,parameterizations
           body ...))]))
+(begin-for-syntax
+  (define-splicing-syntax-class kw-opt
+    (pattern (~seq kw:keyword val:expr))))
 (define-syntax (with-redirections stx)
   (syntax-parse stx
-    [(_ (and (~or (~optional (~seq #:in in))
-                  (~optional (~seq #:out out))
-                  (~optional (~seq #:err err))
-                  (~optional (~seq #:starter starter:pipeline-starter)))
-             opt)
-        ...
-        body ...+)
-     #'(with-redirections* syntax-parameterize opt ... body ...)]))
+    [(_ opt:kw-opt ... body ...+)
+     (syntax-parse #'(opt ...)
+       [(((~or (~optional (~seq #:in in))
+               (~optional (~seq #:out out))
+               (~optional (~seq #:err err))
+               (~optional (~seq #:starter starter:pipeline-starter))))
+         ...)
+        #`(with-redirections*
+            syntax-parameterize
+            #,@(apply append (map syntax->list
+                                  (syntax->list #'(opt ...))))
+            body ...)])]))
 (define-syntax (splicing-with-redirections stx)
   (syntax-parse stx
-    [(_ (and (~or (~optional (~seq #:in in))
-                  (~optional (~seq #:out out))
-                  (~optional (~seq #:err err))
-                  (~optional (~seq #:starter starter:pipeline-starter)))
-             opt)
-        ...
-        body ...+)
-     #'(with-redirections* splicing-syntax-parameterize opt ... body ...)]))
+    [(_ opt:kw-opt ... body ...+)
+     (syntax-parse #'(opt ...)
+       [(((~or (~optional (~seq #:in in))
+               (~optional (~seq #:out out))
+               (~optional (~seq #:err err))
+               (~optional (~seq #:starter starter:pipeline-starter))))
+         ...)
+        #`(with-redirections*
+            splicing-syntax-parameterize
+            #,@(apply append (map syntax->list
+                                  (syntax->list #'(opt ...))))
+            body ...)])]))
 
 (define-syntax (pipeline-start-segment stx)
   (syntax-parse stx
