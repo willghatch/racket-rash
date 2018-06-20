@@ -82,9 +82,9 @@ What more should the good unix pipe do (or at least have options to do)?
   (λ (stx)
     (if alias-support?
         (syntax-parse stx
-          [(_ cmd:rash-alias-id arg ...)
+          [(_ cmd:pipeline-alias-id arg ...)
            (let ([slv (syntax-local-value #'cmd)])
-             ({rash-alias-ref slv} slv #'(cmd arg ...)))]
+             ({pipeline-alias-ref slv} slv #'(cmd arg ...)))]
           [else (do-expansion-parse stx)])
         (do-expansion-parse stx))))
 

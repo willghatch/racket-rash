@@ -13,7 +13,7 @@
   (syntax-parse stx
     [(_ name template-arg ...)
      #'(define-syntax name
-         (rash-alias
+         (pipeline-alias
           (syntax-parser
             [(_ arg (... ...))
              #'(=unix-pipe= template-arg ... arg (... ...))])))]))

@@ -12,5 +12,5 @@
 (define-syntax (define-pipeline-alias stx)
   (syntax-parse stx
     [(_ name transformer)
-     #'(define-syntax name (rash-alias transformer))]))
+     #'(define-syntax name (pipeline-alias transformer))]))
 

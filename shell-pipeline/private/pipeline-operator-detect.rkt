@@ -62,8 +62,8 @@
 
 
 (struct pipeline-operator
-  (as-starter as-joint outside-rash-macro)
+  (as-starter as-joint outside-pipeline-macro)
   #:transparent
   #:property prop:pipeline-starter (struct-field-index as-starter)
   #:property prop:pipeline-joint (struct-field-index as-joint)
-  #:property prop:procedure (struct-field-index outside-rash-macro))
+  #:property prop:procedure (struct-field-index outside-pipeline-macro))
