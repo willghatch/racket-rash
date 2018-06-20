@@ -22,10 +22,14 @@
  \|\|
 
  ;; TODO - some things from pipeline-operator-detect.rkt should be provided
- )
+ (for-syntax
+  pipeline-starter
+  pipeline-joint
+  ))
 (require
  (submod "private/pipeline-macro-parse.rkt" for-public)
  "private/pipeline-operator-default.rkt"
+ (for-syntax "private/pipeline-operator-detect.rkt")
  "private/pipeline-operators.rkt"
  "private/good-unix-operator.rkt"
  "private/define-pipeline-alias.rkt"

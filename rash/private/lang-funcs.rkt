@@ -3,6 +3,8 @@
 (provide
  rash
  rash/wired
+ rash-config
+ splicing-rash-config
  run-pipeline
  run-pipeline/logic
  cd
@@ -52,6 +54,7 @@
   racket/base
   syntax/parse
   linea/line-macro
+  linea/line-macro-prop
   linea/defaults
   linea/read
   linea/read-syntax-string
@@ -104,11 +107,88 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-with-default-line-macro
-          line-macro
-          (splicing-with-redirections
-           #:in in-eval #:out out-eval #:err err-eval #:starter default-starter
-           e ...)))]))
+         (splicing-rash-config
+          #:line-macro line-macro
+          #:starter default-starter
+          #:in in-eval
+          #:out out-eval
+          #:err err-eval
+          e ...))]))
+
+(define-syntax (rash-config* stx)
+  (syntax-parse stx
+    [(_ lm-parameterizer
+        p-parameterizer
+        (~or
+         (~optional (~seq #:in in:expr))
+         (~optional (~seq #:out out:expr))
+         (~optional (~seq #:err err:expr))
+         (~optional (~seq #:starter starter:pipeline-starter))
+         (~optional (~seq #:line-macro line-macro:line-macro)))
+        ...
+        body ...+)
+     (with-syntax ([lm-param-form (if (attribute line-macro)
+                                      #'(lm-parameterizer line-macro)
+                                      #'(begin))]
+                   [p-param-in (if (attribute in)
+                                   #'(#:in in)
+                                   #'())]
+                   [p-param-out (if (attribute out)
+                                    #'(#:out out)
+                                    #'())]
+                   [p-param-err (if (attribute err)
+                                    #'(#:err err)
+                                    #'())]
+                   [p-param-starter (if (attribute starter)
+                                        #'(#:starter starter)
+                                        #'())])
+       (with-syntax ([p-param-form (if (or (attribute in)
+                                           (attribute out)
+                                           (attribute err)
+                                           (attribute starter))
+                                       #`(p-parameterizer #,@#'p-param-in
+                                                          #,@#'p-param-out
+                                                          #,@#'p-param-err
+                                                          #,@#'p-param-starter)
+                                       #'(begin))])
+         #`(#,@#'lm-param-form
+            (#,@#'p-param-form
+             body ...))))]))
+(begin-for-syntax
+  (define-splicing-syntax-class kw-opt
+    (pattern (~seq kw:keyword val:expr))))
+(define-syntax (rash-config stx)
+  (syntax-parse stx
+    [(_ opt:kw-opt ... body ...+)
+     (syntax-parse #'(opt ...)
+       [(((~or
+           (~optional (~seq #:in in:expr))
+           (~optional (~seq #:out out:expr))
+           (~optional (~seq #:err err:expr))
+           (~optional (~seq #:starter starter:pipeline-starter))
+           (~optional (~seq #:line-macro line-macro:line-macro))))
+         ...)
+        #`(rash-config* with-default-line-macro
+                        with-redirections
+                        #,@(apply append (map syntax->list
+                                              (syntax->list #'(opt ...))))
+                        body ...)])]))
+(define-syntax (splicing-rash-config stx)
+  (syntax-parse stx
+    [(_ opt:kw-opt ... body ...+)
+     (syntax-parse #'(opt ...)
+       [(((~or
+           (~optional (~seq #:in in:expr))
+           (~optional (~seq #:out out:expr))
+           (~optional (~seq #:err err:expr))
+           (~optional (~seq #:starter starter:pipeline-starter))
+           (~optional (~seq #:line-macro line-macro:line-macro))))
+         ...)
+        #`(rash-config* splicing-with-default-line-macro
+                        splicing-with-redirections
+                        #,@(apply append (map syntax->list
+                                              (syntax->list #'(opt ...))))
+                        body ...)])]))
 
 
 #|
