@@ -94,12 +94,12 @@
                                      "Can't be used as a pipeline starter operator"
                                      stx)))]
                    [joint (or (and (attribute j-impl) #'j-impl)
-                               (and (attribute o-impl) #'o-impl)
-                               #'(λ (stx)
-                                   (raise-syntax-error
-                                    (syntax->datum #'name)
-                                    "Can't be used as a pipeline joint operator"
-                                    stx)))]
+                              (and (attribute o-impl) #'o-impl)
+                              #'(λ (stx)
+                                  (raise-syntax-error
+                                   (syntax->datum #'name)
+                                   "Can't be used as a pipeline joint operator"
+                                   stx)))]
                    [nmacro (if #f #;(attribute m-impl)
                                #'m-impl
                                #'(λ (stx)
@@ -342,13 +342,13 @@ re-appended).
               #`(composite-pipeline-member-spec
                  (list
                   (unix-pipeline-member-spec (flatten (list arg ...))
-                                          #:err #,err
-                                          #:success #,success-pred)
+                                             #:err #,err
+                                             #:success #,success-pred)
                   (object-pipeline-member-spec (λ (out-port)
                                                  (apply-output-transformer #,as out-port)))))
               #`(unix-pipeline-member-spec (flatten (list arg ...))
-                                        #:err #,err
-                                        #:success #,success-pred)))])]))
+                                           #:err #,err
+                                           #:success #,success-pred)))])]))
 
 (define-for-syntax (basic-unix-pipe stx)
   (syntax-parse stx

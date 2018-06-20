@@ -46,19 +46,19 @@
     [(op:pipeline-starter arg:not-pipeline-op ...)
      (let ([slv (syntax-local-value #'op (λ () #f))])
        (let ([starter (pipeline-starter-ref slv)])
-             (cond [(procedure? starter) (starter slv op-form)]
-                   [(number? starter) ({vector-ref (struct->vector slv)
-                                                   (add1 starter)}
-                                       op-form)])))]))
+         (cond [(procedure? starter) (starter slv op-form)]
+               [(number? starter) ({vector-ref (struct->vector slv)
+                                               (add1 starter)}
+                                   op-form)])))]))
 (define (pipeline-joint-transform op-form)
   (syntax-parse op-form
     [(op:pipeline-joint arg:not-pipeline-op ...)
      (let ([slv (syntax-local-value #'op (λ () #f))])
        (let ([joint (pipeline-joint-ref slv)])
-             (cond [(procedure? joint) (joint slv op-form)]
-                   [(number? joint) ({vector-ref (struct->vector slv)
-                                                   (add1 joint)}
-                                       op-form)])))]))
+         (cond [(procedure? joint) (joint slv op-form)]
+               [(number? joint) ({vector-ref (struct->vector slv)
+                                             (add1 joint)}
+                                 op-form)])))]))
 
 
 (struct pipeline-operator

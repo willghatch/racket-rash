@@ -51,11 +51,11 @@
     [(_ name)
      #'(define-syntax-parameter name
          (syntax-id-rules
-          ()
-          [e (raise-syntax-error
-              'name
-              "can't be used except at the beginning of a rash pipeline specification"
-              #'e)]))]))
+             ()
+           [e (raise-syntax-error
+               'name
+               "can't be used except at the beginning of a rash pipeline specification"
+               #'e)]))]))
 (def-pipeline-opt &bg)
 (def-pipeline-opt &pipeline-ret) ;; TODO - name?
 (def-pipeline-opt &env)
