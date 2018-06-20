@@ -119,7 +119,7 @@
     (pattern (~seq kw:keyword val:expr))))
 (define-syntax (with-redirections stx)
   (syntax-parse stx
-    [(_ opt:kw-opt ... body ...+)
+    [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
        [(((~or (~optional (~seq #:in in))
                (~optional (~seq #:out out))
@@ -133,7 +133,7 @@
             body ...)])]))
 (define-syntax (splicing-with-redirections stx)
   (syntax-parse stx
-    [(_ opt:kw-opt ... body ...+)
+    [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
        [(((~or (~optional (~seq #:in in))
                (~optional (~seq #:out out))

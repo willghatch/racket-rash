@@ -126,7 +126,7 @@
          (~optional (~seq #:starter starter:pipeline-starter))
          (~optional (~seq #:line-macro line-macro:line-macro)))
         ...
-        body ...+)
+        body:expr ...+)
      (with-syntax ([lm-param-form (if (attribute line-macro)
                                       #'(lm-parameterizer line-macro)
                                       #'(begin))]
@@ -159,7 +159,7 @@
     (pattern (~seq kw:keyword val:expr))))
 (define-syntax (rash-config stx)
   (syntax-parse stx
-    [(_ opt:kw-opt ... body ...+)
+    [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
        [(((~or
            (~optional (~seq #:in in:expr))
@@ -175,7 +175,7 @@
                         body ...)])]))
 (define-syntax (splicing-rash-config stx)
   (syntax-parse stx
-    [(_ opt:kw-opt ... body ...+)
+    [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
        [(((~or
            (~optional (~seq #:in in:expr))
