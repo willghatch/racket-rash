@@ -15,7 +15,8 @@
  pipeline-start-segment
  pipeline-joint-segment
  run-pipeline
- rash-set-defaults
+ with-redirections
+ splicing-with-redirections
  default-pipeline-starter
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
@@ -91,14 +92,42 @@
 (define-syntax-parameter rash-default-err-out
   (syntax-parser [_ #''string-port]))
 
-(define-syntax (rash-set-defaults stx)
+(define-syntax (with-redirections* stx)
   (syntax-parse stx
-    [(_ (in out err) body ...)
-     #'(splicing-syntax-parameterize
-           ([rash-default-in (λ (stx) #'in)]
-            [rash-default-out (λ (stx) #'out)]
-            [rash-default-err-out (λ (stx) #'err)])
-         body ...)]))
+    [(_ parameterization-form
+        (~or (~optional (~seq #:in in))
+             (~optional (~seq #:out out))
+             (~optional (~seq #:err err)))
+        ...
+        body:expr ...+)
+     (let* ([set-in (and (attribute in)
+                         #'(rash-default-in (λ (stx) (quote-syntax in))))]
+            [set-out (and (attribute out)
+                          #'(rash-default-out (λ (stx) (quote-syntax out))))]
+            [set-err (and (attribute err)
+                          #'(rash-default-err-out (λ (stx) (quote-syntax err))))]
+            [parameterizations #`(#,@(filter (λ(x)x) (list set-in set-out set-err)))])
+       #`(parameterization-form
+          #,parameterizations
+          body ...))]))
+(define-syntax (with-redirections stx)
+  (syntax-parse stx
+    [(_ (and (~or (~optional (~seq #:in in))
+                  (~optional (~seq #:out out))
+                  (~optional (~seq #:err err)))
+             opt)
+        ...
+        body ...+)
+     #'(with-redirections* syntax-parameterize opt ... body ...)]))
+(define-syntax (splicing-with-redirections stx)
+  (syntax-parse stx
+    [(_ (and (~or (~optional (~seq #:in in))
+                  (~optional (~seq #:out out))
+                  (~optional (~seq #:err err)))
+             opt)
+        ...
+        body ...+)
+     #'(with-redirections* splicing-syntax-parameterize opt ... body ...)]))
 
 (define-syntax (pipeline-start-segment stx)
   (syntax-parse stx

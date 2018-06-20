@@ -72,10 +72,10 @@
                      (eval-syntax
                       (parameterize ([current-namespace repl-namespace])
                         (namespace-syntax-introduce
-                         #`(rash-set-defaults
-                            (real-stdin
-                             (current-output-port)
-                             (current-error-port))
+                         #`(splicing-with-redirections
+                            #:in real-stdin
+                            #:out (current-output-port)
+                            #:err (current-error-port)
                             (splicing-syntax-parameterize
                                 ([default-line-macro #'run-pipeline/logic/ret-obj]
                                  ;; TODO - make configurable
@@ -104,10 +104,10 @@
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
-                  #`(rash-set-defaults
-                     ((current-input-port)
-                      (current-output-port)
-                      (current-error-port))
+                  #`(splicing-with-redirections
+                     #:in real-stdin
+                     #:out (current-output-port)
+                     #:err (current-error-port)
                      (splicing-syntax-parameterize
                          ([default-line-macro #'run-pipeline/logic/ret-obj])
                        #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))

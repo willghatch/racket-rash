@@ -23,7 +23,7 @@
 
 (module+ for-repl
   (provide
-   rash-set-defaults
+   splicing-with-redirections
    run-pipeline
    run-pipeline/logic
    ))
@@ -42,7 +42,7 @@
  linea/defaults
  linea/read
  linea/read-syntax-string
- (only-in shell/private/pipeline-macro-parse rash-set-defaults)
+ (only-in shell/private/pipeline-macro-parse splicing-with-redirections)
  syntax/parse
  syntax/wrap-modbeg
 
@@ -106,8 +106,8 @@
                       [err-eval err-output])
          (splicing-syntax-parameterize ([default-pipeline-starter default-starter]
                                         [default-line-macro line-macro])
-           (rash-set-defaults
-            (in-eval out-eval err-eval)
+           (splicing-with-redirections
+            #:in in-eval #:out out-eval #:err err-eval
             e ...)))]))
 
 
