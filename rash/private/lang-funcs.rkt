@@ -8,6 +8,7 @@
  run-pipeline
  run-pipeline/logic
  cd
+ #%hash-braces
 
  (all-from-out shell/pipeline-macro)
  (all-from-out linea/line-macro)
@@ -190,6 +191,15 @@
                                               (syntax->list #'(opt ...))))
                         body ...)])]))
 
+(define-syntax (#%hash-braces stx)
+  (syntax-parse stx
+    [(_ body:expr)
+     #'(splicing-rash-config #:in (open-input-string "")
+                             #:out (λ (p) (string-trim (port->string p)))
+                             #:err 'string-port
+                             #:starter =unix-pipe=
+                             #:line-macro run-pipeline
+                             body)]))
 
 #|
 TODO

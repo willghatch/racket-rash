@@ -46,15 +46,6 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
     ;; And we want it to work as a first-order function.
     [_ #'(λ args (apply values args))]))
 
-(define-syntax (#%hash-braces stx)
-  (syntax-parse stx
-    [(_ body)
-     #'(splicing-rash-config #:in (open-input-string "")
-                             #:out (λ (p) (string-trim (port->string p)))
-                             #:err 'string-port
-                             #:starter =unix-pipe=
-                             #:line-macro run-pipeline
-                             body)]))
 (define-syntax #%upper-triangles (make-rename-transformer #'rash))
 (define-syntax #%lower-triangles (make-rename-transformer #'rash/wired))
 
