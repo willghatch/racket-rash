@@ -97,8 +97,8 @@
     (list (list '#:in check-expression)
           (list '#:out check-expression)
           (list '#:err check-expression)
-          (list '#:default-starter check-expression)
-          (list '#:default-line-macro check-expression))))
+          (list '#:starter check-expression)
+          (list '#:line-macro check-expression))))
 (require (for-syntax (submod "." keyword-table))
          (for-meta 2 (submod "." keyword-table)))
 
@@ -285,9 +285,9 @@ But how can it be done in a way that let those arguments affect the reader?
                    [mk-input (opref tab '#:in #'(current-input-port))]
                    [mk-output (opref tab '#:out #'(current-output-port))]
                    [mk-err-output (opref tab '#:err #'(current-error-port))]
-                   [mk-default-starter (opref tab '#:default-starter
+                   [mk-default-starter (opref tab '#:starter
                                               #'=unix-pipe=)]
-                   [mk-default-line-macro (opref tab '#:default-line-macro
+                   [mk-default-line-macro (opref tab '#:line-macro
                                                  #'run-pipeline)]
                    [wrap-modbeg-name (datum->syntax stx (gensym
                                                          'wrapping-modbeg-for-rash))])
@@ -343,9 +343,9 @@ But how can it be done in a way that let those arguments affect the reader?
                      [mk-output (opref tab '#:out #'default-output-port-transformer)]
                      [mk-err-output (opref tab '#:err #''string-port)]
                      ;; TODO - make it possible for these to inherit
-                     [mk-default-starter (opref tab '#:default-starter
+                     [mk-default-starter (opref tab '#:starter
                                                 #'=unix-pipe=)]
-                     [mk-line-macro (opref tab '#:default-line-macro
+                     [mk-line-macro (opref tab '#:line-macro
                                            #'run-pipeline)])
          #'(λ (stx)
              (syntax-parse stx
@@ -363,10 +363,10 @@ But how can it be done in a way that let those arguments affect the reader?
                               [err-output
                                (opref tab '#:err (quote-syntax mk-err-output))]
                               [default-starter
-                                (opref tab '#:default-starter
+                                (opref tab '#:starter
                                        (quote-syntax mk-default-starter))]
                               [line-macro
-                               (opref tab '#:default-line-macro
+                               (opref tab '#:line-macro
                                       (quote-syntax mk-line-macro))])
                   (syntax-parse rest-stx
                     [(arg:str (... ...))
