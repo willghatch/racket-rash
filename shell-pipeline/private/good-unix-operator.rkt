@@ -18,7 +18,7 @@
   syntax/parse
   syntax/keyword
   racket/string
-  "rash-alias.rkt"
+  "pipeline-alias.rkt"
   "filter-keyword-args.rkt"
   "misc-utils.rkt"
   ))

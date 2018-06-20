@@ -6,7 +6,7 @@
  (for-syntax
   racket/base
   syntax/parse
-  "rash-alias.rkt"
+  "pipeline-alias.rkt"
   ))
 
 (define-syntax (define-simple-pipeline-alias stx)
