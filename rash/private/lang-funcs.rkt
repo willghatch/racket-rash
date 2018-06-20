@@ -369,14 +369,6 @@ But how can it be done in a way that let those arguments affect the reader?
                                (opref tab '#:default-line-macro
                                       (quote-syntax mk-line-macro))])
                   (syntax-parse rest-stx
-                    #:literals (#%linea-expressions-begin)
-                    ;; This is the case where reading was done up-front
-                    [((#%linea-expressions-begin e (... ...)))
-                     #'(rash-expressions-begin (input output err-output
-                                                      default-starter
-                                                      line-macro)
-                                               (#%linea-expressions-begin e (... ...)))]
-                    ;; This is the case where code was given as a string
                     [(arg:str (... ...))
                      (with-syntax ([parsed-rash-code (linea-read-syntax-string rest-stx)])
                        #'(rash-expressions-begin (input output err-output
