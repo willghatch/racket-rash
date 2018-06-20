@@ -110,14 +110,14 @@
            [num (string->number val)])
       (if num num val)))
   (define (lt l r)
-    ({if (string? l)
+    ((if (string? l)
          string<?
-         <}
+         <)
      l r))
   (define (gt l r)
-    ({if (string? l)
+    ((if (string? l)
          string>?
-         >}
+         >)
      l r))
   (sort rows (if rev gt lt) #:key getkey))
 
