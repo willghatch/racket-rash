@@ -74,7 +74,7 @@
                         (namespace-syntax-introduce
                          #`(splicing-with-default-line-macro
                             run-pipeline/logic/ret-obj
-                            (splicing-with-redirections
+                            (splicing-with-pipeline-parameters
                              #:in real-stdin
                              #:out (current-output-port)
                              #:err (current-error-port)
@@ -102,7 +102,7 @@
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
-                  #`(splicing-with-redirections
+                  #`(splicing-with-pipeline-parameters
                      #:in real-stdin
                      #:out (current-output-port)
                      #:err (current-error-port)

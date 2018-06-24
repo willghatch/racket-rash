@@ -3,8 +3,8 @@
 (provide
  rash
  rash/wired
- rash-config
- splicing-rash-config
+ with-rash-parameters
+ splicing-with-rash-parameters
  run-pipeline
  run-pipeline/logic
  cd
@@ -26,7 +26,7 @@
 
 (module+ for-repl
   (provide
-   splicing-with-redirections
+   splicing-with-pipeline-parameters
    run-pipeline
    run-pipeline/logic
    ))
@@ -45,7 +45,7 @@
  linea/defaults
  linea/read
  linea/read-syntax-string
- (only-in shell/private/pipeline-macro-parse splicing-with-redirections)
+ (only-in shell/private/pipeline-macro-parse splicing-with-pipeline-parameters)
  syntax/parse
  syntax/wrap-modbeg
 
@@ -108,7 +108,7 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-rash-config
+         (splicing-with-rash-parameters
           #:line-macro line-macro
           #:starter default-starter
           #:in in-eval
@@ -116,7 +116,7 @@
           #:err err-eval
           e ...))]))
 
-(define-syntax (rash-config* stx)
+(define-syntax (with-rash-parameters* stx)
   (syntax-parse stx
     [(_ lm-parameterizer
         p-parameterizer
@@ -158,7 +158,7 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
-(define-syntax (rash-config stx)
+(define-syntax (with-rash-parameters stx)
   (syntax-parse stx
     [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
@@ -169,12 +169,12 @@
            (~optional (~seq #:starter starter:pipeline-starter))
            (~optional (~seq #:line-macro line-macro:line-macro))))
          ...)
-        #`(rash-config* with-default-line-macro
-                        with-redirections
+        #`(with-rash-parameters* with-default-line-macro
+                        with-pipeline-parameters
                         #,@(apply append (map syntax->list
                                               (syntax->list #'(opt ...))))
                         body ...)])]))
-(define-syntax (splicing-rash-config stx)
+(define-syntax (splicing-with-rash-parameters stx)
   (syntax-parse stx
     [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
@@ -185,8 +185,8 @@
            (~optional (~seq #:starter starter:pipeline-starter))
            (~optional (~seq #:line-macro line-macro:line-macro))))
          ...)
-        #`(rash-config* splicing-with-default-line-macro
-                        splicing-with-redirections
+        #`(with-rash-parameters* splicing-with-default-line-macro
+                        splicing-with-pipeline-parameters
                         #,@(apply append (map syntax->list
                                               (syntax->list #'(opt ...))))
                         body ...)])]))
@@ -194,7 +194,7 @@
 (define-syntax (#%hash-braces stx)
   (syntax-parse stx
     [(_ body:expr)
-     #'(splicing-rash-config #:in (open-input-string "")
+     #'(splicing-with-rash-parameters #:in (open-input-string "")
                              #:out (λ (p) (string-trim (port->string p)))
                              #:err 'string-port
                              #:starter =unix-pipe=

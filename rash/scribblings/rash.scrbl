@@ -200,7 +200,7 @@ module.
 
 TODO: document forms for configuring Rash besides the rash macro, document forms for creating customized versions of #lang rash (including reader modifications, default line-macro and pipeline operator, bindings available...), etc
 
-@defform[(rash-config options ... body)]{
+@defform[(with-rash-parameters options ... body)]{
 
 Configures the defaults for various options, and runs the body.  Basically this is a wrapper for @racket[syntax-parameterize].
 
@@ -219,8 +219,8 @@ Options:
 Note that in, out, and err are evaluated once for each pipeline run in the body.
 }
 
-@defform[(splicing-rash-config options ... body)]{
-The same as @racket[rash-config], but splicing a la @racket[splicing-syntax-parameterize].
+@defform[(splicing-with-rash-parameters options ... body)]{
+The same as @racket[with-rash-parameters], but splicing a la @racket[splicing-syntax-parameterize].
 }
 
 @defform[(rash options ... codestring)]{
@@ -229,7 +229,7 @@ Read @racket[codestring] as rash code.  Note that this happens during macro expa
 
 Options:
 
-The options are the same as @racket[rash-config].
+The options are the same as @racket[with-rash-parameters].
 
 TODO - options for changing the reader, etc.
 

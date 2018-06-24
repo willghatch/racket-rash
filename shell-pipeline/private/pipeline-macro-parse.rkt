@@ -8,16 +8,16 @@
    pipeline-start-segment
    pipeline-joint-segment
    run-pipeline
-   with-redirections
-   splicing-with-redirections
+   with-pipeline-parameters
+   splicing-with-pipeline-parameters
    ))
 
 (provide
  pipeline-start-segment
  pipeline-joint-segment
  run-pipeline
- with-redirections
- splicing-with-redirections
+ with-pipeline-parameters
+ splicing-with-pipeline-parameters
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
@@ -92,7 +92,7 @@
 (define-syntax-parameter default-pipeline-err-out
   (syntax-parser [_ #''string-port]))
 
-(define-syntax (with-redirections* stx)
+(define-syntax (with-pipeline-parameters* stx)
   (syntax-parse stx
     [(_ parameterization-form
         (~or (~optional (~seq #:in in))
@@ -117,7 +117,7 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
-(define-syntax (with-redirections stx)
+(define-syntax (with-pipeline-parameters stx)
   (syntax-parse stx
     [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
@@ -126,12 +126,12 @@
                (~optional (~seq #:err err))
                (~optional (~seq #:starter starter:pipeline-starter))))
          ...)
-        #`(with-redirections*
+        #`(with-pipeline-parameters*
             syntax-parameterize
             #,@(apply append (map syntax->list
                                   (syntax->list #'(opt ...))))
             body ...)])]))
-(define-syntax (splicing-with-redirections stx)
+(define-syntax (splicing-with-pipeline-parameters stx)
   (syntax-parse stx
     [(_ opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
@@ -140,7 +140,7 @@
                (~optional (~seq #:err err))
                (~optional (~seq #:starter starter:pipeline-starter))))
          ...)
-        #`(with-redirections*
+        #`(with-pipeline-parameters*
             splicing-syntax-parameterize
             #,@(apply append (map syntax->list
                                   (syntax->list #'(opt ...))))
