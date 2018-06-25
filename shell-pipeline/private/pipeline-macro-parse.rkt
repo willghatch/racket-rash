@@ -243,73 +243,74 @@
               (noboth (s-in s-<) (e-in e-<))
               (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
               (noboth s-err e-err)
-              #`(parameterize ([rash-pipeline-opt-hash
-                                (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
+              #`(parameterize
+                    ([rash-pipeline-opt-hash
+                      (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
+                                      #'#t #'#f)
+                            'pipeline-ret #,(if (or (attribute s-pr) (attribute e-pr))
                                                 #'#t #'#f)
-                                      'pipeline-ret #,(if (or (attribute s-pr) (attribute e-pr))
-                                                          #'#t #'#f)
-                                      'env #,(cond [(attribute s-env-list)]
-                                                   [(attribute e-env-list)]
-                                                   [else #''()])
-                                      'env-replace #,(cond [(attribute s-env-r-list)]
-                                                           [(attribute e-env-r-list)]
-                                                           [else #'#f])
-                                      'lazy-timeout #,(or (attribute s-lazy-timeout)
-                                                          (attribute e-lazy-timeout)
-                                                          #'1)
-                                      'strictness #,(cond
-                                                      [(or (attribute s-strict)
-                                                           (attribute e-strict))
-                                                       #''strict]
-                                                      [(or (attribute s-lazy)
-                                                           (attribute e-lazy))
-                                                       #''lazy]
-                                                      [(or (attribute s-permissive)
-                                                           (attribute e-permissive))
-                                                       #''permissive]
-                                                      [else #''lazy])
-                                      'in #,(cond [(attribute s-in)]
-                                                  [(attribute e-in)]
-                                                  [(or (attribute s-<)
-                                                       (attribute e-<))
-                                                   =>
-                                                   (λ (f) (dollar-expand-syntax f))]
-                                                  ;; TODO - respect outer macro default
-                                                  [else #'default-pipeline-in])
-                                      'out #,(cond [(attribute s-out)]
-                                                   [(attribute e-out)]
-                                                   [(or (attribute s->)
-                                                        (attribute e->))
-                                                    =>
-                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
-                                                                   'error))]
-                                                   [(or (attribute s->!)
-                                                        (attribute e->!))
-                                                    =>
-                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
-                                                                   'truncate))]
-                                                   [(or (attribute s->>)
-                                                        (attribute e->>))
-                                                    =>
-                                                    (λ (f) #`(list #,(dollar-expand-syntax f)
-                                                                   'append))]
-                                                   ;; TODO - respect outer macro default
-                                                   [else  #'default-pipeline-out])
-                                      'err #,(cond [(attribute s-err)]
-                                                   [(attribute s-err)]
-                                                   ;; TODO - respect outer macro default
-                                                   [else #'default-pipeline-err-out])
-                                      'object-to-out #,(if (or (attribute s-out)
-                                                               (attribute e-out)
-                                                               (attribute s->)
-                                                               (attribute e->)
-                                                               (attribute s->!)
-                                                               (attribute e->!)
-                                                               (attribute s->>)
-                                                               (attribute e->>))
-                                                           #'#t
-                                                           #'#f)
-                                      )])
+                            'env #,(cond [(attribute s-env-list)]
+                                         [(attribute e-env-list)]
+                                         [else #''()])
+                            'env-replace #,(cond [(attribute s-env-r-list)]
+                                                 [(attribute e-env-r-list)]
+                                                 [else #'#f])
+                            'lazy-timeout #,(or (attribute s-lazy-timeout)
+                                                (attribute e-lazy-timeout)
+                                                #'1)
+                            'strictness #,(cond
+                                            [(or (attribute s-strict)
+                                                 (attribute e-strict))
+                                             #''strict]
+                                            [(or (attribute s-lazy)
+                                                 (attribute e-lazy))
+                                             #''lazy]
+                                            [(or (attribute s-permissive)
+                                                 (attribute e-permissive))
+                                             #''permissive]
+                                            [else #''lazy])
+                            'in #,(cond [(attribute s-in)]
+                                        [(attribute e-in)]
+                                        [(or (attribute s-<)
+                                             (attribute e-<))
+                                         =>
+                                         (λ (f) (dollar-expand-syntax f))]
+                                        ;; TODO - respect outer macro default
+                                        [else #'default-pipeline-in])
+                            'out #,(cond [(attribute s-out)]
+                                         [(attribute e-out)]
+                                         [(or (attribute s->)
+                                              (attribute e->))
+                                          =>
+                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                                         'error))]
+                                         [(or (attribute s->!)
+                                              (attribute e->!))
+                                          =>
+                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                                         'truncate))]
+                                         [(or (attribute s->>)
+                                              (attribute e->>))
+                                          =>
+                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                                         'append))]
+                                         ;; TODO - respect outer macro default
+                                         [else  #'default-pipeline-out])
+                            'err #,(cond [(attribute s-err)]
+                                         [(attribute s-err)]
+                                         ;; TODO - respect outer macro default
+                                         [else #'default-pipeline-err-out])
+                            'object-to-out #,(if (or (attribute s-out)
+                                                     (attribute e-out)
+                                                     (attribute s->)
+                                                     (attribute e->)
+                                                     (attribute s->!)
+                                                     (attribute e->!)
+                                                     (attribute s->>)
+                                                     (attribute e->>))
+                                                 #'#t
+                                                 #'#f)
+                            )])
                   (rash-pipeline-splitter/start run-split-pipe
                                                 arg ...))])])])]))
 
