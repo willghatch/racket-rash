@@ -13,6 +13,8 @@
                "racket-doc"
                "rackunit-lib"
                "readline-lib"
+               ;; for the make demo
+               "make"
                ;; temporarily
                "text-table"
                ))
