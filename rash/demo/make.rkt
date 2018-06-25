@@ -1,5 +1,29 @@
 #lang racket/base
 
+#|
+This is a demo `make` replacement language.
+
+An example usage would look like this:
+
+```
+#lang rash/demo/make
+(define cc 'gcc)
+hello : hello.c {
+  $cc -o (current-target) (current-dependencies)
+}
+```
+
+Targets and dependencies can be computed (use $dollar-vars or parenthesized
+s-expressions), current-target and current-dependencies parameters are
+available in the recipe bodies, and command-line usage with --help that
+lists available targets is generated automatically.
+
+The `make-module-begin` does half of the heavy lifting, along with the
+`make-target` line-macro, which `make-module-begin` sets as the default.
+The `make-target` line-macro sets the normal `run-pipeline` as the default
+inside the recipe body.
+|#
+
 (provide
  (except-out (all-from-out racket/base)
              #%module-begin)
@@ -98,7 +122,7 @@
 (define-line-macro do-make
   (syntax-parser
     [(_)
-     #`(let* ([make-lists (unbox target-list-box)]
+     #`(let* ([make-lists (reverse (unbox target-list-box))]
               [targets (map car make-lists)]
               [targets-to-make
                (parse-command-line
