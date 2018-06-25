@@ -163,7 +163,17 @@ shell-pipeline
 
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
-* improve dollar-expansion 
+* redirection arguments for shell/pipeline and mixed-pipeline
+** I don't want to accept a list with a modifier symbol eg '("foo.txt" 'append)
+** I think probably I should use some redirection struct that has a field for the modifier.
+
+* globs in redirection
+** bash and zsh both allow globs in redirection, but they treat them differently (at least by default, or in my configuration if I've changed it somehow).
+** bash errors with an "ambiguous redirect" error if a glob matches more than one file, and does the classic "use the glob literally if there is no match" semantics.  It does this for redirections even if you set nullglob!
+** zsh redirects to all files if a glob matches multiple.
+** It would potentially be useful to allow multiple arguments for redirection and use port-copy on them (for output) or port-append (for input)
+
+* improve dollar-expansion
 ** maybe support $() as an escape to lisp
 ** add ${foo/from/to} or something for quick string replacement
 ** my biggest question is whether to make it be more like posix shells and have ${} be posix-style or whether to make it match reading and make $() and ${} be escapes to racket...

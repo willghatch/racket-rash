@@ -243,6 +243,14 @@
               (noboth (s-in s-<) (e-in e-<))
               (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
               (noboth s-err e-err)
+              (define (dollar-expand-maybe redirection-arg)
+                (syntax-parse redirection-arg
+                  [(e1:expr e ...) redirection-arg]
+                  [x:keyword
+                   (raise-syntax-error 'pipeline-parse
+                                       "redirection arguments can't be keywords"
+                                       redirection-arg)]
+                  [x (dollar-expand-syntax #'x)]))
               #`(parameterize
                     ([rash-pipeline-opt-hash
                       (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
@@ -274,7 +282,7 @@
                                         [(or (attribute s-<)
                                              (attribute e-<))
                                          =>
-                                         (λ (f) (dollar-expand-syntax f))]
+                                         (λ (f) (dollar-expand-maybe f))]
                                         ;; TODO - respect outer macro default
                                         [else #'default-pipeline-in])
                             'out #,(cond [(attribute s-out)]
@@ -282,17 +290,17 @@
                                          [(or (attribute s->)
                                               (attribute e->))
                                           =>
-                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                          (λ (f) #`(list #,(dollar-expand-maybe f)
                                                          'error))]
                                          [(or (attribute s->!)
                                               (attribute e->!))
                                           =>
-                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                          (λ (f) #`(list #,(dollar-expand-maybe f)
                                                          'truncate))]
                                          [(or (attribute s->>)
                                               (attribute e->>))
                                           =>
-                                          (λ (f) #`(list #,(dollar-expand-syntax f)
+                                          (λ (f) #`(list #,(dollar-expand-maybe f)
                                                          'append))]
                                          ;; TODO - respect outer macro default
                                          [else  #'default-pipeline-out])
