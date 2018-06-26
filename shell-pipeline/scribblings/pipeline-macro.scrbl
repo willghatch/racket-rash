@@ -130,6 +130,29 @@ These identifiers are all errors if used outside of @racket[run-pipeline].  They
 @racket[&bg] and @racket[&pipeline-ret] toggle #:bg and #:return-pipeline-object, and @racket[&strict], @racket[&permissive], and @racket[&lazy] set the #:strictness argument.
 }
 
+
+@defform[#:literals (with-pipeline-parameters)
+         (with-pipeline-parameters option ... body ...)
+         #:grammar [(option
+                     (code:line #:in in-expr)
+                     (code:line #:out out-expr)
+                     (code:line #:err err-expr)
+                     (code:line #:starter default-pipeline-starter))
+                    ]]{
+Parameterizes the body forms to use @racket[default-pipeline-starter] when no starter is explicitly given, and to use @racket[in-expr], @racket[out-expr], and @racket[err-expr] as default redirections.  Note that the expressions given for redirection are evaluated for every pipeline run in the body.
+}
+@defform[#:literals (splicing-with-pipeline-parameters)
+         (splicing-with-pipeline-parameters option ... body ...)
+         #:grammar [(option
+                     (code:line #:in in-expr)
+                     (code:line #:out out-expr)
+                     (code:line #:err err-expr)
+                     (code:line #:starter default-pipeline-starter))
+                    ]]{
+Like @racket[with-pipeline-parameters], except that it splices into definition contexts.
+}
+
+
 @subsection{Pipeline Operators}
 
 The core module only provides a few simple pipeline operators.  There are many more in the demo/ directory in the source repository.  Most of them are hastily written experiments, but some good ones should eventually be standardized.
