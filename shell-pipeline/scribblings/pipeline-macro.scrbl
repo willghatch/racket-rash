@@ -226,10 +226,10 @@ Creates an object pipe where @code{(arg ...)} is the body of a function.
 As with other object pipes, when used as a pipeline starter it generates a lambda with no arguments, and as a pipeline joint it generates a lambda with one argument, @racket[current-pipeline-argument].
 }
 
-@defform[#:kind "pipeline-operator" (=basic-object-pipe= arg ...+)]{
+@defform[#:kind "pipeline-operator" (=basic-object-pipe= f-arg arg ...)]{
 Like @racket[=basic-object-pipe/form=], except that when not used as a pipeline starter, if the @racket[current-pipeline-argument] is not used within the arguments, it is appended as the last argument.
 
-To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @code{(arg ...)} must be equivalent to a function application form and not a macro invocation form.
+To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @racket[f-arg] must evaluate to function, and NOT be the name of a macro to be expanded with the other args.
 
 Usually @racket[\|>] is used instead.
 }
@@ -245,8 +245,10 @@ Like @racket[=basic-object-pipe/expression=], but when it receives a port as an 
 @defform[#:kind "pipeline-operator" (=object-pipe/form= arg ...+)]{
 Like @racket[=basic-object-pipe/form=], but when it receives a port as an argument, it converts it to a string.
 }
-@defform[#:kind "pipeline-operator" (=object-pipe= arg ...+)]{
+@defform[#:kind "pipeline-operator" (=object-pipe= f-arg arg ...)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
+
+The same caveat applies that @racket[f-arg] must NOT be a macro you expect to expand with the other arguments -- it must evaluate to a function.
 
 Usually @racket[\|>>] is used instead.
 }
