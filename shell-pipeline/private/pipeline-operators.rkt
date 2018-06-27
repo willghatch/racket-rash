@@ -162,37 +162,45 @@ pipeline argument was explicitly used, because a macro could make it
 disappear (and I don't want to then come back as something
 re-appended).
 |#
+(define expand-pipeline-arguments-standin #f)
 (define-for-syntax (expand-pipeline-arguments
                     stx
-                    ;; arg-replacement will replace current-pipeline-argument
-                    arg-replacement
                     ;; transformer should be a syntax parser, and the first element
                     ;; of syntax will be #t if at least one replacement was made,
                     ;; else false.
+                    ;; The rest of the elements of the syntax will be transformed
+                    ;; versions of the arg fields of stx, except they will be
+                    ;; turned into functions that must be called with the value
+                    ;; expected for current-pipeline-argument.
                     transformer)
   (syntax-parse stx
     [(arg ...+)
-     (with-syntax ([prev-arg arg-replacement])
-       (with-syntax ([(e-arg ...)
-                      (map (λ (s) (syntax-parse s
-                                    [(~or (form-arg ...) x:id)
-                                     (local-expand
-                                      #`(syntax-parameterize
+     (with-syntax ([(e-arg ...)
+                    (map (λ (s) (syntax-parse s
+                                  [(~or (form-arg ...) x:id)
+                                   (local-expand
+                                    #`(λ (prev-arg)
+                                        (syntax-parameterize
                                             ([current-pipeline-argument
                                               (make-set!-transformer
                                                (λ (id)
                                                  (syntax-case id ()
-                                                   [_ #'prev-arg])))])
-                                          #,s)
-                                      'expression '())]
-                                    [else s]))
-                           (syntax->list #'(arg ...)))])
-         (with-syntax ([explicit-ref-exists?
-                        (datum->syntax #'here
-                                       (stx-contains-id? #'(e-arg ...)
-                                                         arg-replacement))])
-           (transformer #'(explicit-ref-exists?
-                           e-arg ...)))))]))
+                                                   [_ (quote-syntax
+                                                       (begin
+                                                         expand-pipeline-arguments-standin
+                                                         prev-arg))])))])
+                                          #,s))
+                                    'expression '())]
+                                  [else #`(λ (prev-arg) #,s)]))
+                         (syntax->list #'(arg ...)))])
+       (with-syntax ([explicit-ref-exists?
+                      (datum->syntax #'here
+                                     (stx-contains-id?
+                                      #'(e-arg ...)
+                                      (quote-syntax
+                                       expand-pipeline-arguments-standin)))])
+         (transformer #'(explicit-ref-exists?
+                         e-arg ...))))]))
 
 
 
@@ -228,16 +236,15 @@ re-appended).
     [(_ arg ...+)
      (expand-pipeline-arguments
       #'(arg ...)
-      #'prev-ret
       (λ (expanded-stx)
         (syntax-parse expanded-stx
           [(#t narg ...)
-           #'(object-pipeline-member-spec (λ (prev-ret) (narg ...)))]
+           #'(object-pipeline-member-spec (λ (prev-ret) ((narg prev-ret) ...)))]
           [(#f narg ...)
            #'(object-pipeline-member-spec (λ ([prev-ret (pipeline-default-option)])
                                             (if (pipeline-default-option? prev-ret)
-                                                (narg ...)
-                                                (narg ... prev-ret))))])))]))
+                                                ((narg prev-ret) ...)
+                                                ((narg prev-ret) ... prev-ret))))])))]))
 
 ;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
 (define-pipeline-operator =basic-object-pipe/expression=

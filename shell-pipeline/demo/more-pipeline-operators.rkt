@@ -91,16 +91,17 @@ These are essentially a bunch of proof-of-concept pipeline operators.
     [( _ for-macro arg ...+)
      (expand-pipeline-arguments
       #'(arg ...)
-      #'cur-obj-standin
       (syntax-parser
         [(#t narg ...)
-         #'(object-pipeline-member-spec (λ (prev-ret)
-                                          (for-macro ([cur-obj-standin prev-ret])
-                                                     (narg ...))))]
+         #'(object-pipeline-member-spec
+            (λ (prev-ret)
+              (for-macro ([cur-obj-standin prev-ret])
+                         ((narg cur-obj-standin) ...))))]
         [(#f narg ...)
-         #'(object-pipeline-member-spec (λ (prev-ret)
-                                          (for-macro ([cur-obj-standin prev-ret])
-                                                     (narg ... cur-obj-standin))))]))]))
+         #'(object-pipeline-member-spec
+            (λ (prev-ret)
+              (for-macro ([cur-obj-standin prev-ret])
+                         ((narg cur-obj-standin) ... cur-obj-standin))))]))]))
 
 (pipeop =for/list= [(_ arg ...+) #'(=fors= for/list arg ...)])
 (pipeop =for/stream= [(_ arg ...+) #'(=fors= for/list arg ...)])
@@ -123,7 +124,6 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                      [(parg ...) (datum->syntax #f pargs)])
          (expand-pipeline-arguments
           #'((quote-if-id-not-current-arg parg) ...)
-          #'cur-obj-standin
           (syntax-parser
             [(#t narg ...)
              #'(object-pipeline-member-spec (λ (prev-ret)
@@ -132,7 +132,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                                                  &out out-transformer
                                                  =basic-unix-pipe=
                                                  kwarg ...
-                                                 narg ...))))]
+                                                 (narg cur-obj-standin) ...))))]
             [(#f narg ...)
              #'(object-pipeline-member-spec (λ (prev-ret)
                                               (for/list ([cur-obj-standin prev-ret])
@@ -140,7 +140,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                                                  &out out-transformer
                                                  =basic-unix-pipe=
                                                  kwarg ...
-                                                 narg ...
+                                                 (narg cur-obj-standin) ...
                                                  cur-obj-standin))))]))))]))
 (define-pipeline-operator =for/list/unix-input=
   #:joint
@@ -189,7 +189,7 @@ then it needs to standardize the output...
                    (syntax->list #'(arg ...)))
               #'cur-obj-standin
               (syntax-parser
-                [(#f narg ...) #'(=aliasing-unix-pipe= cmd narg ...)]
+                [(#f narg ...) #'(=aliasing-unix-pipe= cmd (narg #f) ...)]
                 [(#t narg ...)
                  #'(let ([cur-obj-standin #f])
                      (composite-pipeline-member-spec
@@ -202,24 +202,24 @@ then it needs to standardize the output...
                                  "")))
                        (u-pipeline-member-spec
                         (list (u-alias-func
-                               (λ () (flatten (list 'cmd narg ...)))))))))]))]))
+                               (λ () (flatten (list 'cmd (narg cur-obj-standin) ...)))))))))]))]))
 
 (define-pipeline-operator =map=
   #:joint (syntax-parser
             [(_ arg ...)
              (expand-pipeline-arguments
               #'(arg ...)
-              #'cur-obj-standin
               (syntax-parser
                 [(#t narg ...)
                  #'(object-pipeline-member-spec
                     (λ (prev-ret)
-                      (map (λ (cur-obj-standin) (narg ...))
+                      (map (λ (cur-obj-standin) ((narg cur-obj-standin) ...))
                            prev-ret)))]
                 [(#f narg ...)
                  #'(object-pipeline-member-spec
                     (λ (prev-ret)
-                      (map (λ (cur-obj-standin) (narg ... cur-obj-standin))
+                      (map (λ (cur-obj-standin)
+                             ((narg cur-obj-standin) ... cur-obj-standin))
                            prev-ret)))]))]))
 
 (define-pipeline-operator =filter=
@@ -227,17 +227,17 @@ then it needs to standardize the output...
             [(_ arg ...)
              (expand-pipeline-arguments
               #'(arg ...)
-              #'cur-obj-standin
               (syntax-parser
                 [(#t narg ...)
                  #'(object-pipeline-member-spec
                     (λ (prev-ret)
-                      (filter (λ (cur-obj-standin) (narg ...))
+                      (filter (λ (cur-obj-standin) ((narg cur-obj-standin) ...))
                               prev-ret)))]
                 [(#f narg ...)
                  #'(object-pipeline-member-spec
                     (λ (prev-ret)
-                      (filter (λ (cur-obj-standin) (narg ... cur-obj-standin))
+                      (filter (λ (cur-obj-standin)
+                                ((narg cur-obj-standin) ... cur-obj-standin))
                               prev-ret)))]))]))
 (define-pipeline-operator =foldl=
   #:joint (syntax-parser
