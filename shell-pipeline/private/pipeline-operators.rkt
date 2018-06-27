@@ -236,8 +236,8 @@ re-appended).
           [(#f narg ...)
            #'(object-pipeline-member-spec (λ ([prev-ret (pipeline-default-option)])
                                             (if (pipeline-default-option? prev-ret)
-                                                (arg ...)
-                                                (arg ... prev-ret))))])))]))
+                                                (narg ...)
+                                                (narg ... prev-ret))))])))]))
 
 ;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
 (define-pipeline-operator =basic-object-pipe/expression=
