@@ -143,6 +143,8 @@ Bugs
 shell-pipeline
 --------------
 
+* =unix-pipe= should evaluate the command argument first and check if such a command exists and raise an error on a command not found before any arguments are evaluated.  This will improve error messages for eg. mistyped or not imported line-macros or pipeline operators.
+
 * pipeline operators
 *** what operators really should be the base set?
 ** =unix-pipe=
