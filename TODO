@@ -166,6 +166,7 @@ shell-pipeline
 * redirection arguments for shell/pipeline and mixed-pipeline
 ** I don't want to accept a list with a modifier symbol eg '("foo.txt" 'append)
 ** I think probably I should use some redirection struct that has a field for the modifier.
+** It would be good for the redirection object to be able to have a list of redirection specifications, in which case it would copy the port to all of them.  But this begs the question of what to do if copying or opening some but not all of the redirections fails.  Eg. what if you have one redirection set to truncate a file and one set to write but not truncate, and both files exist.
 
 * globs in redirection
 ** bash and zsh both allow globs in redirection, but they treat them differently (at least by default, or in my configuration if I've changed it somehow).
@@ -176,9 +177,11 @@ shell-pipeline
 * improve dollar-expansion
 ** maybe support $() as an escape to lisp
 ** add ${foo/from/to} or something for quick string replacement
+*** the most basic and important thing here is to have a way to delimit the variable name.
 ** my biggest question is whether to make it be more like posix shells and have ${} be posix-style or whether to make it match reading and make $() and ${} be escapes to racket...
 *** If I make it configurable, I could eg have ◸◹ etc in the dollar escape reader, so probably the best thing would be just escapes to reading racket that support various implicit macros.
 ** should some aspect of dollar expansion be in object pipes?
+** Rather than formatting a list to a string, it would be better for a list result in a dollar expansion to cause a list of strings to be made, one for each result.  Multiple dollar escapes in the same string that return lists should return a cartesian product of strings.
 
 * splicing -- instead of just splicing lists, unix pipelines should splice any sequence
 ** generally, I need good convenient ways to access the command line, even easier than racket/cmdline for basic usage.
