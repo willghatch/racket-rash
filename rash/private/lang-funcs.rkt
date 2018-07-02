@@ -197,8 +197,8 @@
      #'(splicing-with-rash-parameters #:in (open-input-string "")
                              #:out (λ (p) (string-trim (port->string p)))
                              #:err 'string-port
-                             #:starter =unix-pipe=
-                             #:line-macro run-pipeline
+                             ;#:starter =unix-pipe=
+                             ;#:line-macro run-pipeline
                              body)]))
 
 #|
