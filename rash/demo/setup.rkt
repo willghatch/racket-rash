@@ -118,7 +118,8 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
 
 ;(define-simple-pipeline-alias d 'ls '--color=auto)
-;(define-simple-pipeline-alias di 'ls '-laFh '--color=auto)
+;; Note that this one will expand the `d` alias as well:
+;(define-simple-pipeline-alias di d '-laFh '--color=auto)
 ;(define-simple-pipeline-alias gc "git" 'commit )
 ;(define-simple-pipeline-alias gs "git" 'status )
 ;(define-simple-pipeline-alias gd "git" 'diff )
