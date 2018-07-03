@@ -19,20 +19,21 @@
 
   [struct alias-func ([func procedure?])]
 
-  [run-pipeline (->* ()
-                     (#:in (or/c input-port? false/c path-string-symbol?)
-                      #:out (or/c output-port? false/c path-string-symbol?
-                                  (list/c path-string-symbol?
-                                          (or/c 'error 'append 'truncate)))
-                      #:strictness (or/c 'strict 'lazy 'permissive)
-                      #:lazy-timeout real?
-                      #:background? any/c
-                      #:err (or/c output-port? false/c path-string-symbol?
-                                          (list/c path-string-symbol?
-                                                  (or/c 'error 'append 'truncate)))
-                      )
-                     #:rest (listof (or/c list? pipeline-member-spec?))
-                     pipeline?)]
+  [run-subprocess-pipeline
+   (->* ()
+        (#:in (or/c input-port? false/c path-string-symbol?)
+         #:out (or/c output-port? false/c path-string-symbol?
+                     (list/c path-string-symbol?
+                             (or/c 'error 'append 'truncate)))
+         #:strictness (or/c 'strict 'lazy 'permissive)
+         #:lazy-timeout real?
+         #:background? any/c
+         #:err (or/c output-port? false/c path-string-symbol?
+                     (list/c path-string-symbol?
+                             (or/c 'error 'append 'truncate)))
+         )
+        #:rest (listof (or/c list? pipeline-member-spec?))
+        pipeline?)]
   [run-pipeline/out (->* ()
                          (#:in (or/c input-port? false/c path-string-symbol?)
                           #:strictness (or/c 'strict 'lazy 'permissive)
@@ -409,14 +410,14 @@
               'start-ms 'end-ms-box 'cleaner
               default-err)))
 
-(define (run-pipeline #:in [in (current-input-port)]
-                      #:out [out (current-output-port)]
-                      #:strictness [strictness 'lazy]
-                      #:background? [bg? #f]
-                      ;; TODO -- allow 'string-port
-                      #:err [default-err (current-error-port)]
-                      #:lazy-timeout [lazy-timeout 1]
-                      . members)
+(define (run-subprocess-pipeline #:in [in (current-input-port)]
+                                 #:out [out (current-output-port)]
+                                 #:strictness [strictness 'lazy]
+                                 #:background? [bg? #f]
+                                 ;; TODO -- allow 'string-port
+                                 #:err [default-err (current-error-port)]
+                                 #:lazy-timeout [lazy-timeout 1]
+                                 . members)
   (let ([pline
          (run-pipeline/spec
           (make-pipeline-spec #:in in #:out out
@@ -463,7 +464,7 @@
                              #:err [default-err (current-error-port)]
                              #:failure-as-exn? [failure-as-exn? #t]
                              . members)
-  (let ([pline (apply run-pipeline
+  (let ([pline (apply run-subprocess-pipeline
                       #:in in #:out out
                       #:err default-err
                       #:strictness strictness

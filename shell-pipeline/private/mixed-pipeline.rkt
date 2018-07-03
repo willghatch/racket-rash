@@ -4,30 +4,31 @@
 
 (provide
  (contract-out
-  [run-pipeline (->* ()
-                     (#:in (or/c input-port? false/c path-string-symbol?)
-                      #:out any/c
-                      #|
-                      ;; TODO
-                      ;; This is closer, but it could also be a transformer
-                      ;; for the output rather than a port-like thing.
-                      #:out (or/c output-port? false/c path-string-symbol?
-                                  (list/c path-string-symbol?
-                                          (or/c 'error 'append 'truncate)))
-                      |#
-                      #:err (or/c output-port? false/c path-string-symbol?
-                                  (list/c path-string-symbol?
-                                          (or/c 'error 'append 'truncate)))
-                      #:strictness (or/c 'strict 'lazy 'permissive)
-                      #:lazy-timeout real?
-                      #:bg any/c
-                      #:return-pipeline-object any/c
-                      #:object-to-out any/c
-                      )
-                     #:rest (listof (or/c unix-pipeline-member-spec?
-                                          object-pipeline-member-spec?
-                                          composite-pipeline-member-spec?))
-                     any/c)]
+  [run-mixed-pipeline
+   (->* ()
+        (#:in (or/c input-port? false/c path-string-symbol?)
+         #:out any/c
+         #|
+         ;; TODO
+         ;; This is closer, but it could also be a transformer
+         ;; for the output rather than a port-like thing.
+         #:out (or/c output-port? false/c path-string-symbol?
+         (list/c path-string-symbol?
+         (or/c 'error 'append 'truncate)))
+         |#
+         #:err (or/c output-port? false/c path-string-symbol?
+                     (list/c path-string-symbol?
+                             (or/c 'error 'append 'truncate)))
+         #:strictness (or/c 'strict 'lazy 'permissive)
+         #:lazy-timeout real?
+         #:bg any/c
+         #:return-pipeline-object any/c
+         #:object-to-out any/c
+         )
+        #:rest (listof (or/c unix-pipeline-member-spec?
+                             object-pipeline-member-spec?
+                             composite-pipeline-member-spec?))
+        any/c)]
   [pipeline? (-> any/c boolean?)]
   [pipeline-ends-with-unix-segment? (-> pipeline? boolean?)]
   [pipeline-success? (-> pipeline? any/c)]
@@ -212,7 +213,7 @@
     (define use-out (if (null? specs-rest)
                         final-out-port
                         #f))
-    (define sub-pipe-obj (apply u-run-pipeline
+    (define sub-pipe-obj (apply u-run-subprocess-pipeline
                                 #:in in-port
                                 #:out use-out
                                 #:err default-err
@@ -239,7 +240,7 @@
 (define (default-output-transformer p)
   (string-trim (port->string p)))
 
-(define (run-pipeline
+(define (run-mixed-pipeline
          #:in [init-in-port (open-input-string "")]
          #:out [final-output-port-or-transformer
                 default-output-transformer]
