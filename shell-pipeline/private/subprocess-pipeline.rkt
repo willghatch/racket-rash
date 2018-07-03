@@ -34,26 +34,28 @@
          )
         #:rest (listof (or/c list? pipeline-member-spec?))
         pipeline?)]
-  [run-pipeline/out (->* ()
-                         (#:in (or/c input-port? false/c path-string-symbol?)
-                          #:strictness (or/c 'strict 'lazy 'permissive)
-                          #:lazy-timeout real?)
-                         #:rest (listof (or/c list? pipeline-member-spec?))
-                         any/c)]
-  [run-pipeline/return (->* ()
-                            (#:in (or/c input-port? false/c path-string-symbol?)
-                             #:out (or/c output-port? false/c path-string-symbol?
-                                         (list/c path-string-symbol?
-                                                 (or/c 'error 'append 'truncate)))
-                             #:strictness (or/c 'strict 'lazy 'permissive)
-                             #:lazy-timeout real?
-                             #:failure-as-exn? any/c
-                             #:err (or/c output-port? false/c path-string-symbol?
-                                                 (list/c path-string-symbol?
-                                                         (or/c 'error 'append 'truncate)))
-                             )
-                            #:rest (listof (or/c list? pipeline-member-spec?))
-                            any/c)]
+  [run-subprocess-pipeline/out
+   (->* ()
+        (#:in (or/c input-port? false/c path-string-symbol?)
+         #:strictness (or/c 'strict 'lazy 'permissive)
+         #:lazy-timeout real?)
+        #:rest (listof (or/c list? pipeline-member-spec?))
+        any/c)]
+  #;[run-pipeline/return
+   (->* ()
+        (#:in (or/c input-port? false/c path-string-symbol?)
+         #:out (or/c output-port? false/c path-string-symbol?
+                     (list/c path-string-symbol?
+                             (or/c 'error 'append 'truncate)))
+         #:strictness (or/c 'strict 'lazy 'permissive)
+         #:lazy-timeout real?
+         #:failure-as-exn? any/c
+         #:err (or/c output-port? false/c path-string-symbol?
+                     (list/c path-string-symbol?
+                             (or/c 'error 'append 'truncate)))
+         )
+        #:rest (listof (or/c list? pipeline-member-spec?))
+        any/c)]
   [pipeline? (-> any/c boolean?)]
   [pipeline-port-to (-> pipeline? (or/c false/c output-port?))]
   [pipeline-port-from (-> pipeline? (or/c false/c input-port?))]
@@ -431,7 +433,7 @@
         (begin (pipeline-wait pline)
                pline))))
 
-(define (run-pipeline/out #:strictness [strictness 'lazy]
+(define (run-subprocess-pipeline/out #:strictness [strictness 'lazy]
                           #:lazy-timeout [lazy-timeout 1]
                           #:in [in (open-input-string "")]
                           . members)
@@ -451,13 +453,13 @@
          [kill (pipeline-kill pline)]
          [status (pipeline-status pline)])
     (if (not (pipeline-success? pline))
-        (error 'run-pipeline/out
+        (error 'run-subprocess-pipeline/out
                "unsuccessful pipeline with return ~a and stderr: ~v"
                status
                (get-output-string err))
         (get-output-string out))))
 
-(define (run-pipeline/return #:in [in (current-input-port)]
+#;(define (run-pipeline/return #:in [in (current-input-port)]
                              #:out [out (current-output-port)]
                              #:strictness [strictness #f]
                              #:lazy-timeout [lazy-timeout 1]

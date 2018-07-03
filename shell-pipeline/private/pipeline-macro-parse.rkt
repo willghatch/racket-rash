@@ -361,7 +361,8 @@
                                       #:object-to-out object-to-out
                                       . args)
   ;; TODO - environment extension/replacement
-  (apply mp:run-pipeline #:bg bg #:return-pipeline-object return-pipeline-object
+  (apply mp:run-mixed-pipeline
+         #:bg bg #:return-pipeline-object return-pipeline-object
          #:in in #:out out #:err err
          #:strictness strictness #:lazy-timeout lazy-timeout
          #:object-to-out object-to-out

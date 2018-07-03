@@ -17,12 +17,12 @@ This library is not entirely stable.
 
 Forthcoming features include features such as process redirection (similar to @bold{<()} and @bold{>()} in Bash).
 
-Some specific things that may change are the names of keyword arguments to run-pipeline, and the type of arguments and exact semantics of the redirection options for pipelines.  Also, the extra run-pipline/ functions.
+Some specific things that may change are the names of keyword arguments to run-subprocess-pipeline, and the type of arguments and exact semantics of the redirection options for pipelines.  Also, the extra run-pipline/ functions.
 
 @section{shell/pipeline guide}
 
 @; TODO - I should probably just rewrite this, but at least I should make sure it all makes sense within the tower of libraries to Rash.  And I should maybe explain better the types of return values you get from functions, or the defaults they have...
-This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return a pipeline object.  To get the output as a string, use @racket[run-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
+This library makes unix-style pipelines of external programs and racket functions easy.  You can write things as simply as @code{(run-subprocess-pipeline '(cat /etc/passwd) '(grep root) '(cut -d : -f 1))}, which will print "root\n" to stdout (on unix systems) and will return a pipeline object.  To get the output as a string, use @racket[run-subprocess-pipeline/out] the same way.  You can also put racket functions in the pipeline.  If you have a racket implementation of grep called my-grep, you can do @code{(run-subprocess-pipeline '(cat /etc/passwd) `(,my-grep root) '(cut -d : -f 1))} to get the same results.  So you can write all sorts of filter functions in Racket rather than using shell commands.
 
 Symbols in pipelines are turned into strings before they are passed in as arguments to subprocesses.  Arguments to racket functions are not transformed in any way.
 
@@ -31,7 +31,7 @@ This library DOES work on MS Windows, and if it can't find a program it retries 
 
 @section{shell/pipeline reference}
 
-@defproc[(run-pipeline [member (or/c list? pipeline-member-spec?)] ...
+@defproc[(run-subprocess-pipeline [member (or/c list? pipeline-member-spec?)] ...
 [#:in in (or/c input-port? false/c) (current-input-port)]
 [#:out out (or/c port? false/c path-string-symbol?
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
@@ -59,15 +59,27 @@ Beware that just as with @racket[subprocess], if you pass #f to get an input, ou
 
 Also, if @racket[strictness] is @code{'lazy} or @code{'permissive}, then when a pipeline member finishes, pipeline members before it may be killed.  In permissive mode they may be killed immediately, and in lazy mode they have @racket[lazy-timeout] seconds to finish before they are killed.  This process killing happens to not wait for long (potentially infinitely so) processes in the middle of a pipeline when only a small part of their output is used.  For instance, piping the output of a large file (or cat-ing an infinite pseudo-file) to the "head" command.  This mirrors what bash and other shells do.
 
-If @racket[background?] is false, then @racket[run-pipeline] uses @racket[pipeline-wait] to wait until it finishes, then returns the status with @racket[pipeline-status].  If @racket[background?] is not false, then @racket[run-pipeline] returns a @racket[pipeline] object.
+If @racket[background?] is false, then @racket[run-subprocess-pipeline] uses @racket[pipeline-wait] to wait until it finishes, then returns the status with @racket[pipeline-status].  If @racket[background?] is not false, then @racket[run-subprocess-pipeline] returns a @racket[pipeline] object.
 }
 
-@defproc[(run-pipeline/out [member (or/c list? pipeline-member-spec?)] ...
+@defproc[(run-subprocess-pipeline/out [member (or/c list? pipeline-member-spec?)] ...
 [#:in in (or/c input-port? false/c path-string-symbol?) (open-input-string "")]
 [#:status-and? status-and? any/c #f])
 any/c]{
-Like @racket[run-pipeline], but string-ports are used as the input, output, and error ports.  It does not return until the pipeline finishes, and returns the output string.  If the pipeline has an unsuccessful status, an exception is raised (with the contents of the error port).
+Like @racket[run-subprocess-pipeline], but string-ports are used as the input, output, and error ports.  It does not return until the pipeline finishes, and returns the output string.  If the pipeline has an unsuccessful status, an exception is raised (with the contents of the error port).
 }
+
+@defthing[run-pipeline procedure?]{
+Deprecated.
+
+Alias for @racket[run-subprocess-pipeline].
+}
+@defthing[run-pipeline/out procedure?]{
+Deprecated.
+
+Alias for @racket[run-subprocess-pipeline].
+}
+
 
 @defproc[(pipeline-member-spec? [pmspec any/c]) boolean?]{
 Is it a pipeline-member-spec?
@@ -88,14 +100,18 @@ Make a pipeline-member-spec.  @racket[argl] is the command/argument list.  The f
 @defproc[(pipeline? [p any/c]) boolean?]{
 Is it a pipeline object?  Note that this is not the same as @racket[shell/mixed-pipeline/pipeline?].
 
-Also, pipelines are synchronizable.
+Also, pipelines are synchronizable with the @racket[sync] function.
 }
 
 @defproc[(pipeline-port-to [p pipeline?]) (or/c false/c output-port?)]{Get initial input port (if one was provided initially, this will be false)}
 @defproc[(pipeline-port-from [p pipeline?]) (or/c false/c input-port?)]{Get final output port (if one was provided initially, this will be false)}
 @defproc[(pipeline-err-ports [p pipeline?]) (listof (or/c false/c input-port?))]{Get list of error ports for the pipeline (each one that was provided will be false)}
-@defproc[(pipeline-wait [p pipeline?]) void?]{Wait for the pipeline to finish.  If the pipeline strictness is permissive, then a pipeline is finished when the ending member of the pipeline is finished.
-Pipelines are also synchronizable events that are ready for synchronization when the pipeline is finished.
+@defproc[(pipeline-wait [p pipeline?]) void?]{
+Wait for the pipeline to finish.
+
+@racket[(pipeline-wait pline)] is essentially the same as @racket[(sync pline)].
+
+If the pipeline strictness is permissive, then a pipeline is finished when the ending member of the pipeline is finished.
 }
 @defproc[(pipeline-kill [p pipeline?]) void?]{Kill a running pipeline.}
 @defproc[(pipeline-running? [p pipeline?]) boolean?]{Is the pipeline currently running?}

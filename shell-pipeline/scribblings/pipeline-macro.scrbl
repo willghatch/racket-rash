@@ -5,7 +5,7 @@
            (except-in racket/base _)
            racket/list
            (only-in shell/demo/more-pipeline-operators =map= =filter=)
-           (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
+           @;(except-in shell/mixed-pipeline run-pipeline)
            ))
 
 @; TODO - naming...
@@ -80,9 +80,9 @@ I am really running out of steam for documenting right now... TODO - write a goo
                      (code:line &lazy-timeout timeout-expression)
                      (code:line &env env-expression)
                      )]]{
-Run a pipeline.  This is a macro wrapper for @racket[shell/mixed-pipeline/run-pipeline] that uses pipeline operator macros to specify the pipeline to be run.  So you should read the docs about that as well.
+Run a pipeline.  This is a macro wrapper for @racket[shell/mixed-pipeline/run-mixed-pipeline] that uses pipeline operator macros to specify the pipeline to be run.  So you should read the docs about that as well.
 
-The pipeline flags affect the options passed to @racket[shell/mixed-pipeline/run-pipeline] and are documented separately.
+The pipeline flags affect the options passed to @racket[shell/mixed-pipeline/run-mixed-pipeline] and are documented separately.
 
 The pipeline-member-specs are transformed according to the pipeline operators given.  If the first non-flag argument to @racket[run-pipeline] is not a pipeline operator, then a default is put in its place as determined by @racket[default-pipeline-operator].  The full names of pipeline operators are conventionally identifiers surrounded with = signs.
 
@@ -125,7 +125,7 @@ we will get a pipeline object back.  Conceptually it is still running when it is
 )]{
 These identifiers are all errors if used outside of @racket[run-pipeline].  They are essentially used in place of #:keywords to not conflict with pipeline operators that take keywords.
 
-@racket[&<], @racket[&>], @racket[&>>], and @racket[&>!] each take a file name and cause (respectively) input redirection from the given file, output redirection to the given file erroring if the file exists, output redirection appending to the given file, and output redirection truncating the given file.  @racket[&in], @racket[&out], and @racket[&err] take an argument suitable to be passed to #:in, #:out, and #:err of @racket[shell/mixed-pipeline/run-pipeline].
+@racket[&<], @racket[&>], @racket[&>>], and @racket[&>!] each take a file name and cause (respectively) input redirection from the given file, output redirection to the given file erroring if the file exists, output redirection appending to the given file, and output redirection truncating the given file.  @racket[&in], @racket[&out], and @racket[&err] take an argument suitable to be passed to #:in, #:out, and #:err of @racket[shell/mixed-pipeline/run-mixed-pipeline].
 
 @racket[&bg] and @racket[&pipeline-ret] toggle #:bg and #:return-pipeline-object, and @racket[&strict], @racket[&permissive], and @racket[&lazy] set the #:strictness argument.
 }
@@ -335,24 +335,7 @@ TODO - document this.
 }
 
 @subsection{Inspecting Pipelines}
-@defthing[#:kind "procedure" pipeline? procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline?]
-}
-@defthing[#:kind "procedure" pipeline-success? procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline-success?]
-}
-@defthing[#:kind "procedure" pipeline-wait procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline-wait]
-}
-@defthing[#:kind "procedure" pipeline-return procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline-return]
-}
-@defthing[#:kind "procedure" pipeline-start-ms procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline-start-ms]
-}
-@defthing[#:kind "procedure" pipeline-end-ms procedure?]{
-Same as @racket[shell/mixed-pipeline/pipeline-end-ms]
-}
+See @secref{inspecting-mixed-pipelines}.
 
 
 @section{Demo stuff reference}
