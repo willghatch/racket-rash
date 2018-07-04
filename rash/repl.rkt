@@ -105,8 +105,9 @@
 
 (define (eval-rashrc rcfile)
   (repl-eval #:splice #t
-             (port->list (λ (p) (linea-read-syntax (object-name p) p))
-                         (open-input-file rcfile))))
+             (cons #'(void)
+                   (port->list (λ (p) (linea-read-syntax (object-name p) p))
+                               (open-input-file rcfile)))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?
