@@ -21,7 +21,7 @@
           (not (pipeline-success? last-ret)))
      (let ([err (pipeline-return last-ret)])
        (if (exn? err)
-           (exn->string err)
+           (exn-message err)
            (format "~s" err)))]
     [(pipeline? last-ret)
      (default-rash-formatter (pipeline-return last-ret))]
