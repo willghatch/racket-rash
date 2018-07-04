@@ -102,14 +102,14 @@
 (define (eval-rashrc rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
-                  #`(splicing-with-pipeline-parameters
+                  #`(splicing-with-rash-parameters
                      #:in real-stdin
                      #:out (current-output-port)
                      #:err (current-error-port)
-                     (splicing-with-default-line-macro
-                      run-pipeline/logic/ret-obj
-                      #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
-                                     (open-input-file rcfile))))))))
+                     #:line-macro run-pipeline/logic/ret-obj
+                     #:starter repl-default-pipeline-starter
+                     #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
+                                    (open-input-file rcfile)))))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?
