@@ -340,14 +340,21 @@ re-appended).
                 [x (cons x argl-rev)])
               (cons cur-arg argl-rev))))]))
 (define (unix-args-eval-match cmd-arg)
+  (define (resolve c)
+    (cond [(or (path? c) (string? c) (symbol? c))
+           (resolve-command-path c)]
+          [(or (procedure? c) (prop:alias-func? c)) c]
+          [else (error '=basic-unix-pipe=
+                       "bad command, expected a path/string/symbol or function: ~a"
+                       c)]))
   (match cmd-arg
     [(list a ...)
      (define flat-cmdlist (flatten a))
      (match flat-cmdlist
        [(list cmd arg ...)
-        (cons (resolve-command-path cmd) arg)]
+        (cons (resolve cmd) arg)]
        [(list) (list)])]
-    [cmd (resolve-command-path cmd)]))
+    [cmd (resolve cmd)]))
 
 (define-for-syntax (basic-unix-pipe/ordered-args stx)
   (syntax-parse stx

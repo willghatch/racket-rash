@@ -85,7 +85,7 @@
  )
 
 (module+ resolve-command-path
-  (provide resolve-command-path))
+  (provide resolve-command-path prop:alias-func?))
 
 (define mk-pipeline-member-spec unix-pipeline-member-spec)
 (define pipeline-member-spec? unix-pipeline-member-spec?)
