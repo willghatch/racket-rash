@@ -319,6 +319,8 @@ Simple sugar for @racket[define-pipeline-alias].  It defines an alias transforme
 (run-pipeline =unix-pipe= d -l $HOME)
 (run-pipeline =unix-pipe= 'ls '--color=auto -l $HOME)
 }|
+
+Note that arguments are passed through as-is to @racket[=unix-pipe=], so if you use the name of another alias it will cause alias replacement a second time unless you quote the command name or put it in a string.
 }
 
 @defform[#:id current-pipeline-argument current-pipeline-argument]{
