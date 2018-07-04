@@ -169,10 +169,14 @@ You should read their documentation as well if you want a more thorough understa
 
 What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured per-pipeline, or using aliases (eg. whether other exit codes besides 0 are successful, whether to check for success in subprocesses in the middle of a pipeline, etc).  There are probably more things I should say.  But probably the best way forward from here is to read the @racket[run-pipeline] macro documentation.
 
+You can define aliases with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias].  Aliases are currently supported only by @racket[=unix-pipe=], though I may change that.  Aliases basically bypass the pipe itself -- basically so you can have @racket[=unix-pipe=] be the default operator but have a set of key-words that bypass it for a different operator without having to write the operator when it's in starting position.  And to be able to define aliases that are a little more familiar to people.
+
+You can access environment variables with @racket[getenv] and @racket[putenv], or by accessing the @racket[current-environment-variables] parameter.  Individual pipelines should have some sugar to set environment variables more conveniently, but I haven't added that yet.  Also, the dollar escapes done by @racket[=unix-pipe=] access environment variables instead of normal lexical variables if you use a variable name in ALL CAPS.
+
 Also, for those who just want to pipeline subprocesses in a Racket program using a lispy syntax, you probably want the shell/pipeline library, a basic component of Rash that can be used on its own:
 @secref["pipeline" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 
-While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].  Note that requiring the rash module will not affect the reader, so the line-oriented syntax will not be available unless you take steps to use it too.
+While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].  Note that requiring the rash module will not affect the reader, so the line-oriented syntax will not be available unless you take steps to use it too (IE use the Linea reader, or use the @racket[rash] macro).
 
 
 @section{Media}
