@@ -69,17 +69,7 @@
              (λ () (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                                    [exn:break:terminate? (λ (e) (clean/exit))]
                                    [(λ (e) #t) (λ (e) e)])
-                     (eval-syntax
-                      (parameterize ([current-namespace repl-namespace])
-                        (namespace-syntax-introduce
-                         #`(splicing-with-default-line-macro
-                            run-pipeline/logic/ret-obj
-                            (splicing-with-pipeline-parameters
-                             #:in real-stdin
-                             #:out (current-output-port)
-                             #:err (current-error-port)
-                             #:starter repl-default-pipeline-starter
-                             #,next-input)))))))
+                     (repl-eval next-input)))
              list)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
@@ -94,22 +84,29 @@
       (sleep 0.01)
       (rash-repl ret-val new-n))))
 
+(define (repl-eval stx #:splice [splice #f])
+  (eval-syntax
+   (parameterize ([current-namespace repl-namespace])
+     (namespace-syntax-introduce
+      #`(splicing-with-rash-parameters
+         #:in real-stdin
+         #:out (current-output-port)
+         #:err (current-error-port)
+         #:line-macro run-pipeline/logic/ret-obj
+         #:starter repl-default-pipeline-starter
+         #,@(if splice
+                stx
+                (list stx)))))))
+
 (define (eval-rashrc.rkt rcfile)
   (eval-syntax (parameterize ([current-namespace repl-namespace])
                  (namespace-syntax-introduce
                   (datum->syntax #f `(require (file ,(path->string rcfile))))))))
 
 (define (eval-rashrc rcfile)
-  (eval-syntax (parameterize ([current-namespace repl-namespace])
-                 (namespace-syntax-introduce
-                  #`(splicing-with-rash-parameters
-                     #:in real-stdin
-                     #:out (current-output-port)
-                     #:err (current-error-port)
-                     #:line-macro run-pipeline/logic/ret-obj
-                     #:starter repl-default-pipeline-starter
-                     #,@(port->list (λ (p) (linea-read-syntax (object-name p) p))
-                                    (open-input-file rcfile)))))))
+  (repl-eval #:splice #t
+             (port->list (λ (p) (linea-read-syntax (object-name p) p))
+                         (open-input-file rcfile))))
 
 (define (main)
   ;; Hmm... probably only one of these should count?
