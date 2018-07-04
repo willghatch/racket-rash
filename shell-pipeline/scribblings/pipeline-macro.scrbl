@@ -180,6 +180,8 @@ Options all take an argument, must precede any arguments, and are as follows:
 
 TODO - env modification
 
+Arguments are evaluated left-to-right, and the first argument (that does not produce an empty list) is checked to be a valid executable path.  If it is not a valid executable path, an exception is raised before evaluating the other arguments.  (Note that an executable could be removed between a successful check and an attempt to spawn a subprocess, so it could still error after evaluating the other arguments.)
+
 }
 
 @defform[#:kind "pipeline-operator" (=quoting-basic-unix-pipe= options ... args ...+)]{

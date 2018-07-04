@@ -84,6 +84,9 @@
  or/success
  )
 
+(module+ resolve-command-path
+  (provide resolve-command-path))
+
 (define mk-pipeline-member-spec unix-pipeline-member-spec)
 (define pipeline-member-spec? unix-pipeline-member-spec?)
 (define (cp-spec base

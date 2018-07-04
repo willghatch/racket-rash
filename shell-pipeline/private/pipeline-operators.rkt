@@ -47,6 +47,7 @@
  shell/mixed-pipeline
  "pipeline-operator-transform.rkt"
  "mostly-structs.rkt"
+ (submod "subprocess-pipeline.rkt" resolve-command-path)
  (for-syntax
   racket/base
   syntax/parse
@@ -323,6 +324,31 @@ re-appended).
         (list '#:success check-expression)
         ))
 
+;; This is to evaluate the command form before any arguments, so I can raise
+;; an error early if the command doesn't exist.  This provides better error
+;; messages for eg. line-macro names that are misspelled or not required.
+(define-syntax (unix-args-eval stx)
+  (syntax-parse stx
+    [(_ arg ...)
+     #'(reverse
+        (for/fold ([argl-rev '()])
+                  ([t (list (λ () arg) ...)])
+          (define cur-arg (t))
+          (if (null? argl-rev)
+              (match (unix-args-eval-match cur-arg)
+                [(list) argl-rev]
+                [x (cons x argl-rev)])
+              (cons cur-arg argl-rev))))]))
+(define (unix-args-eval-match cmd-arg)
+  (match cmd-arg
+    [(list a ...)
+     (define flat-cmdlist (flatten a))
+     (match flat-cmdlist
+       [(list cmd arg ...)
+        (cons (resolve-command-path cmd) arg)]
+       [(list) (list)])]
+    [cmd (resolve-command-path cmd)]))
+
 (define-for-syntax (basic-unix-pipe/ordered-args stx)
   (syntax-parse stx
     [(arg-maybe-opt ...+)
@@ -348,12 +374,12 @@ re-appended).
           (if as
               #`(composite-pipeline-member-spec
                  (list
-                  (unix-pipeline-member-spec (flatten (list arg ...))
+                  (unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
                                              #:err #,err
                                              #:success #,success-pred)
                   (object-pipeline-member-spec (λ (out-port)
                                                  (apply-output-transformer #,as out-port)))))
-              #`(unix-pipeline-member-spec (flatten (list arg ...))
+              #`(unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
                                            #:err #,err
                                            #:success #,success-pred)))])]))
 
