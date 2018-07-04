@@ -46,11 +46,11 @@ General Todos (written more for my memory than for something readable by others)
 
 * unix pipeline member argument generalization of env -- run code in thread to change dynamic environment in any way (this makes env easier -- have &env *only* extend/override, and if you want to reset the environment you can use the generalization)
 
-* make &bg work in run-pipeline macro
+* make &bg work in run-pipeline/logic macro
 ** also the other &arguments
 
 * have lexically scoped defaults for all pipeline options, similar to how the implicit starter operator works
-** the forms for setting these (eg. the rash macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
+** the forms for setting these (eg. the with-rash-parameters macro) should be able to set a new default for each or fall back to the current lexical default.  I guess there should just be a syntax parameter for each.  But should they be publicly available as syntax parameters or wrapped up in some api like the rash macro setting it or something?
 
 * optional kw-args for rash macros that affect read tables, macros to define rash macros and rash-module-begin with different defaults for all options including read table options
 
@@ -70,7 +70,7 @@ General Todos (written more for my memory than for something readable by others)
 
 * rash macro -- don't have the same macro for embedding code strings and just setting configuration.  There should be a separate configuration macro that the rash macro uses, and the rash macro should only be used for embedding code in strings.
 
-* Linea could use a line separator like “;” in bash.
+* Linea could use a line separator like “;” in bash.  But I don't want to use the semicolon character because it's also the comment character.  I don't want to make the hash character the comment character because it also does so many things in the reader.  In some of these ways I want to keep it closer to Racket than Bash and friends.
 
 * readline-lib -- I can reliably make rash-repl go to 100% cpu by launching a terminal with rash, running rash, running zsh, running rash, running rash, then xkill-ing the window.  But only when I have readline enabled.
 
@@ -96,11 +96,11 @@ About interactive shells
 ** <() is still missing
 ** running with modified environment
 *** a good workaround is `env FOO=bar cmd ...` -- so this isn't the highest priority...
-** stack traces from rash repl when a pipeline returns nonzero
-*** I want to get the message from an exception in the repl, and sometimes the stack trace UP TO the repl, but I don't want to see anything about the repl loop or anything.
-** issues with SHELL not being posix compatible
+** issues with a lack of job control
 *** vim has some issue starting -- I run it and it seems like it exits immediately.  Then I hit C-d to exit the shell and it pulls up vim.  Then I exit vim and things seem to be back to normal!
-*** Is there a better variable to set than SHELL to say "this is a rash repl"?
+
+** issues with SHELL not being posix compatible
+*** Is there a better variable to set than SHELL to say "this is a rash repl"?  Several programs use the current SHELL variable to run posix shell code.  That seems dumb to me -- if it's always assumed to be the posix shell, why not always run /bin/sh?  But they do it.
 
 * prompt
 ** I should get info about the current directory path like I do in zsh, but I should use more styles for more info (or at least make that optional).  eg. ownership/group/other, read/write/none, mount points, git repo roots, size would be cool but too expensive.
@@ -203,14 +203,9 @@ shell-pipeline
 ** Probably I want a flag struct for each.  The struct will contain a thunk that will evaluate to a file name (for <()) or will take a file name (for >(), the pipeline running mechanism will have to give it one).
 ** Unless it's actually backed by FD, the output process will have to finish before starting the input process, and pipeline waiting will have to wait for the sub-pipeline stuff as well...
 
-* I should probably provide a standard wrapper for the run-pipeline macro that detects some AND and OR identifiers and splits into multiple run-pipeline macros that automatically turn on pipeline-object-return
-** I should probably also change the option for returning the pipeline object to take an argument rather than being just a presence-only flag...
-
 * inspecting pipeline segments with correct compound member handling
 
 * add a set of symbols that the output-transformer can translate into common-case functions -- 'string, 'trim, 'lines, etc.
-
-* look through TODO comments
 
 * a version of pipeline-macro that doesn't have all the overhead (maybe one that doesn't allow unix-segments)
 ** maybe it's not terribly important, because it would be doing mostly the same thing as the threading macro, but it would be more flexible -- eg. =filter=, =for=, etc are nice, especially if they have short names.
