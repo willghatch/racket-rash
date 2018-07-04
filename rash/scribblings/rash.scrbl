@@ -289,7 +289,9 @@ Various details of the repl will change over time.
 Note that in the repl the default input/output/error-output are to the stdin/out/err connected to the terminal unless you change them.  This is different than the rash macro, and allows you to do things like run curses programs that have access to terminal ports.
 
 The repl can be customized with rc files.
-First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the repl.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).
+First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the REPL.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).  Note that @tt{rashrc.rkt} files are modules, can be in any #lang, and get all the normal and good compilation guarantees that Racket modules enjoy.  @tt{rashrc} is NOT a module, and gets none of them.  @tt{rashrc} is mainly there to let you muck up the namespace that you use interactively.  Prefer @tt{rashrc.rkt}.
+
+Note that “the top-level is hopeless”.  This applies to the Rash REPL as well as @tt{rashrc} files.  But the hopelessness is mostly to do with defining macros, particularly complicated macros such as mutually recursive or macro-defining macros.  So the hopelessness doesn't affect the types of things most people are likely to do in a shell.  But if you don't remember that, you might put “hopeless” things in a @tt{rashrc} file.  Don't.  Put it in a module like @tt{rashrc.rkt} (or any other module or library you make).  (For more hopelessness, see @hyperlink["https://gist.github.com/samth/3083053"]{this}.)
 
 A few nice things (like stderr highlighting) are in a demo-rc file you can require.  To do so, add this to $HOME/.config/rash/rashrc:
 
