@@ -20,8 +20,8 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 
  ;; treat the pipeline as an object pipe if the command is bound in racket,
  ;; otherwise treat it as a unix command.
+ =obj-if-def/basic-unix-if-undef=
  =obj-if-def/unix-if-undef=
- =obj-if-def/globbing-unix-if-undef=
 
  =map=
  =filter=
@@ -70,13 +70,13 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                                [e #'e]))
                       pargs)))])
 
-(pipeop =obj-if-def/unix-if-undef=
+(pipeop =obj-if-def/basic-unix-if-undef=
         [(_ cmd arg ...)
          (if (and (identifier? #'cmd) (identifier-binding #'cmd))
              #'(=object-pipe= cmd arg ...)
              #'(=quoting-basic-unix-pipe= cmd arg ...))])
 
-(pipeop =obj-if-def/globbing-unix-if-undef=
+(pipeop =obj-if-def/unix-if-undef=
         [(_ cmd arg ...)
          (if (and (identifier? #'cmd) (identifier-binding #'cmd))
              #'(=object-pipe= cmd arg ...)
