@@ -71,6 +71,17 @@ reads as:
 }
 }
 
+@subsection{Line Macros}
+Line macros are designed to give lines of code flexible meaning.  They are similar to Racket's treatment of S-expressions with macros and @racket[#%app].
+
+Just like the macro expander will check whether the first element of a form is bound as a macro, @racket[#%linea-line] checks if the first element of a line is a line macro.  Just like the macro expander inserts @racket[#%app] if there is not an explicit macro use, @racket[#%linea-line] inserts the @racket[current-default-line-macro].
+
+There are two major differences:
+@itemlist[
+@item{Line macros are specially marked with @racket[prop:line-macro], because the macros that you want to override S-expression meaning and line meaning are not necessarily the same.  The @racket[define-line-macro] form defines line macros that also work as a normal macro (and execute the same syntax transformer), but that is not required.}
+@item{The @racket[current-default-line-macro] form is a syntax parameter, whereas @racket[#%app] is an identifier that is placed using the scope information of the syntax list (IE of the parentheses) of a form.  This means customization of @racket[current-default-line-macro] and @racket[#%app] works slightly differently.}
+]
+
 @section{Linea Reference}
 
 @subsection{linea/defaults}
