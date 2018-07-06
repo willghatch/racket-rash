@@ -20,6 +20,8 @@ Linea is a line-oriented reader and one of the main components of the @hyperlink
 @section{Stability}
 Not yet stable.  Things may still change a bit.
 
+Specifically, I'm likely to change the @racket[default-line-macro] into some #%default-line-macro symbol that is NOT a syntax parameter.  But the @racket[with-default-line-macro] form will probably not change (IE it will bend hygiene rather than using a syntax parameter).
+
 @section{Linea Guide}
 TODO
 

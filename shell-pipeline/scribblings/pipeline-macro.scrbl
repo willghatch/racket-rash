@@ -19,6 +19,8 @@ This library is not entirely stable.
 
 The base set of pipeline operators is likely to change, and some of the names I want to review before a stable release.
 
+The default pipeline operator is currently implemented as a syntax parameter, which has some semantics that will probably be unexpected for people writing macros containing pipelines.  So I will likely change that.
+
 @section{shell/pipeline-macro guide}
 
 This module is a macro DSL wrapper around the
