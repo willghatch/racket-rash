@@ -92,59 +92,61 @@
 (define-syntax-parameter default-pipeline-err-out
   (syntax-parser [_ #''string-port]))
 
-(define-syntax (with-pipeline-parameters* stx)
+(define-for-syntax (with-pipeline-parameters* stx let-form parameterization-form)
+  ;; TODO - the in out and err expressions need to be lexical and not syntax-parameter-y too.
+  ;; TODO - all the pipeline ops need parameterizable lexical defaults.
+  ;; TODO - the name "parameters" is probably bad, since they should not be syntax-parameters...
+  ;; TODO - the code to get the context is copy/pasted...  I need to generalize it, because it's used in with-pipeline-parameters, with-rash-parameters, and with-default-line-macro.
   (syntax-parse stx
-    [(_ parameterization-form
-        (~or (~optional (~seq #:in in))
-             (~optional (~seq #:out out))
-             (~optional (~seq #:err err))
-             (~optional (~seq #:starter starter:pipeline-starter)))
-        ...
-        body:expr ...+)
+    [(orig-macro
+      (~or (~optional (~seq #:in in))
+           (~optional (~seq #:out out))
+           (~optional (~seq #:err err))
+           (~optional (~seq #:starter starter:pipeline-starter))
+           (~optional (~seq #:context context)))
+      ...
+      body:expr ...+)
      (let* ([set-in (and (attribute in)
                          #'(default-pipeline-in (λ (stx) (quote-syntax in))))]
             [set-out (and (attribute out)
                           #'(default-pipeline-out (λ (stx) (quote-syntax out))))]
             [set-err (and (attribute err)
                           #'(default-pipeline-err-out (λ (stx) (quote-syntax err))))]
+            [starter-context-id
+             (or (attribute context)
+                 (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
+                                (syntax->list #'(body ...)))])
+                   (unless (or (not (attribute starter))
+                               (for/and ([x (cdr cs)])
+                                 (bound-identifier=? (car cs) x)))
+                     (raise-syntax-error
+                      'with-pipeline-parameters
+                      "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default pipeline starter to."
+                      stx))
+                   (car cs)))]
             [set-starter (and (attribute starter)
-                              #'(default-pipeline-starter (quote-syntax starter)))]
+                              #`(#,(datum->syntax
+                                    starter-context-id
+                                    '#%shell-pipeline/default-pipeline-starter
+                                    (attribute starter))
+                                 (make-rename-transformer
+                                  (quote-syntax starter))))]
             [parameterizations
-             #`(#,@(filter (λ(x)x) (list set-in set-out set-err set-starter)))])
-       #`(parameterization-form
-          #,parameterizations
-          body ...))]))
+             #`(#,@(filter (λ(x)x) (list set-in set-out set-err)))]
+            [lets
+             #`(#,@(filter (λ(x)x) (list set-starter)))])
+       #`(#,let-form
+          #,lets
+          (#,parameterization-form
+           #,parameterizations
+           body ...)))]))
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
 (define-syntax (with-pipeline-parameters stx)
-  (syntax-parse stx
-    [(_ opt:kw-opt ... body:expr ...+)
-     (syntax-parse #'(opt ...)
-       [(((~or (~optional (~seq #:in in))
-               (~optional (~seq #:out out))
-               (~optional (~seq #:err err))
-               (~optional (~seq #:starter starter:pipeline-starter))))
-         ...)
-        #`(with-pipeline-parameters*
-            syntax-parameterize
-            #,@(apply append (map syntax->list
-                                  (syntax->list #'(opt ...))))
-            body ...)])]))
+  (with-pipeline-parameters* stx #'let-syntax #'syntax-parameterize))
 (define-syntax (splicing-with-pipeline-parameters stx)
-  (syntax-parse stx
-    [(_ opt:kw-opt ... body:expr ...+)
-     (syntax-parse #'(opt ...)
-       [(((~or (~optional (~seq #:in in))
-               (~optional (~seq #:out out))
-               (~optional (~seq #:err err))
-               (~optional (~seq #:starter starter:pipeline-starter))))
-         ...)
-        #`(with-pipeline-parameters*
-            splicing-syntax-parameterize
-            #,@(apply append (map syntax->list
-                                  (syntax->list #'(opt ...))))
-            body ...)])]))
+  (with-pipeline-parameters* stx #'splicing-let-syntax #'splicing-syntax-parameterize))
 
 (define-syntax (pipeline-start-segment stx)
   (syntax-parse stx
@@ -327,9 +329,21 @@
     [(_ do-macro starter:pipeline-starter args:not-pipeline-op ... rest ...)
      #'(rash-pipeline-splitter/joints do-macro ([starter args ...]) (rest ...))]
     [(rps do-macro iargs:not-pipeline-op ...+ rest ...)
-     #`(rps do-macro
-            #,(syntax-parameter-value #'default-pipeline-starter)
-            iargs ... rest ...)]))
+     (define iarg1 (car (syntax->list #'(iargs ...))))
+     (define implicit-starter
+       (datum->syntax iarg1
+                      '#%shell-pipeline/default-pipeline-starter
+                      iarg1))
+     (syntax-parse implicit-starter
+       [implicit-pipeline-starter:pipeline-starter
+        #'(rps do-macro
+               implicit-pipeline-starter
+               iargs ... rest ...)]
+       [_ (raise-syntax-error
+           'run-pipeline
+           "Run-pipeline was used without an explicit starter and in the implicit context (the first form in the pipeline) the default is either not bound or not bound to an appropriate pipeline operator."
+           #'(iargs ... rest ...)
+           iarg1)])]))
 
 (define-syntax (rash-pipeline-splitter/joints stx)
   (syntax-parse stx

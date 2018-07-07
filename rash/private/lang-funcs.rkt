@@ -159,6 +159,7 @@
                                            (attribute err)
                                            (attribute starter))
                                        #`(#,p-parameterizer
+                                          #:context #,context-id
                                           #,@#'p-param-in
                                           #,@#'p-param-out
                                           #,@#'p-param-err
@@ -170,24 +171,6 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
-#;(define-syntax (with-rash-parameters stx)
-  (syntax-parse stx
-    [(orig-macro opt:kw-opt ... body:expr ...+)
-     (syntax-parse #'(opt ...)
-       [(((~or
-           (~optional (~seq #:in in:expr))
-           (~optional (~seq #:out out:expr))
-           (~optional (~seq #:err err:expr))
-           (~optional (~seq #:starter starter:pipeline-starter))
-           (~optional (~seq #:line-macro line-macro:line-macro))))
-         ...)
-        (with-rash-parameters*
-          #`(orig-macro
-             with-default-line-macro
-             with-pipeline-parameters
-             #,@(apply append (map syntax->list
-                                   (syntax->list #'(opt ...))))
-             body ...))])]))
 (define-syntax (with-rash-parameters stx)
   (with-rash-parameters* stx
     #'with-default-line-macro
@@ -196,25 +179,6 @@
   (with-rash-parameters* stx
     #'splicing-with-default-line-macro
     #'splicing-with-pipeline-parameters))
-#;(define-syntax (splicing-with-rash-parameters stx)
-  (syntax-parse stx
-    [(orig-macro opt:kw-opt ... body:expr ...+)
-     (syntax-parse #'(opt ...)
-       [(((~or
-           (~optional (~seq #:in in:expr))
-           (~optional (~seq #:out out:expr))
-           (~optional (~seq #:err err:expr))
-           (~optional (~seq #:starter starter:pipeline-starter))
-           (~optional (~seq #:line-macro line-macro:line-macro))))
-         ...)
-        (eprintf "about to call with splicing: ~a\n\n" (syntax->datum stx))
-        (with-rash-parameters*
-          #`(orig-macro
-             splicing-with-default-line-macro
-             splicing-with-pipeline-parameters
-             #,@(apply append (map syntax->list
-                                   (syntax->list #'(opt ...))))
-             body ...))])]))
 
 (define-syntax (#%hash-braces stx)
   (syntax-parse stx

@@ -1,7 +1,7 @@
 #lang racket/base
 
 (provide
- default-pipeline-starter
+ #%shell-pipeline/default-pipeline-starter
  )
 
 (require
@@ -16,13 +16,12 @@
   (syntax-parse stx
     [(_ e1 e2 ...)
      (raise-syntax-error
-      'erroring-default-pipeline-starter
+      '#%shell-pipeline/default-pipeline-starter
       "No explicit pipeline starter given in a context with no default set."
       #'e1)]))
 
-(define-syntax default-pipeline-starter-macro
+(define-syntax #%shell-pipeline/default-pipeline-starter
   (pipeline-operator default-pipeline-error
                      default-pipeline-error
                      default-pipeline-error))
 
-(define-syntax-parameter default-pipeline-starter #'default-pipeline-starter-macro)

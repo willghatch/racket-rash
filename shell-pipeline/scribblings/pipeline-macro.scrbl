@@ -19,7 +19,7 @@ This library is not entirely stable.
 
 The base set of pipeline operators is likely to change, and some of the names I want to review before a stable release.
 
-The default pipeline operator is currently implemented as a syntax parameter, which has some semantics that will probably be unexpected for people writing macros containing pipelines.  So I will likely change that.
+Some pipeline options (&in, etc) are currently backed by syntax parameters, which is wrong.  It causes things to be... not as lexical as they are supposed to be.  That will be changed.
 
 @section{shell/pipeline-macro guide}
 
@@ -86,7 +86,7 @@ Run a pipeline.  This is a macro wrapper for @racket[shell/mixed-pipeline/run-mi
 
 The pipeline flags affect the options passed to @racket[shell/mixed-pipeline/run-mixed-pipeline] and are documented separately.
 
-The pipeline-member-specs are transformed according to the pipeline operators given.  If the first non-flag argument to @racket[run-pipeline] is not a pipeline operator, then a default is put in its place as determined by @racket[default-pipeline-operator].  The full names of pipeline operators are conventionally identifiers surrounded with = signs.
+The pipeline-member-specs are transformed according to the pipeline operators given.  If the first non-flag argument to @racket[run-pipeline] is not a pipeline operator, then a default is put in its place as determined by a lexical default operator.  The default is determined by the lexical context of the first form among the arguments (after the run-pipeline identifier itself).  The full names of pipeline operators are conventionally identifiers surrounded with = signs.
 
 At the time of writing I'm not really sure what to write here, so have an example:
 
