@@ -3,8 +3,8 @@
 (provide
  rash
  rash/wired
- with-rash-parameters
- splicing-with-rash-parameters
+ with-rash-config
+ splicing-with-rash-config
  run-pipeline
  run-pipeline/logic
  cd
@@ -26,7 +26,7 @@
 
 (module+ for-repl
   (provide
-   splicing-with-pipeline-parameters
+   splicing-with-pipeline-config
    run-pipeline
    run-pipeline/logic
    ))
@@ -45,7 +45,7 @@
  linea/defaults
  linea/read
  linea/read-syntax-string
- (only-in shell/private/pipeline-macro-parse splicing-with-pipeline-parameters)
+ (only-in shell/private/pipeline-macro-parse splicing-with-pipeline-config)
  syntax/parse
  syntax/wrap-modbeg
 
@@ -108,7 +108,7 @@
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
-         (splicing-with-rash-parameters
+         (splicing-with-rash-config
           #:line-macro line-macro
           #:starter default-starter
           #:in in-eval
@@ -116,7 +116,7 @@
           #:err err-eval
           e ...))]))
 
-(define-for-syntax (with-rash-parameters* stx lm-parameterizer p-parameterizer)
+(define-for-syntax (with-rash-config* stx lm-parameterizer p-parameterizer)
   (syntax-parse stx
     [(orig-macro
       (~or
@@ -133,7 +133,7 @@
          (unless (for/and ([x (cdr cs)])
                    (bound-identifier=? (car cs) x))
            (raise-syntax-error
-            'with-rash-parameters
+            'with-rash-config
             "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default line macro and pipeline starter to."
             stx))
          (car cs)))
@@ -171,24 +171,24 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
-(define-syntax (with-rash-parameters stx)
-  (with-rash-parameters* stx
+(define-syntax (with-rash-config stx)
+  (with-rash-config* stx
     #'with-default-line-macro
-    #'with-pipeline-parameters))
-(define-syntax (splicing-with-rash-parameters stx)
-  (with-rash-parameters* stx
+    #'with-pipeline-config))
+(define-syntax (splicing-with-rash-config stx)
+  (with-rash-config* stx
     #'splicing-with-default-line-macro
-    #'splicing-with-pipeline-parameters))
+    #'splicing-with-pipeline-config))
 
 (define-syntax (#%hash-braces stx)
   (syntax-parse stx
     [(_ body:expr)
-     #'(splicing-with-rash-parameters #:in (open-input-string "")
-                             #:out (λ (p) (string-trim (port->string p)))
-                             #:err 'string-port
-                             ;#:starter =unix-pipe=
-                             ;#:line-macro run-pipeline
-                             body)]))
+     #'(splicing-with-rash-config #:in (open-input-string "")
+                                  #:out (λ (p) (string-trim (port->string p)))
+                                  #:err 'string-port
+                                  ;#:starter =unix-pipe=
+                                  ;#:line-macro run-pipeline
+                                  body)]))
 
 #|
 TODO

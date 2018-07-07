@@ -8,16 +8,16 @@
    pipeline-start-segment
    pipeline-joint-segment
    run-pipeline
-   with-pipeline-parameters
-   splicing-with-pipeline-parameters
+   with-pipeline-config
+   splicing-with-pipeline-config
    ))
 
 (provide
  pipeline-start-segment
  pipeline-joint-segment
  run-pipeline
- with-pipeline-parameters
- splicing-with-pipeline-parameters
+ with-pipeline-config
+ splicing-with-pipeline-config
  rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
@@ -92,11 +92,11 @@
 (define-syntax-parameter default-pipeline-err-out
   (syntax-parser [_ #''string-port]))
 
-(define-for-syntax (with-pipeline-parameters* stx let-form parameterization-form)
+(define-for-syntax (with-pipeline-config* stx let-form parameterization-form)
   ;; TODO - the in out and err expressions need to be lexical and not syntax-parameter-y too.
   ;; TODO - all the pipeline ops need parameterizable lexical defaults.
   ;; TODO - the name "parameters" is probably bad, since they should not be syntax-parameters...
-  ;; TODO - the code to get the context is copy/pasted...  I need to generalize it, because it's used in with-pipeline-parameters, with-rash-parameters, and with-default-line-macro.
+  ;; TODO - the code to get the context is copy/pasted...  I need to generalize it, because it's used in with-pipeline-config, with-rash-config, and with-default-line-macro.
   (syntax-parse stx
     [(orig-macro
       (~or (~optional (~seq #:in in))
@@ -120,7 +120,7 @@
                                (for/and ([x (cdr cs)])
                                  (bound-identifier=? (car cs) x)))
                      (raise-syntax-error
-                      'with-pipeline-parameters
+                      'with-pipeline-config
                       "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default pipeline starter to."
                       stx))
                    (car cs)))]
@@ -143,10 +143,10 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
-(define-syntax (with-pipeline-parameters stx)
-  (with-pipeline-parameters* stx #'let-syntax #'syntax-parameterize))
-(define-syntax (splicing-with-pipeline-parameters stx)
-  (with-pipeline-parameters* stx #'splicing-let-syntax #'splicing-syntax-parameterize))
+(define-syntax (with-pipeline-config stx)
+  (with-pipeline-config* stx #'let-syntax #'syntax-parameterize))
+(define-syntax (splicing-with-pipeline-config stx)
+  (with-pipeline-config* stx #'splicing-let-syntax #'splicing-syntax-parameterize))
 
 (define-syntax (pipeline-start-segment stx)
   (syntax-parse stx

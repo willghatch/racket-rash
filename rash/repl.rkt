@@ -88,7 +88,7 @@
   (eval-syntax
    (parameterize ([current-namespace repl-namespace])
      (namespace-syntax-introduce
-      #`(splicing-with-rash-parameters
+      #`(splicing-with-rash-config
          #:in real-stdin
          #:out (current-output-port)
          #:err (current-error-port)

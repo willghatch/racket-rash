@@ -59,7 +59,7 @@ inside the recipe body.
         (define the-target-list-box (box '()))
         (splicing-syntax-parameterize
             ([target-list-box (syntax-parser [x:id #'the-target-list-box])])
-          (splicing-with-rash-parameters
+          (splicing-with-rash-config
            #:out (current-output-port)
            #:in (current-input-port)
            #:err (current-error-port)
@@ -110,7 +110,7 @@ inside the recipe body.
         (append
          (let ([target-result (target/dep-stringify (list #,@target-exprs))]
                [deps-result (target/dep-stringify (list #,@deps-exprs))]
-               [body-result (λ () (with-rash-parameters
+               [body-result (λ () (with-rash-config
                                     #:line-macro run-pipeline
                                     body))])
            (if (list? target-result)
