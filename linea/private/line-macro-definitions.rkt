@@ -6,12 +6,11 @@
  #%linea-line
  #%linea-s-exp
  #%linea-expressions-begin
+ #%linea-default-line-macro
 
  define-line-macro
  with-default-line-macro
  splicing-with-default-line-macro
-
- default-line-macro
  )
 
 (require
@@ -29,14 +28,23 @@
     [(_ name transformer)
      #'(define-syntax name (line-macro-struct transformer))]))
 
+(define-for-syntax (dlm ctxt loc)
+  (datum->syntax ctxt '#%linea-default-line-macro loc))
+
 (define-syntax (#%linea-line stx)
   ;; detect line macros and apply them, or transform into pipeline
   (syntax-parse stx
     [(_ arg1:line-macro arg ...)
      (linea-line-macro-transform #'(arg1 arg ...))]
     [(rec arg ...)
-     (let ([default-macro (syntax-parameter-value #'default-line-macro)])
-       #`(rec #,default-macro arg ...))]))
+     (let ([default-macro (dlm #'rec #'rec)])
+       (syntax-parse default-macro
+         [default-line-macro:line-macro
+           #'(rec default-line-macro arg ...)]
+         [_ (raise-syntax-error
+             '#%linea-line
+             "A line of Linea (Rash) code was used without an explicit line macro and #%linea-default-line-macro is not bound or not bound to a line macro"
+             #'rec)]))]))
 
 (define-syntax #%linea-expressions-begin (make-rename-transformer #'begin))
 
@@ -45,25 +53,56 @@
 (define-syntax (#%linea-s-exp stx)
   (syntax-parse stx [(_ e) #'e]))
 
-(define-line-macro erroring-default-line-macro
+(define-line-macro #%linea-default-line-macro
   (λ (stx)
-    (raise-syntax-error 'erroring-default-line-macro
-                        "No line-macro was specified as the default for the top-level in this module.  Probably you want the #%module-begin of your language to do that."
-                        stx)))
+    (syntax-parse stx
+      [(_ arg ...)
+       (define msg
+         "The base default for #%linea-default-line-macro is to raise this syntax error.  Perhaps your #%module-begin didn't set a different one.")
+       (define args (syntax->list #'(arg ...)))
+       (if (null? args)
+           (raise-syntax-error
+            '#%linea-default-line-macro
+            msg
+            stx)
+           (raise-syntax-error
+            '#%linea-default-line-macro
+            msg
+            stx
+            (car args)
+            (cdr args)))])))
 
-(define-syntax-parameter default-line-macro #'erroring-default-line-macro)
+(define-for-syntax (with-default-line-macro* stx #:context [context #f])
+  (syntax-parse stx
+    [(orig-macro let-form new-default:line-macro e ...+)
+     (define default-line-macro-stx
+       (or (and context (dlm context #'orig-macro))
+           (let ([dlms (map (λ (x) (dlm x #'orig-macro))
+                            (syntax->list #'(e ...)))])
+             (unless (for/and ([x (cdr dlms)])
+                       (bound-identifier=? (car dlms) x))
+               (raise-syntax-error
+                'with-default-line-macro
+                "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default line macro to."
+                #'new-default))
+             (car dlms))))
+     (with-syntax ([default-line-macro default-line-macro-stx])
+       #'(let-form ([default-line-macro (make-rename-transformer
+                                         (quote-syntax new-default))])
+                   e ...))]))
 
 (define-line-macro with-default-line-macro
   (syntax-parser
-    [(_ new-default:line-macro e ...+)
-     #'(syntax-parameterize ([default-line-macro #'new-default])
-         e ...)]))
-
+    [(w-d-l-m (~optional (~seq #:context context)) new-default:line-macro e ...+)
+     (with-default-line-macro*
+       #:context (attribute context)
+       #'(w-d-l-m let-syntax new-default e ...))]))
 (define-line-macro splicing-with-default-line-macro
   (syntax-parser
-    [(_ new-default:line-macro e ...+)
-     #'(splicing-syntax-parameterize ([default-line-macro #'new-default])
-         e ...)]))
+    [(w-d-l-m (~optional (~seq #:context context)) new-default:line-macro e ...+)
+     (with-default-line-macro*
+       #:context (attribute context)
+       #'(w-d-l-m splicing-let-syntax new-default e ...))]))
 
 (module+ test
   (require rackunit)

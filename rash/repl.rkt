@@ -30,12 +30,12 @@
   (syntax-parser [(_ arg ...)
                   ;; Apparently splicing-syntax-parameterize is leaking through here somehow, and wrapping with a let protects this.
                   #'(let ()
-                      (syntax-parameterize ([default-line-macro #'run-pipeline])
+                      (with-default-line-macro run-pipeline
                         (run-pipeline &pipeline-ret arg ...)))]))
 (define-line-macro run-pipeline/logic/ret-obj
   (syntax-parser [(_ arg ...)
                   #'(let ()
-                      (syntax-parameterize ([default-line-macro #'run-pipeline/logic])
+                      (with-default-line-macro run-pipeline
                         (run-pipeline/logic &pipeline-ret arg ...)))]))
 
 (define (clean/exit)
@@ -104,10 +104,11 @@
                   (datum->syntax #f `(require (file ,(path->string rcfile))))))))
 
 (define (eval-rashrc rcfile)
-  (repl-eval #:splice #t
-             (cons #'(void)
-                   (port->list (λ (p) (linea-read-syntax (object-name p) p))
-                               (open-input-file rcfile)))))
+  (define stxs (port->list (λ (p) (linea-read-syntax (object-name p) p))
+                           (open-input-file rcfile)))
+  (if (null? stxs)
+      (void)
+      (repl-eval #:splice #t stxs)))
 
 (define (main)
   ;; Hmm... probably only one of these should count?

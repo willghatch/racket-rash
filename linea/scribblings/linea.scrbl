@@ -20,7 +20,6 @@ Linea is a line-oriented reader and one of the main components of the @hyperlink
 @section{Stability}
 Not yet stable.  Things may still change a bit.
 
-Specifically, I'm likely to change the @racket[default-line-macro] into some #%default-line-macro symbol that is NOT a syntax parameter.  But the @racket[with-default-line-macro] form will probably not change (IE it will bend hygiene rather than using a syntax parameter).
 
 @section{Linea Guide}
 TODO
@@ -76,13 +75,9 @@ reads as:
 @subsection{Line Macros}
 Line macros are designed to give lines of code flexible meaning.  They are similar to Racket's treatment of S-expressions with macros and @racket[#%app].
 
-Just like the macro expander will check whether the first element of a form is bound as a macro, @racket[#%linea-line] checks if the first element of a line is a line macro.  Just like the macro expander inserts @racket[#%app] if there is not an explicit macro use, @racket[#%linea-line] inserts the @racket[current-default-line-macro].
+Just like the macro expander will check whether the first element of a form is bound as a macro, @racket[#%linea-line] checks if the first element of a line is a line macro.  Just like the macro expander inserts @racket[#%app] if there is not an explicit macro use, @racket[#%linea-line] inserts @racket[#%linea-default-line-macro].
 
-There are two major differences:
-@itemlist[
-@item{Line macros are specially marked with @racket[prop:line-macro], because the macros that you want to override S-expression meaning and line meaning are not necessarily the same.  The @racket[define-line-macro] form defines line macros that also work as a normal macro (and execute the same syntax transformer), but that is not required.}
-@item{The @racket[current-default-line-macro] form is a syntax parameter, whereas @racket[#%app] is an identifier that is placed using the scope information of the syntax list (IE of the parentheses) of a form.  This means customization of @racket[current-default-line-macro] and @racket[#%app] works slightly differently.}
-]
+One major difference is that line macros are specially marked with @racket[prop:line-macro], because the macros that you want to override S-expression meaning and line meaning are not necessarily the same.  The @racket[define-line-macro] form defines line macros that also work as a normal macro (and execute the same syntax transformer), but that is not required.
 
 @section{Linea Reference}
 
@@ -100,6 +95,9 @@ If @racket[starter] is a @racket[line-macro], then it acts as #'(starter e ...).
 }
 @defform[(#%linea-s-exp e)]{
 This is just a pass-through -- @(racket (#%linea-s-exp foo)) simply turns into @(racket foo).
+}
+@defform[(#%linea-default-line-macro e)]{
+The identifier #%linea-default-line-macro is the default that is inserted when no explicit line macro is used.  But by default it just raises an error.  This is configured with @racket[with-default-line-macro].
 }
 
 @subsection{linea/line-macro}
@@ -154,7 +152,7 @@ with-default-line-macro basic-app {
 }
 }
 @defform[#:kind "line-macro" (splicing-with-default-line-macro new-default-line-macro body ...)]{
-Like @racket[with-default-line-macro], only the bodies are spliced into the surrounding context as with @racket[splicing-syntax-parameterize].
+Like @racket[with-default-line-macro], only the bodies are spliced into the surrounding context as with @racket[splicing-let-syntax].
 }
 
 

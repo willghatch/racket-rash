@@ -123,7 +123,7 @@ cat #{which my-script.rkt}
 
 TODO - how to more generally parameterize such settings.
 
-Every line in Rash is actually a line-macro.  If a line does not start with a line-macro name explicitly, @racket[default-line-macro] is inserted.  By default this is @racket[run-pipeline] in Rash.
+Every line in Rash is actually a line-macro.  If a line does not start with a line-macro name explicitly, @racket[#%linea-default-line-macro] is inserted.  By default this is @racket[run-pipeline] in Rash.
 
 TODO - actually the default is run-pipeline/logic, which I haven't documented yet, which adds && and ||.
 

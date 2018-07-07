@@ -116,20 +116,31 @@
           #:err err-eval
           e ...))]))
 
-(define-syntax (with-rash-parameters* stx)
+(define-for-syntax (with-rash-parameters* stx lm-parameterizer p-parameterizer)
   (syntax-parse stx
-    [(_ lm-parameterizer
-        p-parameterizer
-        (~or
-         (~optional (~seq #:in in:expr))
-         (~optional (~seq #:out out:expr))
-         (~optional (~seq #:err err:expr))
-         (~optional (~seq #:starter starter:pipeline-starter))
-         (~optional (~seq #:line-macro line-macro:line-macro)))
-        ...
-        body:expr ...+)
+    [(orig-macro
+      (~or
+       (~optional (~seq #:in in:expr))
+       (~optional (~seq #:out out:expr))
+       (~optional (~seq #:err err:expr))
+       (~optional (~seq #:starter starter:pipeline-starter))
+       (~optional (~seq #:line-macro line-macro:line-macro)))
+      ...
+      body:expr ...+)
+     (define context-id
+       (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
+                      (syntax->list #'(body ...)))])
+         (unless (for/and ([x (cdr cs)])
+                   (bound-identifier=? (car cs) x))
+           (raise-syntax-error
+            'with-rash-parameters
+            "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default line macro and pipeline starter to."
+            stx))
+         (car cs)))
      (with-syntax ([lm-param-form (if (attribute line-macro)
-                                      #'(lm-parameterizer line-macro)
+                                      #`(#,lm-parameterizer
+                                         #:context #,context-id
+                                         line-macro)
                                       #'(begin))]
                    [p-param-in (if (attribute in)
                                    #'(#:in in)
@@ -147,10 +158,11 @@
                                            (attribute out)
                                            (attribute err)
                                            (attribute starter))
-                                       #`(p-parameterizer #,@#'p-param-in
-                                                          #,@#'p-param-out
-                                                          #,@#'p-param-err
-                                                          #,@#'p-param-starter)
+                                       #`(#,p-parameterizer
+                                          #,@#'p-param-in
+                                          #,@#'p-param-out
+                                          #,@#'p-param-err
+                                          #,@#'p-param-starter)
                                        #'(begin))])
          #`(#,@#'lm-param-form
             (#,@#'p-param-form
@@ -158,25 +170,35 @@
 (begin-for-syntax
   (define-splicing-syntax-class kw-opt
     (pattern (~seq kw:keyword val:expr))))
+#;(define-syntax (with-rash-parameters stx)
+  (syntax-parse stx
+    [(orig-macro opt:kw-opt ... body:expr ...+)
+     (syntax-parse #'(opt ...)
+       [(((~or
+           (~optional (~seq #:in in:expr))
+           (~optional (~seq #:out out:expr))
+           (~optional (~seq #:err err:expr))
+           (~optional (~seq #:starter starter:pipeline-starter))
+           (~optional (~seq #:line-macro line-macro:line-macro))))
+         ...)
+        (with-rash-parameters*
+          #`(orig-macro
+             with-default-line-macro
+             with-pipeline-parameters
+             #,@(apply append (map syntax->list
+                                   (syntax->list #'(opt ...))))
+             body ...))])]))
 (define-syntax (with-rash-parameters stx)
-  (syntax-parse stx
-    [(_ opt:kw-opt ... body:expr ...+)
-     (syntax-parse #'(opt ...)
-       [(((~or
-           (~optional (~seq #:in in:expr))
-           (~optional (~seq #:out out:expr))
-           (~optional (~seq #:err err:expr))
-           (~optional (~seq #:starter starter:pipeline-starter))
-           (~optional (~seq #:line-macro line-macro:line-macro))))
-         ...)
-        #`(with-rash-parameters* with-default-line-macro
-                        with-pipeline-parameters
-                        #,@(apply append (map syntax->list
-                                              (syntax->list #'(opt ...))))
-                        body ...)])]))
+  (with-rash-parameters* stx
+    #'with-default-line-macro
+    #'with-pipeline-parameters))
 (define-syntax (splicing-with-rash-parameters stx)
+  (with-rash-parameters* stx
+    #'splicing-with-default-line-macro
+    #'splicing-with-pipeline-parameters))
+#;(define-syntax (splicing-with-rash-parameters stx)
   (syntax-parse stx
-    [(_ opt:kw-opt ... body:expr ...+)
+    [(orig-macro opt:kw-opt ... body:expr ...+)
      (syntax-parse #'(opt ...)
        [(((~or
            (~optional (~seq #:in in:expr))
@@ -185,11 +207,14 @@
            (~optional (~seq #:starter starter:pipeline-starter))
            (~optional (~seq #:line-macro line-macro:line-macro))))
          ...)
-        #`(with-rash-parameters* splicing-with-default-line-macro
-                        splicing-with-pipeline-parameters
-                        #,@(apply append (map syntax->list
-                                              (syntax->list #'(opt ...))))
-                        body ...)])]))
+        (eprintf "about to call with splicing: ~a\n\n" (syntax->datum stx))
+        (with-rash-parameters*
+          #`(orig-macro
+             splicing-with-default-line-macro
+             splicing-with-pipeline-parameters
+             #,@(apply append (map syntax->list
+                                   (syntax->list #'(opt ...))))
+             body ...))])]))
 
 (define-syntax (#%hash-braces stx)
   (syntax-parse stx
