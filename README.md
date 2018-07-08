@@ -1,7 +1,7 @@
 # Rash: The Reckless Racket Shell
 
 [![Scribble](https://img.shields.io/badge/Docs-Scribble-blue.svg)](http://docs.racket-lang.org/rash@rash/index.html)
-[![Experimental](https://docs.racket-lang.org/rash/index.html#%28part._.Stability%29)
+[![Experimental](https://docs.racket-lang.org/rash/index.html#%28part._.Stability%29)]
 
 Rash is a shell language, library, and REPL for Racket.
 
