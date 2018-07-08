@@ -29,7 +29,7 @@ You can either install with racket's built in package manager, [`raco`](https://
 
 ### Usage
 
-Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`
+Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`.
 
 I gave a talk about Rash at RacketCon 2017.  It's slightly out of date, but you can watch it  [here](https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y).
 
