@@ -51,7 +51,7 @@ script:
 # some `deps`:
 #
 # script:
- - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR
+ - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/rash
  - raco setup -D --check-pkg-deps rash
  - raco test -x -p rash
 
