@@ -2,7 +2,7 @@
 <h1 align="center">Rash: The Reckless Racket Shell</h1>
 
 <p align="center">
-<a href="https://travis-ci.org/vityou/racket-rash"><img src="https://travis-ci.org/vityou/racket-rash.svg?branch=master"></a>
+<a href="https://travis-ci.org/willghatch/racket-rash"><img src="https://travis-ci.org/willghatch/racket-rash.svg?branch=master"></a>
 <a href="http://docs.racket-lang.org/rash@rash/index.html"><img src="https://img.shields.io/badge/Docs-Scribble-blue.svg" alt="Scribble Docs"></a>
 <a href="https://docs.racket-lang.org/rash/index.html#%28part._.Stability%29"><img src="https://img.shields.io/badge/Stability-experimental-orange.svg" alt="Experimental"></a>
 </p>
