@@ -1,7 +1,11 @@
-# Rash: The Reckless Racket Shell
+<p align="center"><img src="./img/rash-logo.svg" width="200"></p>
+<h1 align="center">Rash: The Reckless Racket Shell</h1>
 
-[![Scribble](https://img.shields.io/badge/Docs-Scribble-blue.svg)](http://docs.racket-lang.org/rash@rash/index.html)
-[![Experimental](https://img.shields.io/badge/Stability-experimental-orange.svg)](https://docs.racket-lang.org/rash/index.html#%28part._.Stability%29)
+<p align="center">
+<a href="http://docs.racket-lang.org/rash@rash/index.html"><img src="https://img.shields.io/badge/Docs-Scribble-blue.svg" alt="Scribble Docs"></a>
+<a href="https://docs.racket-lang.org/rash/index.html#%28part._.Stability%29"><img src="https://img.shields.io/badge/Stability-experimental-orange.svg" alt="Experimental"></a>
+</p>
+
 
 Rash is a shell language, library, and REPL for Racket.
 
@@ -29,12 +33,14 @@ You can either install with racket's built in package manager, [`raco`](https://
 
 ### Usage
 
-Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`.
+Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`
 
 I gave a talk about Rash at RacketCon 2017.  It's slightly out of date, but you can watch it  [here](https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y).
 
-And here's a quick demo video (also slightly out of date):[
-![asciicast](https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi.png)](https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi)
+
+And here's a quick demo video (also slightly out of date):
+
+<a href="https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"><img width="400" src="https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi.png"></a>
 
 
 

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   width="660px"
+   height="430px"
+   viewBox="0 0 660 430"
+   version="1.1"
+   id="svg22"
+   sodipodi:docname="rash-icon-green-with-racket-symbol.svg"
+   inkscape:version="0.92.3 (2405546, 2018-03-11)">
+  <metadata
+     id="metadata26">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="1920"
+     inkscape:window-height="1017"
+     id="namedview24"
+     showgrid="false"
+     inkscape:zoom="1"
+     inkscape:cx="76.69705"
+     inkscape:cy="170.42504"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg22"
+     showguides="true" />
+  <defs
+     id="defs7">
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter831"
+       x="-0.058715927"
+       width="1.1174319"
+       y="-0.26300707"
+       height="1.5260141">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="4.9679108"
+         id="feGaussianBlur833" />
+    </filter>
+    <filter
+       inkscape:collect="always"
+       style="color-interpolation-filters:sRGB"
+       id="filter855"
+       x="-0.052421844"
+       width="1.1048437"
+       y="-0.044266103"
+       height="1.0885322">
+      <feGaussianBlur
+         inkscape:collect="always"
+         stdDeviation="8.51073"
+         id="feGaussianBlur857" />
+    </filter>
+  </defs>
+  <g
+     id="g20">
+    <title
+       id="title14">Layer 1</title>
+    <rect
+       rx="18"
+       stroke-width="null"
+       stroke-linejoin="null"
+       stroke-linecap="null"
+       width="660"
+       height="430"
+       id="outer_rect"
+       inkscape:label="#svg_1"
+       x="0"
+       y="0"
+       style="fill:#b5b5b5">
+      <desc
+         id="desc36">outer grey rectangle</desc>
+    </rect>
+    <rect
+       rx="18"
+       stroke-width="null"
+       stroke-linejoin="null"
+       stroke-linecap="null"
+       x="40"
+       y="40"
+       width="580"
+       height="350"
+       id="inner_rect"
+       inkscape:label="#svg_2"
+       style="fill:#000000">
+      <desc
+         id="desc34">inner black rectangle</desc>
+    </rect>
+    <rect
+       rx="3"
+       x="375.15231"
+       y="305.49762"
+       width="203.06221"
+       height="37.333328"
+       id="cursor"
+       inkscape:label="#svg_6"
+       style="fill:#34cb32;stroke:#34cb32;stroke-width:5">
+      <desc
+         id="desc28">the cursor part after the racket symbol</desc>
+    </rect>
+    <rect
+       style="fill:#34cb32;stroke:#34cb32;stroke-width:5;filter:url(#filter831)"
+       inkscape:label="#svg_6"
+       id="rect829"
+       height="37.333328"
+       width="203.06221"
+       y="305.49762"
+       x="375.15231"
+       rx="3">
+      <desc
+         id="desc827">the cursor part after the racket symbol blurred</desc>
+    </rect>
+    <g
+       id="g851"
+       transform="matrix(0.5517552,0,0,0.58164926,66.621379,51.720279)">
+      <path
+         id="path853"
+         d="M 359.992,495.917 C 339.171,399.712 299.868,311.604 248.638,239.727 193.846,298.778 139.246,402.149 119.486,497.521 93.18297,482.8578 68.652233,465.00445 47.756,440.609 82.111,337.392 146.697,237.907 202.003,182.337 162.522,139.804 118.308,106.025 71.48,83.622 95.89376,62.689132 122.57243,46.721629 151.685,36.09 c 139.32018,93.3005 240.66805,241.93988 285.713,394.107 -20.33382,26.20309 -46.33822,47.95073 -77.406,65.72 z"
+         inkscape:connector-curvature="0"
+         style="fill:#34cb32;fill-opacity:1;filter:url(#filter855)"
+         sodipodi:nodetypes="ccccccccc" />
+      <path
+         sodipodi:nodetypes="ccccccccc"
+         style="fill:#34cb32;fill-opacity:1"
+         inkscape:connector-curvature="0"
+         d="M 359.992,495.917 C 339.171,399.712 299.868,311.604 248.638,239.727 193.846,298.778 139.246,402.149 119.486,497.521 93.18297,482.8578 68.652233,465.00445 47.756,440.609 82.111,337.392 146.697,237.907 202.003,182.337 162.522,139.804 118.308,106.025 71.48,83.622 95.89376,62.689132 122.57243,46.721629 151.685,36.09 c 139.32018,93.3005 240.66805,241.93988 285.713,394.107 -20.33382,26.20309 -46.33822,47.95073 -77.406,65.72 z"
+         id="racket-lambda" />
+    </g>
+  </g>
+</svg>
