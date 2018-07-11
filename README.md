@@ -34,15 +34,11 @@ You can either install with racket's built in package manager, [`raco`](https://
 
 ### Usage
 
-Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`
+Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`.
 
 I gave a talk about Rash at RacketCon 2017.  It's slightly out of date, but you can watch it  [here](https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y).
 
-
-And here's a quick demo video (also slightly out of date):
-
-<a href="https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"><img width="400" src="https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi.png"></a>
-
-
+And here's a quick demo video (also slightly out of date):[
+![asciicast](https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi.png)](https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi)
 
 This repo also contains the [shell-pipeline](https://docs.racket-lang.org/shell-pipeline/index.html) and [linea](http://docs.racket-lang.org/linea/index.html) packages.  They mostly support Rash itself, so they live in the same repo.
