@@ -97,7 +97,11 @@ If @racket[starter] is a @racket[line-macro], then it acts as #'(starter e ...).
 This is just a pass-through -- @(racket (#%linea-s-exp foo)) simply turns into @(racket foo).
 }
 @defform[(#%linea-default-line-macro e)]{
+NOT STABLE
+
 The identifier #%linea-default-line-macro is the default that is inserted when no explicit line macro is used.  But by default it just raises an error.  This is configured with @racket[with-default-line-macro].
+
+Don't count on the name being the same at any future time.  Don't set it yourself.  Use @racket[with-default-line-macro].
 }
 
 @subsection{linea/line-macro}
