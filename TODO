@@ -164,6 +164,11 @@ shell-pipeline
 *** I need a form that makes it easy to define first-class pipeline specs
 **** But this has issues with the start vs joint difference.  But I'm less confident that the difference is really necessary, since you can use an optional argument with a flag for a default value instead.
 
+* operator names
+** I think they should be more to-the-point and better.  `basic-` was a mistake also.
+** probably I'll use these:
+*** =unix= (|), =procedure= (|>), =form= (=basic-object-pipe/expression=), =procedure/port->string= (this one is a little unwieldy...)
+
 * option for shared stderr string capture or individual ones.  Per unix-y section, at least.
 
 * redirection arguments for shell/pipeline and mixed-pipeline
