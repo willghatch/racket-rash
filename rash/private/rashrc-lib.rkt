@@ -1,11 +1,12 @@
 #lang racket/base
 
-(provide current-prompt-function)
 (provide
  complete-paths
  complete-namespaced
  composite-complete
  cwd-hack-box
+
+ current-prompt-function
  current-rash-top-level-print-formatter
  )
 

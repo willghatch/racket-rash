@@ -4,6 +4,10 @@
 
 (require
  "../main.rkt"
+ (only-in "rashrc-lib.rkt"
+          current-prompt-function
+          current-rash-top-level-print-formatter
+          )
  (for-syntax
   racket/base
   syntax/parse
