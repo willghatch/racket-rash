@@ -318,7 +318,19 @@ Only available in the repl.  Like result-n, but if the result is a pipeline, get
 }
 
 @defform[(set-default-pipeline-starter! new-starter)]{
-Only available in the repl.  A line-macro that mutates the default pipeline starter used in the repl.  It's not really hygienic, so if you defined macros that used @racket[run-pipeline] without an explicit starter, this will change the result of new calls to that macro.  Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
+Only available in the repl.
+A line-macro that mutates the default pipeline starter used in the repl.
+It's not really hygienic, so if you defined macros that used @racket[run-pipeline] without an explicit starter, this will change the result of new calls to that macro.
+Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
+Expect this to change eventually.
+}
+
+@defform[(set-default-line-macro! new-line-macro)]{
+Only available in the repl.
+A line-macro that mutates the default line macro used in the repl.
+It's not really hygienic.
+Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
+Expect this to change eventually.
 }
 
 @defparam[current-prompt-function prompt procedure?]{
