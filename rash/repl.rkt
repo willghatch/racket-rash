@@ -26,17 +26,6 @@
 (define real-stdin pre-readline-input-port)
 (define readline-stdin (current-input-port))
 
-(define-line-macro run-pipeline/ret-obj
-  (syntax-parser [(_ arg ...)
-                  ;; Apparently splicing-syntax-parameterize is leaking through here somehow, and wrapping with a let protects this.
-                  #'(let ()
-                      (with-default-line-macro run-pipeline
-                        (run-pipeline &pipeline-ret arg ...)))]))
-(define-line-macro run-pipeline/logic/ret-obj
-  (syntax-parser [(_ arg ...)
-                  #'(let ()
-                      (with-default-line-macro run-pipeline
-                        (run-pipeline/logic &pipeline-ret arg ...)))]))
 
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.
@@ -92,7 +81,7 @@
          #:in real-stdin
          #:out (current-output-port)
          #:err (current-error-port)
-         #:line-macro run-pipeline/logic/ret-obj
+         #:line-macro repl-default-line-macro
          #:starter repl-default-pipeline-starter
          #,@(if splice
                 stx
