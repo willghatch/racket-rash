@@ -29,7 +29,11 @@ You can either install with racket's built in package manager, [`raco`](https://
 `raco pkg install rash`
 
 #### git version:
-`git clone https://github.com/willghatch/racket-rash rash && cd rash && raco pkg install`
+`git clone https://github.com/willghatch/racket-rash rash && cd rash/linea && raco pkg install && cd ../shell-pipeline && raco pkg install && cd ../rash && raco pkg install`
+
+OR
+
+use `raco pkg install --clone rash`
 
 
 ### Usage
