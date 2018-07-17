@@ -6,6 +6,7 @@
 
 (require
  "pipeline-macro-parse.rkt"
+ "pipeline-operators.rkt"
  (prefix-in mp: "../mixed-pipeline.rkt")
  (for-syntax
   racket/base
@@ -43,9 +44,9 @@
              "duplicated occurences of pipeline options at beginning and end"
              stx)]
            [(or (attribute s-bg) (attribute e-bg))
-            (raise-syntax-error
-             'run-pipeline/logic
-             "bg not yet supported")]
+            #'(run-pipeline
+               &bg
+               =basic-object-pipe/expression= (run-pipeline/logic arg ...))]
            [(or (attribute s-pr) (attribute e-pr))
             #'(run-pipeline/logic/inner arg ...)]
            [else
