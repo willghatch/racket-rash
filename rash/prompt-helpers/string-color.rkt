@@ -1,6 +1,7 @@
 #lang rash
 
 (require racket/list
+         racket/class
          racket/draw)
 
 
