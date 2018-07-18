@@ -2,7 +2,7 @@
 
 (require racket/list
          racket/class
-         racket/draw)
+         racket/set)
 
 
 (provide create-colored-string
@@ -54,12 +54,12 @@
                                #:other-commands [other-commands ""]) ; string with normal ansi escape commands
 
   ; if user inputs a color% object, change it to a normal r g b list, ignoring opacity
-  (when (and (object? foreground) (is-a? foreground color%))
+  (when (and (object? foreground) (subset? '(red green blue) (interface->method-names (object-interface foreground))))
     (set! foreground (list (send foreground red)
                            (send foreground green)
                            (send foreground blue))))
 
-  (when (and (object? background) (is-a? background color%))
+  (when (and (object? background) (subset? '(red green blue) (interface->method-names (object-interface background))))
     (set! background (list (send background red)
                            (send background green)
                            (send background blue))))
