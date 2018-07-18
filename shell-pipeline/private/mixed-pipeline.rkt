@@ -36,8 +36,8 @@
   [pipeline-return (-> pipeline? any/c)]
   [pipeline-wait (-> pipeline? any/c)]
   [pipeline-kill (-> pipeline? any/c)]
-  [pipeline-start-ms (-> pipeline? any/c)]
-  [pipeline-end-ms (-> pipeline? any/c)]
+  ;[pipeline-start-ms (-> pipeline? any/c)]
+  ;[pipeline-end-ms (-> pipeline? any/c)]
   )
 
  ;; re-provided from mostly-structs.rkt, already have contracts

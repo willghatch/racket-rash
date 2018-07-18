@@ -115,12 +115,3 @@ Returns the return value of the pipeline if it was successful, or the exception 
 This also waits for the pipeline to finish if it hasn't yet.
 }
 
-@defproc[(pipeline-start-ms [pline pipeline?]) real?]{
-Returns the millisecond count from when the pipeline was started, as returned by @racket[current-inexact-milliseconds].
-}
-@defproc[(pipeline-end-ms [pline pipeline?]) real?]{
-Returns the millisecond count from when the pipeline finished, as returned by @racket[current-inexact-milliseconds].
-
-This also waits for the pipeline to finish if it hasn't yet.
-}
-

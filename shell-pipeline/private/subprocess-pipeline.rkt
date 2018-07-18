@@ -67,8 +67,8 @@
   [pipeline-status/list (-> pipeline? (listof any/c))]
   [pipeline-success? (-> pipeline? any/c)]
   [pipeline-has-failures? (-> pipeline? any/c)]
-  [pipeline-start-ms (-> pipeline? real?)]
-  [pipeline-end-ms (-> pipeline? real?)]
+  ;[pipeline-start-ms (-> pipeline? real?)]
+  ;[pipeline-end-ms (-> pipeline? real?)]
   [pipeline-error-captured-stderr (-> pipeline? (or/c #f string?))]
   [pipeline-error-argl (-> pipeline? (listof any/c))]
 
