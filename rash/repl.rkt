@@ -20,11 +20,21 @@
   syntax/parse
   ))
 
-(require readline)
-(require readline/readline)
+;(require readline)
+;(require readline/readline)
 
-(define real-stdin pre-readline-input-port)
-(define readline-stdin (current-input-port))
+;(define real-stdin pre-readline-input-port)
+;(define readline-stdin (current-input-port))
+
+(define repl-namespace (make-base-namespace))
+(eval '(require rash
+                (only-in rash/private/rashrc-lib
+                         current-prompt-function
+                         current-rash-top-level-print-formatter)
+                (except-in rash/private/repl-namespace
+                           interactive-return-values)
+                (for-syntax racket/base syntax/parse))
+      repl-namespace)
 
 
 (define (clean/exit)
@@ -50,8 +60,8 @@
                                      [exn:break:terminate? (λ (e) (clean/exit))]
                                      [exn? (λ (e) (eprintf "~a\n" e)
                                               #`(void))])
-                       (linea-read-syntax (object-name readline-stdin)
-                                          readline-stdin))]
+                       (linea-read-syntax (object-name (current-input-port))
+                                          (current-input-port)))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
@@ -65,7 +75,7 @@
                         (car ret-val-list)
                         ret-val-list)]
            [new-n (add1 n)])
-      (hash-set! (eval 'interactive-return-values repl-namespace)
+      (hash-set! interactive-return-values
                  new-n
                  ret-val)
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
@@ -78,7 +88,8 @@
    (parameterize ([current-namespace repl-namespace])
      (namespace-syntax-introduce
       #`(splicing-with-rash-config
-         #:in real-stdin
+         ;#:in real-stdin
+         #:in (current-input-port)
          #:out (current-output-port)
          #:err (current-error-port)
          #:line-macro repl-default-line-macro
@@ -102,15 +113,18 @@
 (define (main)
   ;; Hmm... probably only one of these should count?
   ;(port-count-lines! real-stdin)
-  (port-count-lines! readline-stdin)
+  ;(port-count-lines! readline-stdin)
+  (port-count-lines! (current-input-port))
   (putenv "SHELL" "rash-repl")
 
   (current-namespace repl-namespace)
-  (set-completion-function! composite-complete)
+
+  ;(set-completion-function! composite-complete)
 
   ;; make real-stdin available to repl
-  (eval-syntax (namespace-syntax-introduce
-                (datum->syntax #f (list 'define 'real-stdin #'real-stdin))))
+  ;(eval-syntax (namespace-syntax-introduce
+  ;              (datum->syntax #f (list 'define 'real-stdin #'real-stdin))))
+  (eval '(displayln "hilo") repl-namespace)
 
   (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
     (with-handlers ([(λ _ #t) (λ (ex)

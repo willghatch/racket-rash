@@ -1,6 +1,16 @@
 #lang racket/base
 
-(provide repl-namespace)
+(provide
+ ;repl-namespace
+ interactive-return-values
+ result-n
+ return-n
+
+ set-default-pipeline-starter!
+ repl-default-pipeline-starter
+ set-default-line-macro!
+ repl-default-line-macro
+ )
 
 (require
  "../main.rkt"
@@ -79,5 +89,5 @@ numbering schemes...
   (syntax-parser [(_ arg ...)
                   #`(#,repl-default-line-macro-variable arg ...)]))
 
-(define-namespace-anchor ns-a)
-(define repl-namespace (namespace-anchor->namespace ns-a))
+;(define-namespace-anchor ns-a)
+;(define repl-namespace (namespace-anchor->namespace ns-a))
