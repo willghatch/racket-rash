@@ -3,7 +3,6 @@
 (require
  "main.rkt"
  (submod "private/lang-funcs.rkt" for-repl)
- "private/repl-namespace.rkt"
  linea/line-macro
  linea/read
  "private/option-app.rkt"
@@ -25,12 +24,12 @@
   ))
 
 (define repl-namespace (make-base-namespace))
+(current-namespace repl-namespace)
 (eval '(require rash
                 (only-in rash/private/rashrc-lib
                          current-prompt-function
                          current-rash-top-level-print-formatter)
-                (except-in rash/private/repl-namespace
-                           interactive-return-values)
+                rash/private/repl-namespace
                 (submod rash/private/top-level-print default-rash-formatter)
                 (for-syntax racket/base syntax/parse))
       repl-namespace)
@@ -39,7 +38,10 @@
     (namespace-variable-value 'default-rash-formatter)))
 (current-rash-top-level-print-formatter ns-default-rash-formatter)
 
-
+(define interactive-return-values (make-hash))
+(define (result-n n)
+  (hash-ref interactive-return-values n))
+(namespace-set-variable-value! 'result-n result-n)
 
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.

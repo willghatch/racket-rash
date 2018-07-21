@@ -313,10 +313,6 @@ All the following repl functions are not stable.
 Only available in the repl.  Return the result of the @racket[n]th interactive command.
 }
 
-@defproc[(return-n [n integer?]) any/c]{
-Only available in the repl.  Like result-n, but if the result is a pipeline, get the return value of it.  In the repl, the default line-macro is like @racket[run-pipeline], but always prepending the @racket[&pipeline-ret] flag.  So you get pipeline objects instead of their results generally, and the prompt handles it specially to see the return value, but also to potentially use other information from the pipeline object.
-}
-
 @defform[(set-default-pipeline-starter! new-starter)]{
 Only available in the repl.
 A line-macro that mutates the default pipeline starter used in the repl.
@@ -342,7 +338,7 @@ Keywords optionally given:
 
 @racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.  The default prompt function formats the return value with @racket[current-rash-top-level-print-formatter] before printing it.
 
-@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[return-n].  The default prompt function prints the number of the result before printing the result itself.
+@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[result-n].  The default prompt function prints the number of the result before printing the result itself.
 }
 
 
