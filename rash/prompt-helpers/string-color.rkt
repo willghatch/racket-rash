@@ -51,7 +51,8 @@
                                #:underlined? [underlined? #f]
                                #:reset-before? [reset-before? #t] ; reset all attributes before setting your own
                                #:reset-after? [reset-after? #t]
-                               #:custom-commands [custom-commands ""]) ; string with normal ansi escape commands
+                               #:custom-commands [custom-commands ""] ; string with normal ansi escape commands
+                               #:create-function? [create-function? #f]) ; create a re-usable function that accepts a string (includes `to-color`)
 
   ; if user inputs a color% object, change it to a normal r g b list, ignoring opacity
   (when (and (object? foreground) (subset? '(red green blue) (interface->method-names (object-interface foreground))))
@@ -116,15 +117,26 @@
             (if reset-before? "\033[0m" "")
             (if reset-after? "\033[0m" "")))
 
-  (string-append resetbf-str
-                 foreground-command
-                 background-command
-                 bold-str
-                 ital-str
-                 und-str
-                 custom-commands
-                 to-color
-                 resetaft-str))
+  (if create-function?
+      (λ (str) (string-append resetbf-str
+                              foreground-command
+                              background-command
+                              bold-str
+                              ital-str
+                              und-str
+                              custom-commands
+                              to-color
+                              str
+                              resetaft-str))
+      (string-append resetbf-str
+                     foreground-command
+                     background-command
+                     bold-str
+                     ital-str
+                     und-str
+                     custom-commands
+                     to-color
+                     resetaft-str)))
 
 
 ; body is a list of stings and other structs
