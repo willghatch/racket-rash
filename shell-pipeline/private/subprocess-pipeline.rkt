@@ -362,10 +362,15 @@
   (pipeline-wait pline)
   (define strictness (pipeline-strictness pline))
   (define strict? (equal? strictness 'strict))
+  (define last-member-success?
+    (pipeline-member-success? #:strict? #t
+                              (car (reverse (pipeline-members pline)))))
   (if (equal? 'permissive strictness)
-      (pipeline-member-success? (car (reverse (pipeline-members pline))))
-      (for/and ([m (pipeline-members pline)])
-        (pipeline-member-success? m #:strict? strict?))))
+      last-member-success?
+      (and
+       (for/and ([m (pipeline-members pline)])
+         (pipeline-member-success? m #:strict? strict?))
+       last-member-success?)))
 
 (define ((pipeline-success-based-info-func accessor) pline)
   (pipeline-wait pline)
