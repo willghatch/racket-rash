@@ -124,21 +124,30 @@
   |#
   (define info (get-git-info))
   (if info
-      (string-append
-       (default-style "[")
-       (hash-ref info 'branch)
-       (if (< 0 (hash-ref info 'ahead))
-           (format "~a~a" (default-style " ▲")
-                   (cyan (hash-ref info 'ahead)))
-           "")
-       (if (< 0 (hash-ref info 'behind))
-           (format "~a~a" (default-style " ▼")
-                   (cyan (hash-ref info 'behind)))
-           "")
-       (if (hash-ref info 'dirty?) (red " D") "")
-       (if (hash-ref info 'submodule-dirty?) (red " S") "")
-       (if (hash-ref info 'untracked?) (red " U") "")
-       (default-style "] "))
+      (let ([branch (hash-ref info 'branch)]
+            [ahead (hash-ref info 'ahead)]
+            [behind (hash-ref info 'behind)]
+            [dirty (hash-ref info 'dirty?)]
+            [sub-dirty (hash-ref info 'submodule-dirty?)]
+            [untracked (hash-ref info 'untracked?)]
+            [timeout (hash-ref info 'timeout?)])
+        (string-append
+         (default-style "[")
+         (timeout->default branch "?")
+         (if (equal? 0 ahead)
+             ""
+             (format "~a~a"
+                     (default-style " ▲")
+                     (cyan (if (number? ahead) ahead "?"))))
+         (if (equal? 0 behind)
+             ""
+             (format "~a~a" (default-style " ▼")
+                     (cyan (if (number? behind) behind "?"))))
+         (if (eq? #t dirty) (red " D") "")
+         (if (eq? #t sub-dirty) (red " S") "")
+         (if (eq? #t untracked) (red " U") "")
+         (if (eq? #t timeout) (red " Time-out") "")
+         (default-style "] ")))
       ""))
 
 ;; TODO - add path coloring like in megaprompt, maybe with some more info and color options
