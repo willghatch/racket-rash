@@ -3,6 +3,8 @@
 (provide
  current-rash-top-level-print-formatter
  )
+(module+ default-rash-formatter
+  (provide default-rash-formatter))
 
 (require
  shell/mixed-pipeline

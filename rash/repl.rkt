@@ -33,8 +33,13 @@
                          current-rash-top-level-print-formatter)
                 (except-in rash/private/repl-namespace
                            interactive-return-values)
+                (submod rash/private/top-level-print default-rash-formatter)
                 (for-syntax racket/base syntax/parse))
       repl-namespace)
+(define ns-default-rash-formatter
+  (parameterize ([current-namespace repl-namespace])
+    (namespace-variable-value 'default-rash-formatter)))
+(current-rash-top-level-print-formatter ns-default-rash-formatter)
 
 
 (define (clean/exit)
