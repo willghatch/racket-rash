@@ -32,6 +32,7 @@
                 rash/private/repl-namespace
                 (submod rash/private/top-level-print default-rash-formatter)
                 rash/private/help-line-macro
+                rash/private/repl-startup-hint
                 (for-syntax racket/base syntax/parse))
       repl-namespace)
 (define ns-default-rash-formatter
@@ -165,6 +166,8 @@
                                 (eprintf "error in rc file ~a: ~a"
                                          rcfile (exn->string ex)))])
       (eval-rashrc rcfile)))
+
+  (eval '(repl-display-startup-hint))
 
   (rash-repl (void) 0 input-port-for-repl)
 
