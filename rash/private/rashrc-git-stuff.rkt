@@ -62,7 +62,8 @@
             [(eq? c b) (set! n-b (add1 n-b))]
             [else (void)]))
     (list n-a n-b))
-  #{git rev-list --left-right '"@{u}...HEAD" |> 2char-count #\< #\>})
+  (with-handlers ([(λ (e) #t) (λ (e) (list 0 0))])
+    #{git rev-list --left-right '"@{u}...HEAD" |> 2char-count #\< #\>}))
 
 (define (git-dirty?)
   (define pline #{git diff --quiet --ignore-submodules HEAD &pipeline-ret})
