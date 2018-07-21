@@ -1,10 +1,16 @@
 #lang racket/base
 
+;; TODO - This is basically full of quick hacks to get a semi-decent repl.
+;;        Everything in this file should be replaced.
+
 (provide
  complete-paths
  complete-namespaced
  composite-complete
  cwd-hack-box
+
+ basic-prompt
+ lame-prompt
 
  current-prompt-function
  current-rash-top-level-print-formatter

@@ -145,7 +145,9 @@
 
       (define set-completion-function!
         (dynamic-require 'readline/readline 'set-completion-function!))
-      (set-completion-function! composite-complete)))
+      (set-completion-function! composite-complete)
+      (current-prompt-function
+       (dynamic-require 'rash/private/rashrc-lib 'basic-prompt))))
 
   (port-count-lines! (current-input-port))
   (putenv "SHELL" "rash-repl")
