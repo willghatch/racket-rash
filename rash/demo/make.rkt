@@ -50,24 +50,26 @@ inside the recipe body.
   syntax/parse
   ))
 
-(make-rash-reader-submodule rash/make)
+(make-rash-reader-submodule rash/demo/make)
 
-(define-syntax make-module-begin
-  (syntax-parser
+(define-syntax (make-module-begin stx)
+  (syntax-parse stx
     [(_ form:expr ...+)
-     #'(#%module-begin
-        (define the-target-list-box (box '()))
-        (splicing-syntax-parameterize
-            ([target-list-box (syntax-parser [x:id #'the-target-list-box])])
-          (splicing-with-rash-config
-           #:out (current-output-port)
-           #:in (current-input-port)
-           #:err (current-error-port)
-           #:starter =unix-pipe=
-           #:line-macro make-target
-           form
-           ...
-           (do-make))))]))
+     (with-syntax ([context-id (datum->syntax stx 'context)])
+       #'(#%module-begin
+          (define the-target-list-box (box '()))
+          (splicing-syntax-parameterize
+              ([target-list-box (syntax-parser [x:id #'the-target-list-box])])
+            (splicing-with-rash-config
+             #:context context-id
+             #:out (current-output-port)
+             #:in (current-input-port)
+             #:err (current-error-port)
+             #:starter =unix-pipe=
+             #:line-macro make-target
+             form
+             ...
+             (do-make)))))]))
 
 (define current-target (make-parameter #f))
 (define current-dependencies (make-parameter '()))

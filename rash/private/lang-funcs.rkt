@@ -120,6 +120,7 @@
   (syntax-parse stx
     [(orig-macro
       (~or
+       (~optional (~seq #:context context))
        (~optional (~seq #:in in:expr))
        (~optional (~seq #:out out:expr))
        (~optional (~seq #:err err:expr))
@@ -128,15 +129,16 @@
       ...
       body:expr ...+)
      (define context-id
-       (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
-                      (syntax->list #'(body ...)))])
-         (unless (for/and ([x (cdr cs)])
-                   (bound-identifier=? (car cs) x))
-           (raise-syntax-error
-            'with-rash-config
-            "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default line macro and pipeline starter to."
-            stx))
-         (car cs)))
+       (or (attribute context)
+           (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
+                          (syntax->list #'(body ...)))])
+             (unless (for/and ([x (cdr cs)])
+                       (bound-identifier=? (car cs) x))
+               (raise-syntax-error
+                'with-rash-config
+                "Multiple body forms were given with different scoping information, so there is not a clear choice of info to bind the default line macro and pipeline starter to."
+                stx))
+             (car cs))))
      (with-syntax ([lm-param-form (if (attribute line-macro)
                                       #`(#,lm-parameterizer
                                          #:context #,context-id
