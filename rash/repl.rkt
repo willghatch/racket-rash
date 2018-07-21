@@ -15,16 +15,14 @@
  basedir
  racket/exn
 
+ racket/cmdline
+ racket/match
+
+
  (for-syntax
   racket/base
   syntax/parse
   ))
-
-;(require readline)
-;(require readline/readline)
-
-;(define real-stdin pre-readline-input-port)
-;(define readline-stdin (current-input-port))
 
 (define repl-namespace (make-base-namespace))
 (eval '(require rash
@@ -42,6 +40,7 @@
 (current-rash-top-level-print-formatter ns-default-rash-formatter)
 
 
+
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.
   ;;      - This requires signal abilities in the pipeline library.
@@ -51,7 +50,7 @@
   (exit))
 
 
-(define (rash-repl last-ret-val n)
+(define (rash-repl last-ret-val n input-port)
   (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                   [exn:break:terminate? (λ (e) (clean/exit))]
                   [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
@@ -65,8 +64,8 @@
                                      [exn:break:terminate? (λ (e) (clean/exit))]
                                      [exn? (λ (e) (eprintf "~a\n" e)
                                               #`(void))])
-                       (linea-read-syntax (object-name (current-input-port))
-                                          (current-input-port)))]
+                       (linea-read-syntax (object-name input-port)
+                                          input-port))]
          [exit? (if (equal? next-input eof) (exit) #f)])
     (let* ([ret-val-list
             (call-with-values
@@ -86,14 +85,13 @@
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
       ;; to be able to output before the next prompt.
       (sleep 0.01)
-      (rash-repl ret-val new-n))))
+      (rash-repl ret-val new-n input-port))))
 
 (define (repl-eval stx #:splice [splice #f])
   (eval-syntax
    (parameterize ([current-namespace repl-namespace])
      (namespace-syntax-introduce
       #`(splicing-with-rash-config
-         ;#:in real-stdin
          #:in (current-input-port)
          #:out (current-output-port)
          #:err (current-error-port)
@@ -116,20 +114,41 @@
       (repl-eval #:splice #t stxs)))
 
 (define (main)
-  ;; Hmm... probably only one of these should count?
-  ;(port-count-lines! real-stdin)
-  ;(port-count-lines! readline-stdin)
+  (define use-readline? (not (equal? (system-type 'os) 'windows)))
+  (define (cmdline-bool->bool b)
+    (match (string-downcase b)
+      ["true" #t]
+      ["false" #f]
+      [else (error
+             'command-line
+             "--readline flag requires literal \"true\" or \"false\" strings")]
+      ))
+
+  (command-line
+   #:program "rash-repl"
+   #:once-each
+   ["--readline" readline?
+                 "use readline (true or false)"
+                 (set! use-readline? (cmdline-bool->bool readline?))]
+   )
+
+  (define input-port-for-repl (current-input-port))
+  (when use-readline?
+    (let ()
+      (define pre-readline-input-port
+        (dynamic-require 'readline 'pre-readline-input-port
+                         (λ () (error 'readline-didnt-require-right))))
+      (set! input-port-for-repl (current-input-port))
+      (current-input-port pre-readline-input-port)
+
+      (define set-completion-function!
+        (dynamic-require 'readline/readline 'set-completion-function!))
+      (set-completion-function! composite-complete)))
+
   (port-count-lines! (current-input-port))
   (putenv "SHELL" "rash-repl")
 
   (current-namespace repl-namespace)
-
-  ;(set-completion-function! composite-complete)
-
-  ;; make real-stdin available to repl
-  ;(eval-syntax (namespace-syntax-introduce
-  ;              (datum->syntax #f (list 'define 'real-stdin #'real-stdin))))
-  (eval '(displayln "hilo") repl-namespace)
 
   (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
     (with-handlers ([(λ _ #t) (λ (ex)
@@ -142,7 +161,7 @@
                                          rcfile (exn->string ex)))])
       (eval-rashrc rcfile)))
 
-  (rash-repl (void) 0)
+  (rash-repl (void) 0 input-port-for-repl)
 
   (printf "and now exiting for some reason\n"))
 
