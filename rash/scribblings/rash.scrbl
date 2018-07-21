@@ -345,6 +345,8 @@ Keywords optionally given:
 
 @section{Demo stuff reference}
 
+Nothing in the demo directory is remotely stable!  It can all change or go away at any moment.
+
 I've written various pipeline operators and line macros that I use, but I haven't decided what should be in the default language yet.  So for now they are sitting in a demo directory.  But I need some examples.  So here I'm documenting a bit.
 
 Use it with @tt{(require rash/demo/setup)}.
