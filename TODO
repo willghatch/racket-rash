@@ -270,3 +270,12 @@ Job Control
 * bg pipeline disowning?
 ** This is really only reasonable for external-proccess-only pipelines, and I'm not sure how reasonable it is on Windows.
 
+
+make replacement
+----------------
+
+* There is a little `make` replacement demo language in the repo.  I want to leave it as it is (simple) as a quick demo of how you can make an interesting language with line macros.  But I would also like to make a full-scale version.
+** it should support #:phony targets (eg. clean).  This may need to fuss with temporary files to humor the underlying `make` library that doesn't support it.
+** It should support regexps as targets.  The dependency list expressions and make body should have the match from the target.  This is a generalization of the % wildcard in normal makefiles.  Any supplied target that doesn't match a literal pattern should be tested against regexp patterns.
+** it should set the working directory using `define-runtime-path` so the build script can be run from any directory but always affect the proper directory.  If it parameterizes this anew for each build, users can use `cd` in recipes without worrying.
+** it would be good to have command-line arguments for specifying eg. printing verbosity

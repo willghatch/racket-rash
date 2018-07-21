@@ -1,5 +1,9 @@
 #lang rash
 
+;; This is to demonstrate a quick-and-easy way to get infix math in your shell...
+;; But a *better* way is to do this stuff with the k-infix package instead of
+;; my simplistic `basic-infix-math` macro.
+
 (provide
  infix-math
  pipeline-or-math
