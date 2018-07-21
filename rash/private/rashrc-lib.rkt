@@ -130,6 +130,7 @@
             [dirty (hash-ref info 'dirty?)]
             [sub-dirty (hash-ref info 'submodule-dirty?)]
             [untracked (hash-ref info 'untracked?)]
+            [remote-tracking? (hash-ref info 'remote-tracking?)]
             [timeout (hash-ref info 'timeout?)])
         (string-append
          (default-style "[")
@@ -146,6 +147,7 @@
          (if (eq? #t dirty) (red " D") "")
          (if (eq? #t sub-dirty) (red " S") "")
          (if (eq? #t untracked) (red " U") "")
+         (if (eq? #f remote-tracking?) (default-style " N") "")
          (if (eq? #t timeout) (red " Time-out") "")
          (default-style "] ")))
       ""))

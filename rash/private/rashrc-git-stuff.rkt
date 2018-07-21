@@ -12,6 +12,7 @@
  git-dirty?
  git-submodule-dirty?
  git-has-untracked?
+ git-remote-tracking?
  )
 
 (require
@@ -65,6 +66,10 @@
   (with-handlers ([(λ (e) #t) (λ (e) (list 0 0))])
     #{git rev-list --left-right '"@{u}...HEAD" |> 2char-count #\< #\>}))
 
+(define (git-remote-tracking?)
+  (define pline #{git rev-parse --abbrev-ref '"@{upstream}" &pipeline-ret})
+  (pipeline-success? pline))
+
 (define (git-dirty?)
   (define pline #{git diff --quiet --ignore-submodules HEAD &pipeline-ret})
   (not (pipeline-success? pline)))
@@ -85,7 +90,8 @@
           [behind-ahead (git-behind/ahead-numbers)]
           [dirty? (git-dirty?)]
           [sub-dirty? (git-submodule-dirty?)]
-          [untracked? (git-has-untracked?)])
+          [untracked? (git-has-untracked?)]
+          [remote-tracking? (git-remote-tracking?)])
         (hash 'root root
               'branch current-branch
               'behind (and (list? behind-ahead)
@@ -95,6 +101,7 @@
               'dirty? dirty?
               'submodule-dirty? sub-dirty?
               'untracked? untracked?
+              'remote-tracking? remote-tracking?
               'timeout? (for/or ([v (list current-branch behind-ahead dirty?
                                           sub-dirty? untracked?)])
                           (eq? git-timeout-flag v))
