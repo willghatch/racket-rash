@@ -31,6 +31,7 @@
                          current-rash-top-level-print-formatter)
                 rash/private/repl-namespace
                 (submod rash/private/top-level-print default-rash-formatter)
+                rash/private/help-line-macro
                 (for-syntax racket/base syntax/parse))
       repl-namespace)
 (define ns-default-rash-formatter
