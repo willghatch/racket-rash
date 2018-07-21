@@ -29,14 +29,16 @@
 
 (define-syntax (define-vars-with-timeout stx)
   (syntax-parse stx
-    [(_ [var:id e:expr] ...)
+    [(_ [var:id var-e:expr] ...)
      #'(begin
          (define var git-timeout-flag)
          ...
          (parameterize ([current-subprocess-custodian-mode 'kill]
                         [current-custodian (make-custodian)])
            (let ()
-             (define threads (list (thread (λ () (set! var e)))
+             (define threads (list (thread (λ () (with-handlers
+                                                   ([(λ (e) #t) (λ (e) (void))])
+                                                   (set! var var-e))))
                                    ...))
              (define master-thread (thread (λ () (map thread-wait threads))))
              ;; TODO - the timeout should be configurable
