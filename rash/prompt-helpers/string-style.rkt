@@ -43,7 +43,7 @@
 ; #:fg "green" -> treated as 4 bit
 ; #:fg 41 -> treated as 8 bit springgreen3 color
 ; #:fg '(r g b) -> treated as a 24 bit color
-(define (create-styled-string to-style
+(define (create-styled-string [to-style ""]
                               #:fg [foreground #f]
                               #:bg [background #f]
                               #:bold? [bold? #f]
