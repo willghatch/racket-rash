@@ -43,16 +43,16 @@
 ; #:fg "green" -> treated as 4 bit
 ; #:fg 41 -> treated as 8 bit springgreen3 color
 ; #:fg '(r g b) -> treated as a 24 bit color
-(define (create-styled-string to-color
-                               #:fg [foreground #f]
-                               #:bg [background #f]
-                               #:bold? [bold? #f]
-                               #:italic? [italic? #f]
-                               #:underlined? [underlined? #f]
-                               #:reset-before? [reset-before? #t] ; reset all attributes before setting your own
-                               #:reset-after? [reset-after? #t]
-                               #:custom-commands [custom-commands ""] ; string with normal ansi escape commands
-                               #:create-function? [create-function? #f]) ; create a re-usable function that accepts a string (includes `to-color`)
+(define (create-styled-string to-style
+                              #:fg [foreground #f]
+                              #:bg [background #f]
+                              #:bold? [bold? #f]
+                              #:italic? [italic? #f]
+                              #:underlined? [underlined? #f]
+                              #:reset-before? [reset-before? #t] ; reset all attributes before setting your own
+                              #:reset-after? [reset-after? #t]
+                              #:custom-commands [custom-commands ""] ; string with normal ansi escape commands
+                              #:create-function? [create-function? #f]) ; create a re-usable function that accepts a string (includes `to-color`)
 
   ; if user inputs a color% object, change it to a normal r g b list, ignoring opacity
   (when (and (object? foreground) (subset? '(red green blue) (interface->method-names (object-interface foreground))))
@@ -125,7 +125,7 @@
                               ital-str
                               und-str
                               custom-commands
-                              to-color
+                              to-style
                               str
                               resetaft-str))
       (string-append resetbf-str
@@ -135,7 +135,7 @@
                      ital-str
                      und-str
                      custom-commands
-                     to-color
+                     to-style
                      resetaft-str)))
 
 
@@ -157,10 +157,10 @@
                               #:italic? [italic? default]
                               #:underlined? [underlined? default]
                               #:reset-before? [reset-before? #f] ; this doesn't get passed to the actual
-                                                                 ; create-styled-string function
+                              ; create-styled-string function
                               #:custom-commands [custom-commands ""] ; will get appended to outer customs
                               #:reset-customs? [reset-customs? #f] ; unless this is set to `#t`
-                              . to-color)
+                              . to-style)
   (define style-hash (make-hash))
   (hash-set! style-hash 'foreground foreground)
   (hash-set! style-hash 'background background)
@@ -171,7 +171,7 @@
   (hash-set! style-hash 'custom-commands custom-commands)
   (hash-set! style-hash 'reset-customs? reset-customs?)
 
-  (styled-struct to-color style-hash))
+  (styled-struct to-style style-hash))
 
 
 ; h2's styles override h1's styles
@@ -195,7 +195,7 @@
                                            (string-append (hash-ref h1 'custom-commands)
                                                           (hash-ref h2 'custom-commands))))
   (hash-set! new-hash 'reset-customs? #f) ; doesn't matter what we put here since it's only used in this function
-                                           ; and this hash will be h1 next time, so it wont be used
+  ; and this hash will be h1 next time, so it wont be used
   new-hash)
 
 
@@ -243,15 +243,38 @@
 
 
 (module+ main
-  (displayln (styled-struct->string (create-styled-struct "I'm green and hilighted blue"
-                                                          (create-styled-struct " im still green but higighted yellow and underlined " #:bg "yellow" #:underlined? #t)
-                                                          "I'm green and hilighted blue again (and not underlined)"
+  ; should this go in a test module since it's technically a test?
+  (displayln "\nRunning string-style main module\n\n")
+  (displayln "Color string display tests:\n")
+  (displayln (create-styled-string "My background should be red if the terminal supports 4 bit colors, which it definately should."
+                                   #:bg "red"
+                                   #:fg "black"))
+  (displayln (create-styled-string "My background should be \"dark golden rod\", color code 136, if your terminal supports 8 bit (256 colors), which it probably should."
+                                   #:bg 136
+                                   #:fg "black"))
+  (displayln (create-styled-string "My background should be a pale violet red color rgb(168,94,158) if your terminal supports true/24bit color.  Many modern terminals do, but 256 color is usually good enough."
+                                   #:bg '(168 94 158)
+                                   #:fg "black"))
+
+  (displayln "\nOther string style tests:\n")
+  (displayln (create-styled-string "I should look like normal text."))
+  (displayln (create-styled-string "I should be bold." #:bold? #t))
+  (displayln (create-styled-string "I should be italic." #:italic? #t))
+  (displayln (create-styled-string "I should be underlined." #:underlined? #t))
+  (displayln (create-styled-string "I should be bold, italic, and underlined." #:bold? #t #:italic? #t #:underlined? #t))
+  (displayln (create-styled-string "If your terminal supports it, I should be faint, or have decreased intensity." #:custom-commands "\033[2m"))
+
+  (displayln "\nStyled struct tests:\n")
+  (displayln (styled-struct->string (create-styled-struct "I'm green and hilighted blue. "
+                                                          (create-styled-struct "Im still green but higighted yellow and underlined." #:bg "yellow" #:underlined? #t)
+                                                          " I'm green and hilighted blue again (and not underlined)"
                                                           #:fg "green"
                                                           #:bg "blue")))
   (displayln
    (styled-struct->string (create-styled-struct #:underlined? #t
                                                 #:bg "blue"
-                                                "underlined "
+                                                "underlined"
                                                 (create-styled-struct #:underlined? #f
-                                                                      "not underlined")
-                                                " underlined"))))
+                                                                      " not underlined ")
+                                                "underlined"
+                                                (create-styled-struct #:reset-before? #t "\n")))))
