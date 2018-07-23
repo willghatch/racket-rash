@@ -2,12 +2,14 @@
 
 (require racket/list
          racket/class
-         racket/set)
+         racket/set
+         racket/contract)
 
 
 (provide create-styled-string
          create-styled-struct
-         styled-struct->string)
+         styled-struct->string
+         color-value?)
 
 
 ; hash for 4 bit colors
@@ -29,6 +31,28 @@
         ("bright magenta" . (95 105))
         ("bright cyan" . (96 106))
         ("bright white" . (97 107))))
+
+
+(define (valid-hex? v)
+  (and (string? v) (= (string-length v) 7) (char=? (string-ref v 0) #\#) (subset? (rest (string->list v)) (string->list "0123456789abcdef"))))
+
+
+(define (rgb-component? v)
+  (and (integer? v) (<= 0 v 255)))
+
+
+(define (color-value? v)
+  (cond
+    [(string? v) (or (subset? (list v) (hash-keys color-hash)) (valid-hex? v))]
+    [(integer? v) (<= 0 v 255)]
+    [(list? v) (andmap (λ (x) (<= 0 x 255)) v)]
+    [(object? v) (and (subset? '(red green blue) (interface->method-names (object-interface v)))
+                      (andmap (λ (x) (and (integer? x)
+                                          (<= 0 x 255)))
+                              (list (send v red)
+                                    (send v green)
+                                    (send v blue))))]
+    [else #f]))
 
 
 ; if you give a string as a color, it will treat it as a name for a 4 bit

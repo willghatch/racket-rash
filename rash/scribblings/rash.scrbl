@@ -356,18 +356,8 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
 
 @(define prompt-helper-eval (make-base-eval))
 @defproc[(create-styled-string [to-style string? ""]
-                               [#:fg foreground
-                                (or/c string?
-                                      integer?
-                                      (list/c number? number? number?)
-                                      #f)
-                                #f]
-                               [#:bg background
-                                (or/c string?
-                                      integer?
-                                      (list/c number? number? number?)
-                                      #f)
-                                #f]
+                               [#:fg foreground color-value?]
+                               [#:bg background color-value?]
                                [#:bold? bold? boolean? #f]
                                [#:italic? italic? boolean? #f]
                                [#:underlined? underlined? boolean? #f]
@@ -378,7 +368,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
          (or/c string? (-> string? string?))]{
  Produces a string with the specified styles.
 
- The values given for @racket[foreground] and @racket[background] are treated the same.  If a string is given, it must either be the name of a 4 bit color, eg. @racket["red"], or start with the charachter "#" and represent a hexidecimal color code, eg @racket["#f2e455"].  If a number is given, it is treated as a color code for a 8bit/256color color.  If a list is given, it is treated as an RGB value for a color, eg. @racket['(0 0 0)] means black.
+ The values given for @racket[foreground] and @racket[background] are treated the same.  If a string is given, it must either be the name of a 4 bit color, eg. @racket["red"], or start with the charachter "#" and represent a hexidecimal color code, eg @racket["#f2e455"].  If a number is given, it is treated as a color code for a 8bit/256color color.  If a list is given, it is treated as an RGB value for a color, eg. @racket['(0 0 0)] means black.  An object with @racket[red], @racket[green], and @racket[blue] methods (like @racket[color%]) can also be given, and are treated like RGB values.
 
  The values @racket[bold?], @racket[italic?], and @racket[underlined?] do what you'd expect them to.
 
@@ -411,21 +401,13 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
  ]}
 
 
+@defproc[(color-value? [v any/c])
+         boolean?]{Thoroughly determines whether @racket[v] is a valid color argument.  See @racket[create-styled-string] for valid color arguments.}
+
+
 @defproc[(create-styled-struct [to-style (or/c string? struct?)] ...
-                               [#:fg foreground
-                                (or/c string?
-                                      integer?
-                                      (list/c number? number? number?)
-                                      #f
-                                      default)
-                                default]
-                               [#:bg background
-                                (or/c string?
-                                      integer?
-                                      (list/c number? number? number?)
-                                      #f
-                                      default)
-                                default]
+                               [#:fg foreground (or/c color-value? default) default]
+                               [#:bg background (or/c color-value? default) default]
                                [#:bold? bold? (or/c boolean? default) default]
                                [#:italic? italic? (or/c boolean? default) default]
                                [#:underlined? underlined? (or/c boolean? default) default]
@@ -433,7 +415,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
                                [#:custom-commands custom-commands string? ""]
                                [#:reset-customs? reset-customs? #f])
          styled-struct?]{
- Mostly the same as @racket[create-styled-string], except a structure with a list of strings/sub-structs and a style represented by a hash is produced.  This struct can be given to @racket[styled-struct->string] to turn it into a string.  An uninterned symbol is used as the default value for some of the optional arguments.  The function treats the default argument to mean "use the style the outer struct provides".
+ Mostly the same as @racket[create-styled-string], except a structure with a list of strings/sub-structs and a style represented by a hash is produced.  This struct can be given to @racket[styled-struct->string] to turn it into a string.  An uninterned symbol is used as the @racket[default] value for some of the optional arguments.  The function treats the @racket[default] argument to mean "use the style the outer struct provides".
                     
  @examples[
  #:eval prompt-helper-eval
@@ -462,22 +444,34 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
  #:eval prompt-helper-eval
  #:label "Examples (Sorry for the long strings):"
  
- (styled-struct->string (create-styled-struct "I'm green and hilighted blue. "
-                                              (create-styled-struct "Im still green but higighted yellow and underlined."
-                                                                    #:bg "yellow"
-                                                                    #:underlined? #t)
-                                              " I'm green and hilighted blue again (and not underlined)"
-                                              #:fg "green"
-                                              #:bg "blue"))
+ (define example1
+  (styled-struct->string
+   (create-styled-struct
+    "I'm green and hilighted blue."
+    (create-styled-struct
+     "Im still green but higighted yellow and underlined."
+     #:bg "yellow"
+     #:underlined? #t)
+    " I'm green and hilighted blue again (and not underlined)"
+    #:fg "green"
+    #:bg "blue")))
+
+ (code:line (regexp-split #px"\\." example1) (code:comment "so it fits on the screen"))
  
- (styled-struct->string (create-styled-struct #:underlined? #t
-                                              #:bg "blue"
-                                              "underlined"
-                                              (create-styled-struct #:underlined? #f
-                                                                    " not underlined ")
-                                              "underlined"
-                                              (create-styled-struct #:reset-before? #t
-                                                                    "\n")))]
+ (define example2
+   (styled-struct->string
+    (create-styled-struct
+     #:underlined? #t
+     #:bg "blue"
+     "Underlined."
+     (create-styled-struct
+      #:underlined? #f
+      "Not underlined.")
+     "Underlined."
+     (create-styled-struct
+      #:reset-before? #t
+      "\n"))))
+ (regexp-split #px"\\." example2)]
 }
 
 
