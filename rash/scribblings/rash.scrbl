@@ -13,6 +13,7 @@ syntax/parse
 )
 (for-label
 rash/prompt-helpers/string-style
+racket/contract
 rash
 (only-in rash/demo/setup in-dir =map= =filter= =foldl=)
 (except-in racket/base _ do)
@@ -350,12 +351,23 @@ Keywords optionally given:
 
 There are currently a few functions that can help you design a custom prompt.  Currently, they only support things like changing foreground/background color and underlined text, but they will be expanded in the future to include more useful ways of getting information for your prompt.
 
-You can use these functions with @tt{(require rash/prompt-helpers/string-style)}.
+You can use them with @tt{(require rash/prompt-helpers/string-style)}
+@declare-exporting[rash/prompt-helpers/string-style]
 
 @(define prompt-helper-eval (make-base-eval))
 @defproc[(create-styled-string [to-style string? ""]
-                               [#:fg foreground (or/c string? integer? (listof number?) #f) #f]
-                               [#:bg background (or/c string? integer? (listof number?) #f) #f]
+                               [#:fg foreground
+                                (or/c string?
+                                      integer?
+                                      (list/c number? number? number?)
+                                      #f)
+                                #f]
+                               [#:bg background
+                                (or/c string?
+                                      integer?
+                                      (list/c number? number? number?)
+                                      #f)
+                                #f]
                                [#:bold? bold? boolean? #f]
                                [#:italic? italic? boolean? #f]
                                [#:underlined? underlined? boolean? #f]
@@ -363,7 +375,7 @@ You can use these functions with @tt{(require rash/prompt-helpers/string-style)}
                                [#:reset-after? reset-after? boolean? #t]
                                [#:custom-commands custom-commands string? ""]
                                [#:create-function? create-function? boolean? #f])
-         (or/c string? procedure?)]{
+         (or/c string? (-> string? string?))]{
  Produces a string with the specified styles.
 
  The values given for @racket[foreground] and @racket[background] are treated the same.  If a string is given, it must either be the name of a 4 bit color, eg. @racket["red"], or start with the charachter "#" and represent a hexidecimal color code, eg @racket["#f2e455"].  If a number is given, it is treated as a color code for a 8bit/256color color.  If a list is given, it is treated as an RGB value for a color, eg. @racket['(0 0 0)] means black.
@@ -376,7 +388,7 @@ You can use these functions with @tt{(require rash/prompt-helpers/string-style)}
 
  If @racket[create-function?] is @racket[#t], then a function is returned instead of a string.  This function takes 1 argument and places that argument where @racket[to-style] would have went, and returns the resulting string.
 
- @margin-note{I cant display the actual colors here, but you can copy the resulting strings into a terminal and print them with @exec{echo -e "..."} or display them using @racket[display] in a terminal window.}
+ @margin-note{I cant display the actual colors here, but you can copy the resulting strings into a terminal and print them with @exec{echo "string"} or display them using @racket[display] in a terminal window.}
  
  @interaction-eval[#:eval prompt-helper-eval
                    (require rash/prompt-helpers/string-style)]
@@ -400,15 +412,27 @@ You can use these functions with @tt{(require rash/prompt-helpers/string-style)}
 
 
 @defproc[(create-styled-struct [to-style (or/c string? struct?)] ...
-                               [#:fg foreground (or/c string? integer? (listof number?) symbol? boolean?) default]
-                               [#:bg background (or/c string? integer? (listof number?) symbol? boolean?) default]
-                               [#:bold? bold? (or/c boolean? symbol?) default]
-                               [#:italic? italic? (or/c boolean? symbol?) default]
-                               [#:underlined? underlined? (or/c boolean? symbol?) default]
+                               [#:fg foreground
+                                (or/c string?
+                                      integer?
+                                      (list/c number? number? number?)
+                                      #f
+                                      default)
+                                default]
+                               [#:bg background
+                                (or/c string?
+                                      integer?
+                                      (list/c number? number? number?)
+                                      #f
+                                      default)
+                                default]
+                               [#:bold? bold? (or/c boolean? default) default]
+                               [#:italic? italic? (or/c boolean? default) default]
+                               [#:underlined? underlined? (or/c boolean? default) default]
                                [#:reset-before? reset-before? boolean? #f]
                                [#:custom-commands custom-commands string? ""]
                                [#:reset-customs? reset-customs? #f])
-         struct?]{
+         styled-struct?]{
  Mostly the same as @racket[create-styled-string], except a structure with a list of strings/sub-structs and a style represented by a hash is produced.  This struct can be given to @racket[styled-struct->string] to turn it into a string.  An uninterned symbol is used as the default value for some of the optional arguments.  The function treats the default argument to mean "use the style the outer struct provides".
                     
  @examples[
