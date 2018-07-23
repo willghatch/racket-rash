@@ -22,7 +22,7 @@
  shell/utils/bourne-expansion-utils
  (prefix-in sp- shell/pipeline)
  "top-level-print.rkt"
- "rashrc-git-stuff.rkt"
+ "../prompt-helpers/git-info.rkt"
  racket/list
  racket/string
  readline/pread
