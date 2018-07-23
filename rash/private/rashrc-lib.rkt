@@ -122,19 +122,19 @@
   add some sort of timeout, or only give information that comes out
   quickly.
   |#
-  (define info (get-git-info))
+  (define info (git-info))
   (if info
-      (let ([branch (hash-ref info 'branch)]
-            [ahead (hash-ref info 'ahead)]
-            [behind (hash-ref info 'behind)]
-            [dirty (hash-ref info 'dirty?)]
-            [sub-dirty (hash-ref info 'submodule-dirty?)]
-            [untracked (hash-ref info 'untracked?)]
-            [remote-tracking? (hash-ref info 'remote-tracking?)]
-            [timeout (hash-ref info 'timeout?)])
+      (let ([branch (hash-ref info 'branch "?")]
+            [ahead (hash-ref info 'ahead 0)]
+            [behind (hash-ref info 'behind 0)]
+            [dirty (hash-ref info 'dirty? #f)]
+            [sub-dirty (hash-ref info 'submodule-dirty? #f)]
+            [untracked (hash-ref info 'untracked? #f)]
+            [remote-tracking? (hash-ref info 'remote-tracking? #f)]
+            [timeout (hash-ref info 'timeout? #t)])
         (string-append
          (default-style "[")
-         (timeout->default branch "?")
+         branch
          (if (equal? 0 ahead)
              ""
              (format "~a~a"

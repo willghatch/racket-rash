@@ -1,13 +1,10 @@
 #lang rash
 
 (provide
+ git-info
 
- timeout->default
-
- get-git-info
-
- get-git-root
- get-current-git-branch
+ git-root
+ git-branch
  git-behind/ahead-numbers
  git-dirty?
  git-submodule-dirty?
@@ -22,14 +19,10 @@
   ))
 
 (define git-timeout-flag (gensym))
-(define (timeout->default v default)
-  (if (eq? git-timeout-flag v)
-      default
-      v))
 
 (define-syntax (define-vars-with-timeout stx)
   (syntax-parse stx
-    [(_ [var:id var-e:expr] ...)
+    [(_ timeout [var:id var-e:expr] ...)
      #'(begin
          (define var git-timeout-flag)
          ...
@@ -42,21 +35,22 @@
                                    ...))
              (define master-thread (thread (λ () (map thread-wait threads))))
              ;; TODO - the timeout should be configurable
-             (sync/timeout 0.25 master-thread)
+             (sync/timeout timeout master-thread)
              (custodian-shutdown-all (current-custodian)))))]))
 
 
-(define (get-git-root dir)
+(define (git-root [dir (current-directory)])
   (cond [(directory-exists? (build-path dir ".git")) dir]
         [else (let-values ([(parent end-path must-be-dir) (split-path dir)])
                 (if (path? parent)
-                    (get-git-root parent)
+                    (git-root parent)
                     #f))]))
 
-(define (get-current-git-branch)
-  #{git branch | fgrep '"*" | sed '"s/*//"})
+(define (git-branch [dir (current-directory)])
+  (parameterize ([current-directory dir])
+    #{git branch | fgrep '"*" | sed '"s/*//"}))
 
-(define (git-behind/ahead-numbers)
+(define (git-behind/ahead-numbers [dir (current-directory)])
   (define (2char-count a b port)
     (define n-a 0)
     (define n-b 0)
@@ -65,46 +59,63 @@
             [(eq? c b) (set! n-b (add1 n-b))]
             [else (void)]))
     (list n-a n-b))
-  (with-handlers ([(λ (e) #t) (λ (e) (list 0 0))])
-    #{git rev-list --left-right '"@{u}...HEAD" |> 2char-count #\< #\>}))
+  (parameterize ([current-directory dir])
+    (with-handlers ([(λ (e) #t) (λ (e) (list 0 0))])
+      #{git rev-list --left-right '"@{u}...HEAD" |> 2char-count #\< #\>})))
 
-(define (git-remote-tracking?)
-  (define pline #{git rev-parse --abbrev-ref '"@{upstream}" &pipeline-ret})
+(define (git-remote-tracking? [dir (current-directory)])
+  (define pline
+    (parameterize ([current-directory dir])
+      #{git rev-parse --abbrev-ref '"@{upstream}" &pipeline-ret}))
   (pipeline-success? pline))
 
-(define (git-dirty?)
-  (define pline #{git diff --quiet --ignore-submodules HEAD &pipeline-ret})
+(define (git-dirty? [dir (current-directory)])
+  (define pline
+    (parameterize ([current-directory dir])
+      #{git diff --quiet --ignore-submodules HEAD &pipeline-ret}))
   (not (pipeline-success? pline)))
 
-(define (git-submodule-dirty?)
-  (not (equal? "" #{git submodule summary -n 1})))
+(define (git-submodule-dirty? [dir (current-directory)])
+  (parameterize ([current-directory dir])
+    (not (equal? "" #{git submodule summary -n 1}))))
 
-(define (git-has-untracked?)
-  (not (equal? "" #{git ls-files --other --directory --exclude-standard})))
+(define (git-has-untracked? [dir (current-directory)])
+  (parameterize ([current-directory dir])
+    (not (equal? "" #{git ls-files --other --directory --exclude-standard}))))
 
-(define (get-git-info)
-  (define root (get-git-root (current-directory)))
+(define (git-info [dir (current-directory)]
+                  #:timeout [timeout 0.25])
+  (define root (git-root dir))
   (if (not root)
       #f
-      (let ()
-        (define-vars-with-timeout
-          [current-branch (get-current-git-branch)]
-          [behind-ahead (git-behind/ahead-numbers)]
-          [dirty? (git-dirty?)]
-          [sub-dirty? (git-submodule-dirty?)]
-          [untracked? (git-has-untracked?)]
-          [remote-tracking? (git-remote-tracking?)])
-        (hash 'root root
-              'branch current-branch
-              'behind (and (list? behind-ahead)
-                           (car behind-ahead))
-              'ahead (and (list? behind-ahead)
-                          (cadr behind-ahead))
-              'dirty? dirty?
-              'submodule-dirty? sub-dirty?
-              'untracked? untracked?
-              'remote-tracking? remote-tracking?
-              'timeout? (for/or ([v (list current-branch behind-ahead dirty?
-                                          sub-dirty? untracked?)])
-                          (eq? git-timeout-flag v))
-              ))))
+      (parameterize ([current-directory dir])
+        (let ()
+          (define-vars-with-timeout
+            timeout
+            [current-branch (git-branch)]
+            [behind-ahead (git-behind/ahead-numbers)]
+            [dirty? (git-dirty?)]
+            [sub-dirty? (git-submodule-dirty?)]
+            [untracked? (git-has-untracked?)]
+            [remote-tracking? (git-remote-tracking?)])
+          (for/fold ([h (hash)])
+                    ([k-v-list
+                      (list (list 'root root)
+                            (list 'branch current-branch)
+                            (list 'behind (and (list? behind-ahead)
+                                               (car behind-ahead)))
+                            (list 'ahead (and (list? behind-ahead)
+                                              (cadr behind-ahead)))
+                            (list 'dirty? dirty?)
+                            (list 'submodule-dirty? sub-dirty?)
+                            (list 'untracked? untracked?)
+                            (list 'remote-tracking? remote-tracking?)
+                            (list 'timeout?
+                                  (for/or ([v (list current-branch
+                                                    behind-ahead dirty?
+                                                    sub-dirty?
+                                                    untracked?)])
+                                    (eq? git-timeout-flag v))))])
+            (if (eq? git-timeout-flag (cadr k-v-list))
+                h
+                (hash-set h (car k-v-list) (cadr k-v-list))))))))
