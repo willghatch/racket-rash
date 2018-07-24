@@ -91,7 +91,7 @@
    #:reset-after? boolean?
    #:custom-commands string?
    #:create-function? boolean?)
-   . ->* . string?)
+   . ->* . (or/c string? (-> string? string?)))
 
   ; if user inputs a color% object, change it to a normal r g b list, ignoring opacity
   (when (and (object? foreground) (subset? '(red green blue) (interface->method-names (object-interface foreground))))
