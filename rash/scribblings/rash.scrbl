@@ -356,8 +356,8 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
 
 @(define prompt-helper-eval (make-base-eval))
 @defproc[(create-styled-string [to-style string? ""]
-                               [#:fg foreground color-value?]
-                               [#:bg background color-value?]
+                               [#:fg foreground (or/c color-value? #f) #f]
+                               [#:bg background (or/c color-value? #f) #f]
                                [#:bold? bold? boolean? #f]
                                [#:italic? italic? boolean? #f]
                                [#:underlined? underlined? boolean? #f]
@@ -368,7 +368,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
          (or/c string? (-> string? string?))]{
  Produces a string with the specified styles.
 
- The values given for @racket[foreground] and @racket[background] are treated the same.  If a string is given, it must either be the name of a 4 bit color, eg. @racket["red"], or start with the charachter "#" and represent a hexidecimal color code, eg @racket["#f2e455"].  If a number is given, it is treated as a color code for a 8bit/256color color.  If a list is given, it is treated as an RGB value for a color, eg. @racket['(0 0 0)] means black.  An object with @racket[red], @racket[green], and @racket[blue] methods (like @racket[color%]) can also be given, and are treated like RGB values.
+ The values given for @racket[foreground] and @racket[background] are treated the same.  If a string is given, it must either be the name of a 4 bit color, e.g. @racket["red"] or @racket["bright red"] for the high-intensity version, or start with the charachter "#" and represent a hexidecimal color code, e.g. @racket["#f2e455"] or @racket["#fff"].  If a number is given, it is treated as a color code for a 8bit/256color color.  If a list is given, it is treated as an RGB value for a color, e.g. @racket['(0 0 0)] means black.  An object with @racket[red], @racket[green], and @racket[blue] methods (like @racket[color%]) can also be given, and are treated like RGB values. See @hyperlink["https://stackoverflow.com/a/33206814/4530731" "this"] stack overflow answer for more information on ansi colors.
 
  The values @racket[bold?], @racket[italic?], and @racket[underlined?] do what you'd expect them to.
 
