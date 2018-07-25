@@ -13,6 +13,7 @@ syntax/parse
 )
 (for-label
 rash/prompt-helpers/string-style
+rash/prompt-helpers/git-info
 racket/contract
 rash
 (only-in rash/demo/setup in-dir =map= =filter= =foldl=)
@@ -349,7 +350,11 @@ Keywords optionally given:
 
 @section{Prompt helpers}
 
-There are currently a few functions that can help you design a custom prompt.  Currently, they only support things like changing foreground/background color and underlined text, but they will be expanded in the future to include more useful ways of getting information for your prompt.
+There are currently a few functions that can help you design a custom prompt.  Currently, they support things like changing foreground/background color and underlined text and getting git information, and they will be expanded in the future to include more useful ways of getting information for your prompt.
+
+@subsection{Styling Strings}
+
+These are some usefull functions for styling strings.
 
 You can use them with @tt{(require rash/prompt-helpers/string-style)}
 @declare-exporting[rash/prompt-helpers/string-style]
@@ -472,6 +477,55 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
       #:reset-before? #t
       "\n"))))
  (regexp-split #px"\\." example2)]
+}
+
+@subsection{Git functions}
+
+There are also some useful functions that help gather git information.
+
+You can use them with @tt{(require rash/prompt-helpers/git-info)}
+@(declare-exporting rash/prompt-helpers/git-info)
+
+
+@defproc[(git-root [dir path? (current-directory)])
+         path?]{
+ Returns the git root directory of @racket[dir].
+}
+
+@defproc[(git-branch [dir path? (current-directory)])
+         string?]{
+ Returns the current branch of @racket[dir].
+}
+
+@defproc[(git-behind/ahead-numbers [dir path? (current-directory)])
+         list?]{
+ Returns a list with the number of commits behind and ahead, in that order, that the current branch is in relation to its corresponding upstream branch.
+}
+
+@defproc[(git-dirty? [dir path? (current-directory)])
+         boolean?]{
+ Determines if branch is dirty.
+}
+
+@defproc[(git-submodule-dirty? [dir path? (current-directory)])
+         boolean?]{
+ Determines if submodule at @racket[dir] is dirty.
+}
+
+@defproc[(git-has-untracked? [dir path? (current-directory)])
+         boolean?]{
+ Determines if current branch has untracked files.
+}
+
+@defproc[(git-remote-tracking? [dir path? (current-directory)])
+         boolean?]{
+ Determines if current branch is tracking a remote branch.
+}
+
+@defproc[(git-info [dir path? (current-directory)]
+                   [#:timeout timeout positive? 0.25])
+         hash?]{
+ Returns a hash with info from above git functions that didn't timeout accouding to @racket[timeout].
 }
 
 
