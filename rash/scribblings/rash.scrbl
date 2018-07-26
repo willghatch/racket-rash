@@ -483,6 +483,8 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
 
 There are also some useful functions that help gather git information.
 
+Remember -- these functions are not yet stable, and may change.
+
 You can use them with @tt{(require rash/prompt-helpers/git-info)}
 @(declare-exporting rash/prompt-helpers/git-info)
 
@@ -497,24 +499,19 @@ You can use them with @tt{(require rash/prompt-helpers/git-info)}
  Returns the current branch of @racket[dir].
 }
 
-@defproc[(git-behind/ahead-numbers [dir path? (current-directory)])
-         list?]{
- Returns a list with the number of commits behind and ahead, in that order, that the current branch is in relation to its corresponding upstream branch.
+@defproc[(git-has-untracked? [dir path? (current-directory)])
+         boolean?]{
+ Determines if current branch has untracked files.
 }
 
 @defproc[(git-dirty? [dir path? (current-directory)])
          boolean?]{
- Determines if branch is dirty.
+ Determines whether there are uncommited changes (staged or unstaged) to tracked files in the current branch of the git repository containing @racket[dir].
 }
 
 @defproc[(git-submodule-dirty? [dir path? (current-directory)])
          boolean?]{
- Determines if submodule at @racket[dir] is dirty.
-}
-
-@defproc[(git-has-untracked? [dir path? (current-directory)])
-         boolean?]{
- Determines if current branch has untracked files.
+ Determines whether there are uncommited changes within submodules of the git repository that contains @racket[dir].
 }
 
 @defproc[(git-remote-tracking? [dir path? (current-directory)])
@@ -522,10 +519,30 @@ You can use them with @tt{(require rash/prompt-helpers/git-info)}
  Determines if current branch is tracking a remote branch.
 }
 
+@defproc[(git-behind/ahead-numbers [dir path? (current-directory)])
+         list?]{
+ Returns a list with the number of commits behind and ahead, in that order, that the current branch is in relation to its corresponding upstream branch.
+}
+
 @defproc[(git-info [dir path? (current-directory)]
                    [#:timeout timeout positive? 0.25])
          hash?]{
- Returns a hash with info from above git functions that didn't timeout accouding to @racket[timeout].
+ Returns a hash with info from above git functions that finished executing within @racket[timeout] seconds.
+
+The hash contains the following key-value pairs if all operations complete before the timeout:
+@itemlist[
+@item{@racket['root] to the result of @racket[git-root]}
+@item{@racket['branch] to the result of @racket[git-branch]}
+@item{@racket['untracked?] to the result of @racket[git-has-untracked?]}
+@item{@racket['dirty?] to the result of @racket[git-dirty?]}
+@item{@racket['submodule-dirty?] to the result of @racket[git-submodule-dirty?]}
+@item{@racket['remote-tracking?] to the result of @racket[git-remote-tracking?]}
+@item{@racket['behind] to the @racket[car] of the result of @racket[git-behind/ahead-numbers]}
+@item{@racket['ahead] to the @racket[cadr] of the result of @racket[git-behind/ahead-numbers]}
+@item{@racket['timeout?] to @racket[#t] if the operation timed out before gathering all data, otherwise @racket[#f]}
+]
+
+If the timeout is reached before all information is gathered, the hash is returned with only those elements that were completed.
 }
 
 
