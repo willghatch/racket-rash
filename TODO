@@ -253,19 +253,31 @@ shell-pipeline
 Job Control
 -----------
 
+* Implementation plan:
+** (note that this will only work on Unix, so I will have to make job control unix-only... which is probably fine)
+** launch subprocess in the same new group (with Racket's new-ish ability to do that via `subprocess`).
+** Use `subprocess-pid` on the first subprocess.
+** Use (with FFI) `getpgid` on the subprocess pid (and probably record this in the pipeline object).
+** use (with the FFI) `tcsetpgrp` on the stdin of the terminal *** Note that this (and therefore job control in general with process groups) only makes sense if I have a file descriptor for a terminal!
+** because the subprocess command doesn't let me use `tcsetpgrp` before the subprocess starts potentially reading/writing to the terminal, I might have to send SIGCONT to the process group after using tcsetpgrp because the processes could already have received SIGTTIN or SIGTTOU
+
+* what about job control with Racket function segments?
+** This is a problem because "jobs" of subprocesses are all in the same process group, which will be (and needs to be) different from the process group of the shell.  So if the shell tries to read/write to the terminal while it is controlled by another group, the shell will get SIGTTIN/SIGTTOU.
+** Note that even `run-subprocess-pipeline` accepts functions to run in a similar manner to subprocess, so this problem exists even at the lowest level of shell-pipeline...
+** I can have job control work only for pure subprocess pipelines.
+*** But I would like a way to suspend/resume long Racket computations.
+** normal shells solve the problem by forking subshells, but forking is not advised in Racket, and unless I have tight control of everything in the process forking might cause problems...
+** maybe I can send appropriate terminal input/output through a proxy port for Racket functions during job control, and launch an extra subprocess in the group that does the actual reading/writing.  But then I could eg. write bytes to the intermediate process (and therefore the writer thinks it's succeeded in writing) but have the intermediate process hang or die before actually writing.
+
+
 * Pipeline suspend/resume -- Threads have pause/resume, Unix processes have sigstop/sigcont, but I'm not sure how to pause/suspend windows processes.  Maybe a Unix-only feature?  But this is a pretty standard shell feature for job control.
 
 * job control -- for an interactive shell, how should the shell capture references to the pipelines to do job control?
-** importantly, currently the repl is still the foreground process of the terminal when you press control c or control z, so it gets sigint or sigstop even when you have launched eg. vim
-** I need to set a pipeline to all have the same process group ID that is different than the pgid of the host shell.  Right now I can either let them all keep the pgid of the shell or give each of them a different pgid.  Anything else would require changes to the subprocess API in the C code of Racket.
-** I need to use `tcsetpgrp` to set the foreground process group on a terminal, to control which processes get sigint/sigstop signals from C-c and C-z.
-** I maybe ought to do some signal handling setup of the subprocesses also, for sigtou, sigtin, and maybe I need to specially handle sighup and sigterm in the shell repl?
+** importantly, currently (IE without job control) the repl is still the foreground process of the terminal when you press control c or control z, so it gets SIGINT or SIGTSTP even when you have launched eg. vim
 ** When Racket gets SIGHUP the main thread generates exn:break:hang-up, and for SIGQUIT it generates exn:break:terminate.  So a handler around the main repl loop can propogate SIGHUP to any jobs (except disowned ones) and quit gracefully.
 
-** for object pipelines, when C-c is hit in the terminal, only the main thread gets it.
+** when C-c is hit in the terminal, only the main thread gets it.  This is a problem for eg. background computation or object pipelines.  The main thread needs a way to communicate these things.
 ** for the repl, I need to have a handler specifically for user-break that will send signals to the current pipeline if one is running.
-*** maybe every expression should be evaluated in a new thread?  But then I couldn't mutate parameters.  Aha, but I remember that I tacitly run all pipelines as bg, so I can have the handler on the code that waits for the pipeline.  Of course, I need to clear up how bg works with actual background processes -- this has terminal signalling in it.
-** for mixed pipelines, job control is harder -- I don't want the shell itself in the same process group as the pipeline processes.  Maybe if I have job control on I can fix this by having a special extra subprocess for the in-racket parts to go through?  When that process gets a signal, it can communicate via pipe or something to the racket process about what signal it got.
 
 * bg pipeline disowning?
 ** This is really only reasonable for external-proccess-only pipelines, and I'm not sure how reasonable it is on Windows.
