@@ -31,6 +31,7 @@
          #:err (or/c output-port? false/c path-string-symbol?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
+         #:process-group (or/c pipeline? boolean?)
          )
         #:rest (listof (or/c list? pipeline-member-spec?))
         pipeline?)]
@@ -276,7 +277,8 @@
 (struct pipeline
   (port-to port-from members start-bg? strictness
            from-port-copier err-port-copiers lazy-timeout
-           start-ms end-ms-box cleaner default-err)
+           start-ms end-ms-box cleaner default-err
+           group-object)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -404,6 +406,7 @@
                             #:background? bg?
                             #:err default-err
                             #:lazy-timeout lazy-timeout
+                            #:process-group group
                             members)
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
@@ -418,7 +421,8 @@
               'err-port-coper
               lazy-timeout
               'start-ms 'end-ms-box 'cleaner
-              default-err)))
+              default-err
+              group)))
 
 (define (run-subprocess-pipeline #:in [in (current-input-port)]
                                  #:out [out (current-output-port)]
@@ -427,6 +431,7 @@
                                  ;; TODO -- allow 'string-port
                                  #:err [default-err (current-error-port)]
                                  #:lazy-timeout [lazy-timeout 1]
+                                 #:process-group [group #f]
                                  . members)
   (let ([pline
          (run-pipeline/spec
@@ -435,6 +440,7 @@
                               #:background? bg?
                               #:err default-err
                               #:lazy-timeout lazy-timeout
+                              #:process-group group
                               members))])
     (if bg?
         pline
@@ -497,6 +503,11 @@
          [strictness (pipeline-strictness pipeline-spec)]
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
+         [group-initial (pipeline-group-object pipeline-spec)]
+         [group-use (cond [(pipeline? group-initial)
+                           (pipeline-group-object group-initial)]
+                          [(not group-initial) #f]
+                          [else #t])]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-file-port (cond [(equal? to-port 'null) (open-input-string "")]
                              [(path-string-symbol? to-port)
@@ -573,11 +584,15 @@
           (map (λ (m p) (cp-spec m #:err p))
                members
                err-ports-mapped)]
-         [run-members/ports (run-pipeline-members members-with-m-err to-use from-use)]
-         [run-members (first run-members/ports)]
-         [to-out (second run-members/ports)]
-         [from-out (third run-members/ports)]
-         [err-port-copiers (fourth run-members/ports)]
+         [run-results (run-pipeline-members members-with-m-err
+                                            to-use
+                                            from-use
+                                            group-use)]
+         [run-members (first run-results)]
+         [to-out (second run-results)]
+         [from-out (third run-results)]
+         [err-port-copiers (fourth run-results)]
+         [group-return (fifth run-results)]
          [ports-to-close (append (filter port? (list to-file-port from-file-port))
                                  err-ports-to-close)]
          [from-ret-almost (if (and from-port from-out)
@@ -604,7 +619,8 @@
          [pline (pipeline to-ret from-ret run-members bg? strictness
                           from-port-copier err-port-copiers lazy-timeout
                           (current-inexact-milliseconds) end-time-box
-                          'cleaner-goes-here default-err)]
+                          'cleaner-goes-here default-err
+                          group-return)]
          [cleanup-thread
           (thread (λ ()
                     (pipeline-wait/internal pline)
@@ -618,7 +634,10 @@
          [pline-final (struct-copy pipeline pline [cleaner cleanup-thread])])
     pline-final))
 
-(define (run-pipeline-members pipeline-member-specs to-line-port from-line-port)
+(define (run-pipeline-members pipeline-member-specs
+                              to-line-port
+                              from-line-port
+                              group)
   #| This has to be careful about the it starts things in for proper wiring.
   The important bit is that subprocesses have to be passed a file-stream-port
   for each of its in/out/err ports (or #f to create one).
@@ -640,6 +659,9 @@
     (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box
              argl capture-port-err success-pred)
     #:transparent)
+  (define group-ret (if (subprocess? group)
+                        group
+                        #f))
   (define (pmi-process? pmember)
     (and (pmi? pmember) (subprocess? (pmi-subproc-or-thread pmember))))
   (define (pmi-thread? pmember)
@@ -683,8 +705,14 @@
                          (subprocess+ argl
                                       #:err err-to-send
                                       #:in to-spec
-                                      #:out from-spec)])
+                                      #:out from-spec
+                                      #:group (if group
+                                                  (or group-ret
+                                                      'new)
+                                                  #f))])
              (when (and to-spec (> i 0)) (close-input-port to-spec))
+             (when (and group (not group-ret))
+               (set! group-ret sproc))
              (let ([out-member (pmi to from err-from sproc #f #f argl
                                     capture-err success-pred)])
                (values
@@ -784,7 +812,7 @@
      (pmi-success-pred m)))
 
   (define out-members (map finalize-member r2-members))
-  (list out-members to-port from-port err-port-copy-threads))
+  (list out-members to-port from-port err-port-copy-threads group-ret))
 
 
 ;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -797,7 +825,11 @@
       (flush-output))))
 
 
-(define (subprocess+ #:in [in #f] #:out [out #f] #:err [err #f] argv)
+(define (subprocess+ #:in [in #f]
+                     #:out [out #f]
+                     #:err [err #f]
+                     #:group [group #f]
+                     argv)
   (when (null? argv)
     (error 'subprocess+ "empty argv"))
   (define cmd (car argv))
@@ -808,6 +840,7 @@
          (append (list out
                        in
                        err
+                       group
                        cmdpath)
                  (map ~a args))))
 
