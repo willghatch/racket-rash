@@ -455,6 +455,12 @@
     (if bg?
         pline
         (begin (pipeline-wait pline)
+               (when group
+                 ;; TODO - this doesn't seem to be working
+                 (let ([my-group (getpgid 0)])
+                   (set-controlling-process-group
+                    (list in out default-err)
+                    my-group)))
                pline))))
 
 (define (run-subprocess-pipeline/out #:strictness [strictness 'lazy]
@@ -516,7 +522,8 @@
          [strictness (pipeline-strictness pipeline-spec)]
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
-         [group-initial (pipeline-group pipeline-spec)]
+         [group-initial (and job-control-available?
+                             (pipeline-group pipeline-spec))]
          [group-use (cond [(not all-subprocess?)
                            #f]
                           [group-initial #t]
