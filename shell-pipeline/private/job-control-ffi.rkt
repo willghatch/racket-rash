@@ -33,6 +33,16 @@
                             r))
                no-jc!))
 
+(define scheme-get-port-fd
+  (get-ffi-obj "scheme_get_port_fd"
+               #f
+               (_fun (port : _racket)
+                     -> (r : _int)
+                     -> (if (< r 0)
+                            (error 'rash
+                                   "internal error -- bad call to scheme_get_port_fd")
+                            r))))
+
 (define tcsetpgrp
   (get-ffi-obj "tcsetpgrp"
                ;; tcsetpgrp is in unistd.h
@@ -42,7 +52,8 @@
                      -> (r : _int)
                      -> (if (equal? r 0)
                             (void)
-                            (error 'rash "tcsetpgrp failed")))
+                            (let ([err saved-errno])
+                              (error 'rash "tcsetpgrp failed"))))
                no-jc!))
 
 ;;; TODO - This is wrong.
@@ -54,8 +65,10 @@
 (define (set-controlling-process-group ports pgid)
   (define success?
     (for/or ([p ports])
-      (define fd (and (file-stream-port? p) (port-file-identity p)))
-      (with-handlers ([(λ(e)#t)(λ(e)#f)])
+      (define fd (and (file-stream-port? p) (scheme-get-port-fd p)))
+      (with-handlers ([(λ(e)#t)(λ(e)
+                                 (println e)
+                                 #f)])
         (tcsetpgrp fd pgid)
         #t)))
   (when (not success?)
@@ -76,8 +89,10 @@
 (define (kill-process-group pgid signal-number)
   (kill (- pgid) signal-number))
 
+;; TODO
 ;; My `man 7 signal` lists SIGCONT as 19,18,25... hmmm... may be more system-dependent.
-(define SIGCONT 19)
+;; I need a good way to get signal numbers from system headers...
+(define SIGCONT 18)
 
 (define (send-sigcont-to-process-group pgid)
   (kill-process-group pgid SIGCONT))
