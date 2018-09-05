@@ -8,6 +8,7 @@
 (require syntax/parse/define)
 (require "mostly-structs.rkt")
 (require "misc-utils.rkt")
+(require "job-control-ffi.rkt")
 (require (submod "mostly-structs.rkt" internals))
 
 
@@ -31,7 +32,7 @@
          #:err (or/c output-port? false/c path-string-symbol?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
-         #:process-group (or/c pipeline? boolean?)
+         #:unix-job-control any/c
          )
         #:rest (listof (or/c list? pipeline-member-spec?))
         pipeline?)]
@@ -278,7 +279,7 @@
   (port-to port-from members start-bg? strictness
            from-port-copier err-port-copiers lazy-timeout
            start-ms end-ms-box cleaner default-err
-           group-object)
+           group)
   #:property prop:evt (λ (pline)
                         (let ([sema (make-semaphore)])
                           (thread (λ ()
@@ -406,7 +407,7 @@
                             #:background? bg?
                             #:err default-err
                             #:lazy-timeout lazy-timeout
-                            #:process-group group
+                            #:unix-job-control job-control
                             members)
   (let* ([members1 (map (λ (m)
                           (if (pipeline-member-spec? m)
@@ -422,7 +423,7 @@
               lazy-timeout
               'start-ms 'end-ms-box 'cleaner
               default-err
-              group)))
+              job-control)))
 
 (define (run-subprocess-pipeline #:in [in (current-input-port)]
                                  #:out [out (current-output-port)]
@@ -431,17 +432,26 @@
                                  ;; TODO -- allow 'string-port
                                  #:err [default-err (current-error-port)]
                                  #:lazy-timeout [lazy-timeout 1]
-                                 #:process-group [group #f]
+                                 #:unix-job-control [job-control #f]
                                  . members)
-  (let ([pline
-         (run-pipeline/spec
-          (make-pipeline-spec #:in in #:out out
-                              #:strictness strictness
-                              #:background? bg?
-                              #:err default-err
-                              #:lazy-timeout lazy-timeout
-                              #:process-group group
-                              members))])
+  (let* ([pline
+          (run-pipeline/spec
+           (make-pipeline-spec #:in in #:out out
+                               #:strictness strictness
+                               #:background? bg?
+                               #:err default-err
+                               #:lazy-timeout lazy-timeout
+                               #:unix-job-control job-control
+                               members))]
+         [group (pipeline-group pline)])
+    (when (and group
+               (not bg?)
+               ;; TODO - how can I do this predicate?
+               #;(or (terminal-port? in)
+                     (terminal-port? out)))
+      ;; make the group the controlling group of the terminal
+      (set-controlling-process-group (list in out default-err) group)
+      (send-sigcont-to-process-group group))
     (if bg?
         pline
         (begin (pipeline-wait pline)
@@ -500,14 +510,17 @@
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [default-err (pipeline-default-err pipeline-spec)]
          [members (map (resolve-spec default-err) members-pre-resolve)]
+         [all-subprocess? (map (λ (m) (not (procedure?
+                                            (car (pipeline-member-spec-argl m)))))
+                               members)]
          [strictness (pipeline-strictness pipeline-spec)]
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
-         [group-initial (pipeline-group-object pipeline-spec)]
-         [group-use (cond [(pipeline? group-initial)
-                           (pipeline-group-object group-initial)]
-                          [(not group-initial) #f]
-                          [else #t])]
+         [group-initial (pipeline-group pipeline-spec)]
+         [group-use (cond [(not all-subprocess?)
+                           #f]
+                          [group-initial #t]
+                          [else #f])]
          [to-port (pipeline-port-to pipeline-spec)]
          [to-file-port (cond [(equal? to-port 'null) (open-input-string "")]
                              [(path-string-symbol? to-port)
@@ -592,7 +605,10 @@
          [to-out (second run-results)]
          [from-out (third run-results)]
          [err-port-copiers (fourth run-results)]
-         [group-return (fifth run-results)]
+         [group-subprocess (fifth run-results)]
+         [group-return (if (subprocess? group-subprocess)
+                           (getpgid (subprocess-pid group-subprocess))
+                           #f)]
          [ports-to-close (append (filter port? (list to-file-port from-file-port))
                                  err-ports-to-close)]
          [from-ret-almost (if (and from-port from-out)
@@ -659,9 +675,7 @@
     (port-to port-from port-err subproc-or-thread thread-ret-box thread-exn-box
              argl capture-port-err success-pred)
     #:transparent)
-  (define group-ret (if (subprocess? group)
-                        group
-                        #f))
+  (define group-ret #f)
   (define (pmi-process? pmember)
     (and (pmi? pmember) (subprocess? (pmi-subproc-or-thread pmember))))
   (define (pmi-thread? pmember)
