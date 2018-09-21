@@ -186,11 +186,10 @@ While you can use Rash as a #lang, you can also just use the bindings it exports
 
 @section{Media}
 I made a quick demo recording of an interactive repl
-@hyperlink["https://asciinema.org/a/sHiBRIlSM9wHDetDhsVjrCaZi"]{here}.
-It's a little out of date.  I should make a new and better one.
+@hyperlink["https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26"]{here}.
 
 Also I gave a talk at RacketCon 2017 about it, which can be viewed
-@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}.
+@hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}, though it is outdated.
 There have been various changes since the talk was given, but the core ideas are the same.  The biggest change since then is that embedding the line-syntax is encouraged with braces in the Linea syntax rather than string embedding.
 
 
