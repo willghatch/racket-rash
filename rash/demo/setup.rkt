@@ -90,7 +90,8 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
      "\n")))
 
 (require racket/system)
-(define-line-macro a
+;; I first heard of this as `a`, but I have something else in my personal setup called `a`, so I'm making the name longer.
+(define-line-macro cded
   (λ (stx)
     (syntax-case stx ()
       [(_ arg1 arg2 arg ...)
