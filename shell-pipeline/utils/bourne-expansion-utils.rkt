@@ -19,6 +19,7 @@
   syntax/parse
   racket/match
   racket/string
+  syntax/strip-context
   "../private/misc-utils.rkt"
   ))
 
@@ -168,10 +169,27 @@
   (define dollar-regexp (pregexp dollar-regexp-str))
   (define dollar-id-end-regexp (pregexp (string-append dollar-regexp-str
                                                        "|\\s|/|:")))
-  (define (dollar-var-str->var-ref str old-stx glob-protect-maybe)
+  (define (dollar-var-str->var-ref str old-stx glob-protect-maybe id-start-posn)
     (with-syntax ([ref (if (equal? str (string-upcase str))
                            #`(envar #,(datum->syntax old-stx str old-stx))
-                           (datum->syntax old-stx (string->symbol str) old-stx))])
+                           #|
+                           To get DrRacket binding arrows to draw, syntax
+                           needs the syntax-original? property, which can't simply
+                           be set.  So to forge it, we have to turn the string
+                           into a port and read it with read-syntax...
+                           |#
+                           (let* ([line (syntax-line old-stx)]
+                                  [col (syntax-column old-stx)]
+                                  [pos (syntax-position old-stx)]
+                                  [col (+ col id-start-posn)]
+                                  [pos (+ pos id-start-posn)]
+                                  [src (syntax-source old-stx)]
+                                  [port (open-input-string str)])
+                             (port-count-lines! port)
+                             (set-port-next-location! port line col pos)
+                             (replace-context
+                              old-stx
+                              (read-syntax src port))))])
       (if (and glob-after? glob-protect-maybe)
           #'(glob-quote ref)
           #'ref)))
@@ -230,7 +248,8 @@
                   (dollar-var-str->var-ref
                    (substring str (+ (string-length dollar-str) start) end)
                    str-stx
-                   (and glob-after? glob-detected))]))]
+                   (and glob-after? glob-detected)
+                   (+ start (string-length dollar-str)))]))]
             [mixed-parts (append (interleave literal-parts-but-end dollar-parts)
                                  (list last-literal-part))])
        (cond
