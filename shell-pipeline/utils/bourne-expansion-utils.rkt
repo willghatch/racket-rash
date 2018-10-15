@@ -181,8 +181,8 @@
                            (let* ([line (syntax-line old-stx)]
                                   [col (syntax-column old-stx)]
                                   [pos (syntax-position old-stx)]
-                                  [col (+ col id-start-posn)]
-                                  [pos (+ pos id-start-posn)]
+                                  [col (and col (+ col id-start-posn))]
+                                  [pos (and pos (+ pos id-start-posn))]
                                   [src (syntax-source old-stx)]
                                   [port (open-input-string str)])
                              (port-count-lines! port)
