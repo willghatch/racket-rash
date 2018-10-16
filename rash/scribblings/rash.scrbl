@@ -183,8 +183,71 @@ Also, for those who just want to pipeline subprocesses in a Racket program using
 
 While you can use Rash as a #lang, you can also just use the bindings it exports via @racket[(require rash)].  Note that requiring the rash module will not affect the reader, so the line-oriented syntax will not be available unless you take steps to use it too (IE use the Linea reader, or use the @racket[rash] macro).
 
+Here are some miscellaneous little sections I am adding off-the-cuff based on discussions until I rewrite the whole Rash Guide to be better.
+
+@subsection{Rash's names are terrible, how do I rename them?}
+
+Line macros (like @racket[cd]), pipeline operators (like @racket[\|>]), and pipeline option flags (like @racket[&>] and @racket[&bg]) are all macros, so you can rename them with @racket[make-rename-transformer]:
+
+@(racketblock
+(define-syntax > (make-rename-transformer #'&>!)))
+
+@subsection{How does the underscore work?}
+
+The @racket[_] identifier is short for @racket[current-pipeline-argument].
+It is actually a syntax parameter that pipeline operators can make mean whatever they want.  So there isn't one single thing that it means.  But there is a convention.
+
+Probably the best way to explain @racket[_] is to start with the most basic
+pipeline operator that uses it, which is called
+@racket[=basic-object-pipe/expression=].
+The name is terrible, and it should probably have a short name like @racket[\|] and @racket[\|>] do.  But I haven't decided what yet.  Suggestions appreciated.
+
+For now let's call it =bop/e=.
+@(racketblock
+(define-syntax =bop/e=
+  (make-rename-transformer #'=basic-object-pipe/expression=)))
+
+
+=bop/e= takes an expression that (probably) contains @racket[_].  And it uses
+it as the body of a function where @racket[_] is the argument.  Unless it is in
+the first part of the pipeline, in which case @racket[_] is an error.
+Actually, it's not a bad operator in start position -- it is like
+@tt{cat} for racket values.
+
+So:
+@irash{
+=bop/e= 5 =bop/e= (+ 6 _)
+}
+is like
+@(racketblock
+((λ (x) (+ 6 x)) 5))
+
+
+@racket[=basic-object-pipe=], or @racket[\|>], basically unwraps a layer of parentheses
+and lets @racket[_] be implicit when it is at the end of the pipeline.  So the
+following two pipelines are the same as the above.
+
+@irash{
+=bop/e= 5 |> + 6 _
+=bop/e= 5 |> + 6
+}
+
+But you can also explicitly place the underscore elsewhere.
+
+@irash{
+=bop/e= 5 |> + _ 6
+}
+
+Then @racket[=object-pipe=] (or @racket[\|>>]) is the same, except that it automatically detects ports and turns them into strings.
+
+Other operators like @racket[=map=] and @racket[=filter=] place @racket[_] like @racket[\|>] does, but instead of standing for the whole object received from the previous pipeline stage, it stands for an element of the object received (which must be a list).
+
+
 
 @section{Media}
+A preprint of an academic paper about Rash is available @hyperlink["http://willghatch.net/publications/rash-gpce-2018-preprint.pdf"]{here}.
+It is much better documentation than the Rash guide, currently.
+
 I made a quick demo recording of an interactive repl
 @hyperlink["https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26"]{here}.
 
