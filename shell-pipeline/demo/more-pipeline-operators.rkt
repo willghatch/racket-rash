@@ -113,7 +113,9 @@ These are essentially a bunch of proof-of-concept pipeline operators.
     [(_ x:id) #'(quote x)]
     [(_ e) #'e]))
 
-(define out-transformer (λ (o) (string-trim (port->string o))))
+(define (closing-port->string o)
+  (begin0 (port->string o) (close-input-port o)))
+(define out-transformer (λ (o) (string-trim (closing-port->string o))))
 
 (define-pipeline-operator =for/list/unix-arg=
   #:joint
@@ -197,7 +199,7 @@ then it needs to standardize the output...
                        (object-pipeline-member-spec
                         (λ (in)
                           (begin (set! cur-obj-standin (if (input-port? in)
-                                                           (port->string in)
+                                                           (closing-port->string in)
                                                            in))
                                  "")))
                        (u-pipeline-member-spec

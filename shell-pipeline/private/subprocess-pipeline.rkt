@@ -791,7 +791,8 @@
 
 (define (shellify f)
   (λ args
-    (let* ([in-str (port->string (current-input-port))]
+    (let* ([in-str (begin0 (port->string (current-input-port))
+                     (close-input-port (current-input-port)))]
            [out-str (apply f in-str args)])
       (display out-str)
       (flush-output))))

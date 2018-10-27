@@ -238,7 +238,8 @@
   (values (object-pipeline-member driver-thread rbox ebox) (cdr specs)))
 
 (define (default-output-transformer p)
-  (string-trim (port->string p)))
+  (string-trim (begin0 (port->string p)
+                 (close-input-port p))))
 
 (define (run-mixed-pipeline
          #:in [init-in-port (open-input-string "")]

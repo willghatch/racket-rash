@@ -88,7 +88,8 @@
 (define-syntax-parameter default-pipeline-in
   (syntax-parser [_ #'(open-input-string "")]))
 (define-syntax-parameter default-pipeline-out
-  (syntax-parser [_ #'(λ (x) (string-trim (port->string x)))]))
+  (syntax-parser [_ #'(λ (x) (string-trim (begin0 (port->string x)
+                                            (close-input-port x))))]))
 (define-syntax-parameter default-pipeline-err-out
   (syntax-parser [_ #''string-port]))
 

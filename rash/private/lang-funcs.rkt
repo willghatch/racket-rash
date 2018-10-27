@@ -88,7 +88,8 @@
       [(_ arg ...)
        #'(run-pipeline/logic/no-line-macro arg ...)])))
 
-(define default-output-port-transformer (λ (p) (string-trim (port->string p))))
+(define default-output-port-transformer (λ (p) (string-trim (begin0 (port->string p)
+                                                              (close-input-port p)))))
 
 (module keyword-table racket/base
   (provide rash-keyword-table)
@@ -186,7 +187,8 @@
   (syntax-parse stx
     [(_ body:expr)
      #'(splicing-with-rash-config #:in (open-input-string "")
-                                  #:out (λ (p) (string-trim (port->string p)))
+                                  #:out (λ (p) (string-trim (begin0 (port->string p)
+                                                              (close-input-port p))))
                                   #:err 'string-port
                                   ;#:starter =unix-pipe=
                                   ;#:line-macro run-pipeline
