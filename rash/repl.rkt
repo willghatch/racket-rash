@@ -173,4 +173,5 @@
 
   (printf "and now exiting for some reason\n"))
 
-(main)
+(module+ main
+  (main))

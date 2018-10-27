@@ -19,5 +19,7 @@
                "text-table"
                ))
 
+(define test-omit-paths '("demo/use-make-dumb-example.rkt"))
+
 (define version "0.2")
 

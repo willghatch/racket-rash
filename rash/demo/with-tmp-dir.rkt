@@ -32,3 +32,32 @@
   (syntax-parser
     [(_ body:expr)
      #'(with-tmp-dir d (in-dir (values d) body))]))
+
+(module+ non-sandboxed-test
+  {
+
+   (require rackunit)
+
+   (define orig-dir (current-directory))
+   (define dir1 #f)
+   (define dir2 #f)
+   with-tmp-dir d {
+                   (check-true (directory-exists? d))
+                   echo $d
+                   echo hello foo bar &> $d/file
+                   echo $d/file
+                   cat $d/file
+                   (set! dir1 d)
+                   }
+
+   (check-false (directory-exists? dir1))
+
+   in-tmp-dir {
+               (set! dir2 (current-directory))
+               echo in (current-directory)
+               }
+
+   (check-false (directory-exists? dir2))
+   (check-false (equal? dir1 dir2))
+
+   })

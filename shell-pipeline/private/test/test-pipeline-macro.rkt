@@ -1,6 +1,6 @@
 #lang racket/base
 
-(require "../pipeline-macro.rkt")
+(require "../../pipeline-macro.rkt")
 
 (module+ test
   (require rackunit)

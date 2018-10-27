@@ -2,14 +2,14 @@
 
 (provide my-grep)
 
-(require "../pipeline.rkt")
+(require "../../pipeline.rkt")
 (require racket/string)
 (require racket/function)
 (require racket/format)
 (require racket/runtime-path)
 (require racket/port)
 
-(define-runtime-path pipeline.rkt "../pipeline.rkt")
+(define-runtime-path subprocess-pipeline.rkt "../subprocess-pipeline.rkt")
 
 
 (define (grep-func str regex)
@@ -123,23 +123,25 @@
   )
 
 
-(module+ main
+(module+ non-sandboxed-test
   ;; Here can go tests that rely on external programs,
   ;; but these tests must be run manually.
 
   (require rackunit)
 
-  ;; TODO - how to I wrap this so I get a nice summary as with raco test and the test module?
-  (printf "If this exits without saying things passed, then things failed.\n")
 
-  (check-equal? (string->number
-                 (string-trim
-                  (run-pipeline/out `(cat ,pipeline.rkt)
-                                    '(grep define)
-                                    `(,my-grep shellify)
-                                    '(wc -l))))
-                1)
-
-  (printf "If it didn't say anything about falures, then the tests passed.\n")
+  #|
+  This is a stupid test -- I should write some proper tests that use
+  some sort of test directory they can muck about in.  But for now, this
+  one tests a file that I know exists.
+  |#
+  (check-pred
+   number?
+   (string->number
+    (string-trim
+     (run-pipeline/out `(cat ,subprocess-pipeline.rkt)
+                       '(grep define)
+                       `(,my-grep pipeline)
+                       '(wc -l)))))
 
   )

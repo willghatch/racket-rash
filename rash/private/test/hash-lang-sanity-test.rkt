@@ -1,19 +1,27 @@
 #lang rash
+(module+ non-sandboxed-test
+  (require rackunit)
+  (check-not-exn
+   (λ ()
+     {
 
-=quoting-basic-unix-pipe= ls -l =object-pipe= string-upcase =object-pipe= display
+      =quoting-basic-unix-pipe= ls -l =object-pipe= string-upcase =object-pipe= display
 
-(display (rash «=quoting-basic-unix-pipe= ls =object-pipe= string-downcase»))
+      (display (rash «=quoting-basic-unix-pipe= ls =object-pipe= string-downcase»))
 
-(rash «(define x 5)
-      (define y 6)
-      (define z 7)»)
+      (rash «(define x 5)
+            (define y 6)
+            (define z 7)»)
 
-(printf "adding: ~a\n" (+ x y z))
+      (printf "adding: ~a\n" (+ x y z))
 
-(begin {echo this has a closing delimiter: '"}"})
-(begin {echo this has an opening delimiter '"{"})
+      (begin {echo this has a closing delimiter: '"}"})
+      (begin {echo this has an opening delimiter '"{"})
 
-ls
+      ls
 
-echo Top-level multiple values:
-(values 1 2 3)
+      echo Top-level multiple values:
+      (values 1 2 3)
+
+      })))
+
