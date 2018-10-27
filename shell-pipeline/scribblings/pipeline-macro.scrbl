@@ -235,6 +235,8 @@ Like @racket[=basic-object-pipe/form=], except that when not used as a pipeline 
 
 To discover whether @racket[current-pipeline-argument] is used, each argument is local-expanded.  So @racket[f-arg] must evaluate to function, and NOT be the name of a macro to be expanded with the other args.
 
+@bold{Note:}  If @racket[=basic-object-pipe=] follows a subprocess form, it should close the received port.  Operators that handle ports automatically such as @racket[\|>>] close the port automatically, but @racket[\|>] allows things like lazy reading into a stream, so it can not apply an automatic policy that will always work effectively.
+
 Usually @racket[\|>] is used instead.
 }
 @defform[#:kind "pipeline-operator" (\|> arg ...+)]{

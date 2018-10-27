@@ -277,7 +277,7 @@ Configures the defaults for various options, and runs the body.
 
 Options:
 
-@racket[#:out] sets the default output port or transformer for unix pipelines (as run by @racket[run-pipeline]).  The default runs @racket[port->string] on the output.
+@racket[#:out] sets the default output port or transformer for unix pipelines (as run by @racket[run-pipeline]).  The default runs @racket[port->string] on the output.  @bold{Note} that a custom output transformer should close the received port!
 
 @racket[#:in] sets the default input port for unix pipelines (as run by @racket[run-pipeline]).  The default is an empty port.
 

@@ -56,6 +56,8 @@ If either @racket[bg] or @racket[return-pipeline-object] are non-false values, t
 
 The @racket[in], @racket[out], and @racket[err] options only affect unix pipeline members.  Specifically, if the pipeline begins with a unix member, @racket[in] is used as its initial input port.  For all unix members that don't specify an error port, @racket[err] is used as their default.  If the last member of the pipeline is a unix member, then @racket[out] is used either as its output port, OR as a function that is appended to the pipeline to consume the final output port and produce some object.
 
+@bold{Note:}  if you use a transformer function on the output, the transformer should close the port!
+
 The @racket[strictness] and @racket[lazy-timeout] options are also passed through to @racket[run-subprocess-pipeline], and only affect unix pipeline members.
 
 This function is run by @racket[run-pipeline] macro, and otherwise this function should probably only be used if you want to write a replacement for the pipeline-macro library.
