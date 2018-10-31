@@ -4,6 +4,7 @@
 
 (provide
  #%linea-line
+ #%linea-line/context
  #%linea-s-exp
  #%linea-expressions-begin
  #%linea-default-line-macro
@@ -31,20 +32,27 @@
 (define-for-syntax (dlm ctxt loc)
   (datum->syntax ctxt '#%linea-default-line-macro loc))
 
-(define-syntax (#%linea-line stx)
-  ;; detect line macros and apply them, or transform into pipeline
+(define-syntax (#%linea-line/context stx)
   (syntax-parse stx
-    [(_ arg1:line-macro arg ...)
-     (linea-line-macro-transform #'(arg1 arg ...))]
-    [(rec arg ...)
-     (let ([default-macro (dlm #'rec #'rec)])
+    [(_ context arg1:line-macro arg ...)
+     (linea-line-macro-transform
+      (datum->syntax #'context (syntax->list #'(arg1 arg ...))))]
+    [(rec context arg ...)
+     (let ([default-macro (dlm #'context #'context)])
        (syntax-parse default-macro
          [default-line-macro:line-macro
-           #'(rec default-line-macro arg ...)]
+           #'(rec context default-line-macro arg ...)]
          [_ (raise-syntax-error
              '#%linea-line
              "A line of Linea (Rash) code was used without an explicit line macro and #%linea-default-line-macro is not bound or not bound to a line macro"
              #'rec)]))]))
+
+(define-syntax (#%linea-line stx)
+  ;; detect line macros and apply them, or transform into pipeline
+  (syntax-parse stx
+    [(_ arg ...)
+     (with-syntax ([context (datum->syntax stx #f)])
+       #'(#%linea-line/context context arg ...))]))
 
 (define-syntax #%linea-expressions-begin (make-rename-transformer #'begin))
 

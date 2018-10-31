@@ -3,6 +3,7 @@
 (provide
  #%linea-expressions-begin
  #%linea-line
+ #%linea-line/context
  #%linea-s-exp
  #%linea-default-line-macro
  )
