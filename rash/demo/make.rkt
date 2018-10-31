@@ -27,8 +27,10 @@ inside the recipe body.
 (provide
  (except-out (all-from-out racket/base)
              #%module-begin)
- (all-from-out rash)
- (rename-out [make-module-begin #%module-begin])
+ (except-out (all-from-out rash)
+             #%linea-s-exp)
+ (rename-out [make-module-begin #%module-begin]
+             [make-linea-s-exp #%linea-s-exp])
 
  make-target
  current-target
@@ -70,6 +72,16 @@ inside the recipe body.
              form
              ...
              (do-make)))))]))
+
+(define-syntax (make-linea-s-exp stx)
+  (syntax-parse stx
+    [(_ e)
+     #'(splicing-let-syntax ([#%linea-s-exp (syntax-parser
+                                              [(_ x)
+                                               #'(#%linea-s-exp x)])])
+         (splicing-with-rash-config
+          #:line-macro run-pipeline
+          e))]))
 
 (define current-target (make-parameter #f))
 (define current-dependencies (make-parameter '()))
