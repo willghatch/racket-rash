@@ -9,6 +9,8 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
  (all-defined-out)
  (all-from-out shell/demo/more-pipeline-operators)
  (all-from-out racket/string)
+ (all-from-out racket/dict)
+ (all-from-out racket/cmdline)
  (all-from-out racket/port)
  (all-from-out racket/function)
  (all-from-out file/glob)
@@ -27,8 +29,11 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
 
  racket/string
  racket/port
+ racket/dict
+ racket/cmdline
  racket/function
  file/glob
+ csv-reading
  shell/utils/bourne-expansion-utils
  (for-syntax
   racket/base
@@ -165,4 +170,18 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
              (for/list ([d edirs])
                (do-body d))
              (do-body edirs)))]))
+
+;; Read a CSV file into a list of hashes, one hash per row.
+(define (csv-file->dicts port-or-file)
+  (define p (if (input-port? port-or-file)
+                port-or-file
+                (open-input-file port-or-file)))
+  (define lines (csv->list p))
+  (close-input-port p)
+  (define keys (car lines))
+  (for/list ([line (cdr lines)])
+    (for/hash ([k keys]
+               [v line])
+      (values k v))))
+
 

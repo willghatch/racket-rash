@@ -15,6 +15,8 @@
                "readline-lib"
                ;; for the make demo
                "make"
+               ;; for csv-file->dicts in demo/setup
+               "csv-reading"
                ;; temporarily
                "text-table"
                ))
