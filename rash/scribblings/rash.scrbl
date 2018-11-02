@@ -35,9 +35,9 @@ syntax/parse
 
 @section{Stability}
 
-Rash is not stable.
+Some things in Rash are not entirely stable.  However, things from the GPCE paper are all stable.  If any of them don't work at any point it's a bug.
 
-But it's getting closer, and it's definitely usable as an interactive shell/repl.
+Rash is definitely usable as an interactive shell/repl as well as for writing scripts, and I'm anxious to hear feedback from more users to understand what they like and what can be improved.
 
 @section{Rash Guide}
 
