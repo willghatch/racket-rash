@@ -24,7 +24,7 @@
   #:in (current-input-port)
   #:out (current-output-port)
   #:err (current-error-port)
-  #:starter =quoting-basic-unix-pipe=
+  #:starter =unix-pipe=
   )
 #;(define-syntax basic-rash-module-begin
   (make-rash-module-begin-transformer #:in (current-input-port)

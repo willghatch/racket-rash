@@ -5,9 +5,9 @@
    (λ ()
      {
 
-      =quoting-basic-unix-pipe= ls -l =object-pipe= string-upcase =object-pipe= display
+      =basic-unix-pipe= 'ls '-l =object-pipe= string-upcase =object-pipe= display
 
-      (display (rash «=quoting-basic-unix-pipe= ls =object-pipe= string-downcase»))
+      (display (rash «=basic-unix-pipe= 'ls =object-pipe= string-downcase»))
 
       (rash «(define x 5)
             (define y 6)

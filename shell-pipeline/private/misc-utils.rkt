@@ -20,7 +20,10 @@
   (regexp-match #px"\\*|\\?|\\{|\\}" str))
 
 (define (open-output-spec spec)
-  (cond [(equal? spec 'null) (open-output-nowhere)]
+  (cond [(file-redirection-spec? spec)
+         (open-output-file (file-redirection-spec-file spec)
+                           (file-redirection-spec-exists-flag spec))]
+        [(equal? spec 'null) (open-output-nowhere)]
         [(path-string-symbol? spec)
          (open-output-file
           (path-string-sym->path spec)

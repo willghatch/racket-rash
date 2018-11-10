@@ -11,7 +11,10 @@
 
   [rename mk-unix-pipeline-member-spec unix-pipeline-member-spec
           (->* ((listof any/c))
-               (#:err (or/c output-port? false/c path-string-symbol?
+               (#:err (or/c output-port?
+                            false/c
+                            path-string-symbol?
+                            file-redirection-spec?
                             (list/c path-string-symbol?
                                     (or/c 'error 'append 'truncate))
                             pipeline-default-option?)
@@ -26,12 +29,18 @@
                                                     object-pipeline-member-spec?
                                                     composite-pipeline-member-spec?))
                                       composite-pipeline-member-spec?)]
+  [rename mk-file-redirection-spec
+          file-redirect
+          (->* (path-string-symbol?)
+               (#:exists (or/c 'error 'append 'truncate))
+               file-redirection-spec?)]
   )
 
 
  ;; These ones are not really for public consumption.
  pipeline-default-option
  pipeline-default-option?
+ (struct-out file-redirection-spec)
 
  )
 
@@ -64,6 +73,10 @@
   (unix-pipeline-member-spec argl port-err success-pred))
 
 (struct pipeline-default-option ())
+
+(struct file-redirection-spec (file exists-flag))
+(define (mk-file-redirection-spec f #:exists [exists 'error])
+  (file-redirection-spec f exists))
 
 (define (path-string-symbol? pss)
   (or (path-string? pss)

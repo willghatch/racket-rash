@@ -16,7 +16,10 @@
          (list/c path-string-symbol?
          (or/c 'error 'append 'truncate)))
          |#
-         #:err (or/c output-port? false/c path-string-symbol?
+         #:err (or/c output-port?
+                     false/c
+                     path-string-symbol?
+                     file-redirection-spec?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          #:strictness (or/c 'strict 'lazy 'permissive)

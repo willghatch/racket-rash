@@ -22,13 +22,19 @@
   [run-subprocess-pipeline
    (->* ()
         (#:in (or/c input-port? false/c path-string-symbol?)
-         #:out (or/c output-port? false/c path-string-symbol?
+         #:out (or/c output-port?
+                     false/c
+                     path-string-symbol?
+                     file-redirection-spec?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          #:strictness (or/c 'strict 'lazy 'permissive)
          #:lazy-timeout real?
          #:background? any/c
-         #:err (or/c output-port? false/c path-string-symbol?
+         #:err (or/c output-port?
+                     false/c
+                     path-string-symbol?
+                     file-redirection-spec?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          )
@@ -526,6 +532,9 @@
          [err-ports (map pipeline-member-spec-port-err members)]
          [err-ports-with-paths (map (λ (p) (cond [(path-string-symbol? p)
                                                   (path-string-sym->path p)]
+                                                 [(file-redirection-spec? p)
+                                                  (path-string-sym->path
+                                                   (file-redirection-spec-file p))]
                                                  [(list? p)
                                                   (path-string-sym->path (car p))]
                                                  [else #f]))
@@ -547,6 +556,9 @@
                  (- (length err-ports-with-paths)
                     (length (member epp err-ports-with-paths)))]
                 [(list? p) (open-output-file epp #:exists (second p))]
+                [(file-redirection-spec? p)
+                 (open-output-file (file-redirection-spec-file p)
+                                   #:exists (file-redirection-spec-exists-flag p))]
                 [(path-string-symbol? p)
                  (open-output-file (path-string-sym->path p)
                                    #:exists 'error)]
