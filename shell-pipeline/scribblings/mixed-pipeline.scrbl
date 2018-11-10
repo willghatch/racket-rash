@@ -40,8 +40,10 @@ Everything from this module is also provided by the pipeline-macro library.  Thi
 @;                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
 @;                (current-output-port)]
 [#:err err (or/c port? false/c path-string-symbol?
+                file-redirection-spec?
+                special-redirect?
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
-                'string-port]
+                shared-string-port-redirect]
 [#:strictness strictness (or/c 'strict 'lazy 'permissive) 'lazy]
 [#:lazy-timeout lazy-timeout real? 1]
 [#:return-pipeline-object return-pipeline-object any/c #f]
@@ -74,7 +76,9 @@ This function is run by @racket[run-pipeline] macro, and otherwise this function
 @defproc[(unix-pipeline-member-spec? [spec any/c]) boolean?]{}
 @defproc[(unix-pipeline-member-spec [argl any/c]
 [#:err err (or/c port? false/c path-string-symbol?
-                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
+                 file-redirection-spec?
+                 (list/c path-string-symbol? (or/c 'append 'truncate 'error))
+                 )
                  hidden-default-value]
 [#:success success-pred (or/c false/c procedure? (listof any/c)) hidden-default-value])
 pipeline-member-spec?]{

@@ -32,11 +32,15 @@ This library DOES work on MS Windows, and if it can't find a program it retries 
 @section{shell/pipeline reference}
 
 @defproc[(run-subprocess-pipeline [member (or/c list? pipeline-member-spec?)] ...
-[#:in in (or/c input-port? false/c) (current-input-port)]
+[#:in in (or/c input-port? false/c special-redirect?) (current-input-port)]
 [#:out out (or/c port? false/c path-string-symbol?
+                file-redirection-spec?
+                special-redirect?
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
                 (current-output-port)]
 [#:err err (or/c port? false/c path-string-symbol?
+                file-redirection-spec?
+                special-redirect?
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
                 (current-error-port)]
 [#:strictness strictness (or/c 'strict 'lazy 'permissive) 'lazy]
@@ -49,7 +53,10 @@ A @racket[pipeline-member-spec], in addition to the command/argument list, has a
 
 Each member of the pipeline will have its @racket[current-output-port] connected to the @racket[current-input-port] of the next member.  The first and last members use @racket[in] and @racket[out], respectively, to communicate with the outside world.
 
-All ports specified (@racket[in], @racket[out], @racket[err]) may be either a port, the symbol @code{'null}, #f, or a path/string/symbol.  The error port may be @code{'stdout}, in which case the output port will be used.  If #f is given, then a port will be returned in the pipeline struct returned (similar to @racket[subprocess]).  If @code{'null} is given a null output port or empty string port is used.  If a path/string/symbol is given, then a file at that path is opened.
+All ports specified (@racket[in], @racket[out], @racket[err]) may be either a port, the special redirect value @racket[null-redirect], #f, or a path/string/symbol.
+The error port may also be @racket[stdout-redirect], in which case the output port will be used, @racket[string-port-redirect], in which case the error text will be available as a string-port, or @racket[shared-string-port-redirect], which is like @racket[string-port-redirect] except that all parts of a pipeline that use it share the port.
+If #f is given, then a port will be returned in the pipeline struct returned (similar to @racket[subprocess]).
+If a path/string/symbol is given, then a file at that path is opened.
 
 Output and error ports may be a list of a path/string/symbol and any of @code{'error}, @code{'append}, or @code{'truncate} to specify what should happen if the file already exists.
 
@@ -126,6 +133,11 @@ The status of any member is its return code for a process, the return of or exce
 }
 @defproc[(pipeline-status/list [p pipeline?]) (listof any/c)]{A list of the exit statuses of all the pipeline members.}
 
+@defproc[(special-redirect? [v any/c]) any/c]{}
+@defthing[null-redirect special-redirect?]{}
+@defthing[stdout-redirect special-redirect?]{}
+@defthing[string-port-redirect special-redirect?]{}
+@defthing[shared-string-port-redirect special-redirect?]{}
 
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.

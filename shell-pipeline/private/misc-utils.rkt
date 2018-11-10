@@ -23,7 +23,12 @@
   (cond [(file-redirection-spec? spec)
          (open-output-file (file-redirection-spec-file spec)
                            (file-redirection-spec-exists-flag spec))]
-        [(equal? spec 'null) (open-output-nowhere)]
+        [(equal? spec null-redirect) (open-output-nowhere)]
+        [(special-redirect? spec)
+         (error
+          'run-pipeline
+          "special redirect not supported for output of run-pipeline: ~a"
+          (special-redirect-type spec))]
         [(path-string-symbol? spec)
          (open-output-file
           (path-string-sym->path spec)

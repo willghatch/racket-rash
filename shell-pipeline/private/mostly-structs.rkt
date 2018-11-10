@@ -15,6 +15,7 @@
                             false/c
                             path-string-symbol?
                             file-redirection-spec?
+                            special-redirect?
                             (list/c path-string-symbol?
                                     (or/c 'error 'append 'truncate))
                             pipeline-default-option?)
@@ -37,7 +38,16 @@
   )
 
 
+ special-redirect?
+ null-redirect
+ string-port-redirect
+ shared-string-port-redirect
+ stdout-redirect
+ stderr-redirect
+
+
  ;; These ones are not really for public consumption.
+ special-redirect-type
  pipeline-default-option
  pipeline-default-option?
  (struct-out file-redirection-spec)
@@ -81,3 +91,10 @@
 (define (path-string-symbol? pss)
   (or (path-string? pss)
       (and (symbol? pss) (path-string? (symbol->string pss)))))
+
+(struct special-redirect (type))
+(define null-redirect (special-redirect 'null))
+(define string-port-redirect (special-redirect 'string-port))
+(define shared-string-port-redirect (special-redirect 'shared-string-port))
+(define stdout-redirect (special-redirect 'stdout))
+(define stderr-redirect (special-redirect 'stderr))

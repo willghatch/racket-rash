@@ -13,7 +13,9 @@
    (define p+ep-err-str  "p+ep stderr")
    (define (p+ep)
      (printf p+ep-out-str)
+     (flush-output (current-output-port))
      (eprintf p+ep-err-str)
+     (flush-output (current-error-port))
      )
 
    mkdir -p $test-dir
@@ -42,6 +44,10 @@
    (check-equal? #{cat $test-dir/err1} p+ep-err-str)
    (check-not-exn (λ () {$p+ep #:e>> $test-dir/err1 &>! $test-dir/out1}))
    (check-equal? #{cat $test-dir/err1} (string-append p+ep-err-str p+ep-err-str))
+
+
+   (check-not-exn (λ () {$p+ep #:err stdout-redirect &>! $test-dir/out1}))
+   (check-equal? #{cat $test-dir/out1} (string-append p+ep-out-str p+ep-err-str))
 
    rm -rf $test-dir
    }

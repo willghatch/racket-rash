@@ -91,7 +91,7 @@
   (syntax-parser [_ #'(λ (x) (string-trim (begin0 (port->string x)
                                             (close-input-port x))))]))
 (define-syntax-parameter default-pipeline-err-out
-  (syntax-parser [_ #''string-port]))
+  (syntax-parser [_ #'mp:string-port-redirect]))
 
 (define-for-syntax (with-pipeline-config* stx let-form parameterization-form)
   ;; TODO - the in out and err expressions need to be lexical and not syntax-parameter-y too.

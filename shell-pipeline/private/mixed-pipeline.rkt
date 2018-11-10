@@ -6,7 +6,7 @@
  (contract-out
   [run-mixed-pipeline
    (->* ()
-        (#:in (or/c input-port? false/c path-string-symbol?)
+        (#:in (or/c input-port? false/c path-string-symbol? special-redirect?)
          #:out any/c
          #|
          ;; TODO
@@ -20,6 +20,7 @@
                      false/c
                      path-string-symbol?
                      file-redirection-spec?
+                     special-redirect?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          #:strictness (or/c 'strict 'lazy 'permissive)
@@ -52,6 +53,15 @@
  composite-pipeline-member-spec?
  and/success
  or/success
+
+ file-redirect
+ special-redirect?
+ null-redirect
+ string-port-redirect
+ shared-string-port-redirect
+ stdout-redirect
+ stderr-redirect
+
  )
 
 
@@ -248,7 +258,7 @@
          #:in [init-in-port (open-input-string "")]
          #:out [final-output-port-or-transformer
                 default-output-transformer]
-         #:err [default-err 'string-port]
+         #:err [default-err shared-string-port-redirect]
          #:strictness [strictness 'lazy]
          #:lazy-timeout [lazy-timeout 1]
          ;; TODO - make consistent with other run-pipelines

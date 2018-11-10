@@ -21,11 +21,12 @@
 
   [run-subprocess-pipeline
    (->* ()
-        (#:in (or/c input-port? false/c path-string-symbol?)
+        (#:in (or/c input-port? false/c path-string-symbol? special-redirect?)
          #:out (or/c output-port?
                      false/c
                      path-string-symbol?
                      file-redirection-spec?
+                     special-redirect?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          #:strictness (or/c 'strict 'lazy 'permissive)
@@ -35,6 +36,7 @@
                      false/c
                      path-string-symbol?
                      file-redirection-spec?
+                     special-redirect?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
          )
@@ -42,7 +44,7 @@
         pipeline?)]
   [run-subprocess-pipeline/out
    (->* ()
-        (#:in (or/c input-port? false/c path-string-symbol?)
+        (#:in (or/c input-port? false/c path-string-symbol? special-redirect?)
          #:strictness (or/c 'strict 'lazy 'permissive)
          #:lazy-timeout real?)
         #:rest (listof (or/c list? pipeline-member-spec?))
@@ -85,9 +87,19 @@
  (rename-out [unix-pipeline-member-spec? pipeline-member-spec?])
  path-string-symbol?
 
+
  prop:alias-func
  and/success
  or/success
+
+ file-redirect
+ special-redirect?
+ null-redirect
+ string-port-redirect
+ shared-string-port-redirect
+ stdout-redirect
+ stderr-redirect
+
  )
 
 (module+ resolve-command-path
@@ -430,7 +442,6 @@
                                  #:out [out (current-output-port)]
                                  #:strictness [strictness 'lazy]
                                  #:background? [bg? #f]
-                                 ;; TODO -- allow 'string-port
                                  #:err [default-err (current-error-port)]
                                  #:lazy-timeout [lazy-timeout 1]
                                  . members)
@@ -452,7 +463,7 @@
                           #:in [in (open-input-string "")]
                           . members)
   (let* ([out (open-output-string)]
-         [err (open-output-string)]
+         [err (open-output-string 'run-subprocess-pipeline/out_stderr)]
          [pline-spec (make-pipeline-spec #:in in #:out out
                                          #:strictness strictness
                                          #:lazy-timeout lazy-timeout
@@ -470,7 +481,7 @@
         (error 'run-subprocess-pipeline/out
                "unsuccessful pipeline with return ~a and stderr: ~v"
                status
-               (get-output-string err))
+               (pipeline-error-captured-stderr pline))
         (get-output-string out))))
 
 #;(define (run-pipeline/return #:in [in (current-input-port)]
@@ -504,7 +515,13 @@
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
          [to-port (pipeline-port-to pipeline-spec)]
-         [to-file-port (cond [(equal? to-port 'null) (open-input-string "")]
+         [to-file-port (cond [(special-redirect? to-port)
+                              (if (equal? to-port null-redirect)
+                                  (open-input-string "")
+                                  (error
+                                   'run-pipeline
+                                   "special redirection not supported as input redirection: ~a"
+                                   (special-redirect-type to-port)))]
                              [(path-string-symbol? to-port)
                               (open-input-file (path-string-sym->path to-port))]
                              [else #f])]
@@ -539,6 +556,7 @@
                                                   (path-string-sym->path (car p))]
                                                  [else #f]))
                                     err-ports)]
+         [shared-string-port-box (box #f)]
          [err-ports-mapped-with-dup-numbers
           (for/list ([p err-ports]
                      [epp err-ports-with-paths]
@@ -546,9 +564,21 @@
             (with-handlers ([(λ _ #t)(λ (e) e)])
               ;; if an exception is thrown, catch it and save it for later
               (cond
-                [(equal? p 'stdout) p]
-                [(equal? p 'string-port) (open-output-string)]
-                [(equal? p 'null) (open-output-nowhere)]
+                [(equal? p null-redirect) (open-output-nowhere)]
+                [(equal? p stdout-redirect) 'stdout]
+                [(equal? p string-port-redirect)
+                 (open-output-string 'stderr-string-redirect)]
+                [(equal? p shared-string-port-redirect)
+                 (or (unbox shared-string-port-box)
+                     (let ([str-port (open-output-string
+                                      'shared-stderr-string-redirect)])
+                       (set-box! shared-string-port-box str-port)
+                       str-port))]
+                [(special-redirect? p)
+                 (error
+                  'run-pipeline
+                  "special redirect not supported for stderr: ~a"
+                  (special-redirect-type p))]
                 ;; If this is the second instance of the file, note the number
                 ;; so they can share ports rather than trying to open
                 ;; a file twice.
@@ -645,6 +675,7 @@
   In the end there is a third pass to start any pipeline members marked to run
   in the same thread, which is basically a hack, but I deemed it worth it to
   let `cd` be run in a pipeline (for syntactic easiness in Rash).
+  TODO - this should go away!  `cd` is a line macro now.
   |#
   (struct pmi
     ;; pmi for pipeline-member-intermediate -- has info important for running
