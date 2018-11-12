@@ -43,6 +43,6 @@ Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html)
 Here's a quick demo video of Rash in action:[
 ![asciicast](https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26.png)](https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26)
 
-I gave a talk about Rash at RacketCon 2017.  It's slightly out of date, but you can watch it  [here](https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y).
+I published [a paper about Rash in GPCE 2018](http://willghatch.net/publications/rash-gpce-2018-preprint.pdf).
 
 This repo also contains the [shell-pipeline](https://docs.racket-lang.org/shell-pipeline/index.html) and [linea](http://docs.racket-lang.org/linea/index.html) packages.  They mostly support Rash itself, so they live in the same repo.
