@@ -4,5 +4,5 @@
 ;; Some tests require subprocess and file system support, so those tests
 ;; are in a different submodule that the package system's automated testing
 ;; doesn't run, since those would fail in its sandbox.
-raco test --submodule test --submodule non-sandboxed-test \
+raco test --no-run-if-absent --submodule test --submodule non-sandboxed-test \
   --package linea shell-pipeline rash

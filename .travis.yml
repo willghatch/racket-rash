@@ -46,13 +46,12 @@ before_script:
 script:
 #  - raco make main.rkt
 #  - raco test -x .
-
 # OR: If your repo is a Racket package with an info.rkt that includes
 # some `deps`:
-#
-# script:
+ - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/linea
+ - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/shell-pipeline
  - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/rash
- - raco setup -D --check-pkg-deps rash
- - raco test -x -p rash
+ - raco setup --check-pkg-deps linea shell-pipeline rash
+ - racket $TRAVIS_BUILD_DIR/run-all-tests
 
 after_script:
