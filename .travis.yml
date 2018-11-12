@@ -51,7 +51,10 @@ script:
  - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/linea
  - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/shell-pipeline
  - raco pkg install --deps search-auto $TRAVIS_BUILD_DIR/rash
- - raco setup --check-pkg-deps linea shell-pipeline rash
+ # This setup step probably isn't necessary, because pkg install does a setup.
+ # But I'm not sure it does --check-pkg-deps.
+ #- raco setup --check-pkg-deps --pkgs linea shell-pipeline rash
+ - raco setup --check-pkg-deps
  - racket $TRAVIS_BUILD_DIR/run-all-tests
 
 after_script:
