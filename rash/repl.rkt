@@ -147,7 +147,10 @@
 
       (define set-completion-function!
         (dynamic-require 'readline/readline 'set-completion-function!))
-      (set-completion-function! composite-complete)
+      (set-completion-function! (make-composite-completer complete-paths
+                                                          ;complete-commands
+                                                          ;complete-namespaced
+                                                          ))
       (current-prompt-function
        (dynamic-require 'rash/private/rashrc-lib 'basic-prompt))))
 

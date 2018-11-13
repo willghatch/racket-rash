@@ -5,8 +5,9 @@
 
 (provide
  complete-paths
+ complete-commands
  complete-namespaced
- composite-complete
+ make-composite-completer
  cwd-hack-box
 
  basic-prompt
@@ -44,15 +45,39 @@
 ;; Let's hack around that.
 (define cwd-hack-box (box (current-directory)))
 
-(define (composite-complete pat)
-  (append (complete-paths pat)
-          (complete-namespaced pat)))
+(define (make-composite-completer . completers)
+  (λ (pat)
+    (flatten
+     (for/list ([c completers])
+       (c pat)))))
+
 
 (define (complete-namespaced pat)
   (with-handlers ([(λ _ #t) (λ (e) '())])
     (define names (map symbol->string (namespace-mapped-symbols)))
     (define qpat (string-append "^" (regexp-quote pat)))
     (filter (λ (n) (regexp-match qpat n)) names)))
+
+(define (complete-commands pat)
+  (with-handlers ([(λ _ #t) (λ (e) (eprintf "exn: ~a\n" e)'())])
+    (define path (getenv "PATH"))
+    (define path-parts (string-split path ":"))
+    (define files-on-path (flatten
+                           (map (λ (d) (with-handlers ([(λ _ #t) (λ (e) '())])
+                                         (map (λ (p) (build-path d p))
+                                              (directory-list d))))
+                                path-parts)))
+    (define commands (filter (λ (x) (with-handlers ([(λ _ #t) (λ (e) #f)])
+                                      (and (file-exists? x)
+                                           (member
+                                            'execute
+                                            (file-or-directory-permissions x)))))
+                             files-on-path))
+    (define (basename p)
+      (path->string (car (reverse (explode-path p)))))
+    (define command-basenames (map basename commands))
+    (define qpat (string-append "^" (regexp-quote pat)))
+    (filter (λ (n) (regexp-match qpat n)) command-basenames)))
 
 (define (complete-paths pstr)
   (set-completion-append-character! #\null)
