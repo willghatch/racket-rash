@@ -146,8 +146,8 @@
              (string-append p+ep-err-str p+ep-err-str)))))
     (λ ()
       (run-subprocess-pipeline/out
-       (pipeline-member-spec `(,p+ep) #:err string-port-redirect)
-       (pipeline-member-spec `(,p+ep error) #:err string-port-redirect)
+       (pipeline-member-spec `(,p+ep) #:err stderr-capture-redirect)
+       (pipeline-member-spec `(,p+ep error) #:err stderr-capture-redirect)
        )))
 
    (check-exn
@@ -161,8 +161,8 @@
         (string-append p+ep-err-str p+ep-err-str))))
     (λ ()
       (run-subprocess-pipeline/out
-       (pipeline-member-spec `(,p+ep) #:err shared-string-port-redirect)
-       (pipeline-member-spec `(,p+ep error) #:err shared-string-port-redirect)
+       (pipeline-member-spec `(,p+ep) #:err shared-stderr-capture-redirect)
+       (pipeline-member-spec `(,p+ep error) #:err shared-stderr-capture-redirect)
        )))
 
 

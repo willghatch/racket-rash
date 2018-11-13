@@ -43,7 +43,7 @@ Everything from this module is also provided by the pipeline-macro library.  Thi
                 file-redirection-spec?
                 special-redirect?
                 (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
-                shared-string-port-redirect]
+                stderr-capture-redirect]
 [#:strictness strictness (or/c 'strict 'lazy 'permissive) 'lazy]
 [#:lazy-timeout lazy-timeout real? 1]
 [#:return-pipeline-object return-pipeline-object any/c #f]

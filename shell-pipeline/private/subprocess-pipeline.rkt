@@ -95,8 +95,8 @@
  file-redirect
  special-redirect?
  null-redirect
- string-port-redirect
- shared-string-port-redirect
+ stderr-capture-redirect
+ shared-stderr-capture-redirect
  stdout-redirect
  stderr-redirect
 
@@ -566,12 +566,12 @@
               (cond
                 [(equal? p null-redirect) (open-output-nowhere)]
                 [(equal? p stdout-redirect) 'stdout]
-                [(equal? p string-port-redirect)
-                 (open-output-string 'stderr-string-redirect)]
-                [(equal? p shared-string-port-redirect)
+                [(equal? p stderr-capture-redirect)
+                 (open-output-string 'stderr-capture-redirect)]
+                [(equal? p shared-stderr-capture-redirect)
                  (or (unbox shared-string-port-box)
                      (let ([str-port (open-output-string
-                                      'shared-stderr-string-redirect)])
+                                      'shared-stderr-capture-redirect)])
                        (set-box! shared-string-port-box str-port)
                        str-port))]
                 [(special-redirect? p)

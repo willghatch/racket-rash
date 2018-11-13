@@ -54,7 +54,7 @@ A @racket[pipeline-member-spec], in addition to the command/argument list, has a
 Each member of the pipeline will have its @racket[current-output-port] connected to the @racket[current-input-port] of the next member.  The first and last members use @racket[in] and @racket[out], respectively, to communicate with the outside world.
 
 All ports specified (@racket[in], @racket[out], @racket[err]) may be either a port, the special redirect value @racket[null-redirect], #f, or a path/string/symbol.
-The error port may also be @racket[stdout-redirect], in which case the output port will be used, @racket[string-port-redirect], in which case the error text will be available as a string-port, or @racket[shared-string-port-redirect], which is like @racket[string-port-redirect] except that all parts of a pipeline that use it share the port.
+The error port may also be @racket[stdout-redirect], in which case the output port will be used, @racket[stderr-capture-redirect], in which case the error text will be available as a string-port, or @racket[shared-stderr-capture-redirect], which is like @racket[stderr-capture-redirect] except that all parts of a pipeline that use it share the port.
 If #f is given, then a port will be returned in the pipeline struct returned (similar to @racket[subprocess]).
 If a path/string/symbol is given, then a file at that path is opened.
 
@@ -136,8 +136,8 @@ The status of any member is its return code for a process, the return of or exce
 @defproc[(special-redirect? [v any/c]) any/c]{}
 @defthing[null-redirect special-redirect?]{}
 @defthing[stdout-redirect special-redirect?]{}
-@defthing[string-port-redirect special-redirect?]{}
-@defthing[shared-string-port-redirect special-redirect?]{}
+@defthing[stderr-capture-redirect special-redirect?]{}
+@defthing[shared-stderr-capture-redirect special-redirect?]{}
 
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.

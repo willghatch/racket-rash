@@ -57,8 +57,8 @@
  file-redirect
  special-redirect?
  null-redirect
- string-port-redirect
- shared-string-port-redirect
+ stderr-capture-redirect
+ shared-stderr-capture-redirect
  stdout-redirect
  stderr-redirect
 
@@ -258,7 +258,7 @@
          #:in [init-in-port (open-input-string "")]
          #:out [final-output-port-or-transformer
                 default-output-transformer]
-         #:err [default-err shared-string-port-redirect]
+         #:err [default-err stderr-capture-redirect]
          #:strictness [strictness 'lazy]
          #:lazy-timeout [lazy-timeout 1]
          ;; TODO - make consistent with other run-pipelines

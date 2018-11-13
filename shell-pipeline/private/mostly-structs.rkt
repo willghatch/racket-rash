@@ -40,8 +40,8 @@
 
  special-redirect?
  null-redirect
- string-port-redirect
- shared-string-port-redirect
+ stderr-capture-redirect
+ shared-stderr-capture-redirect
  stdout-redirect
  stderr-redirect
 
@@ -93,8 +93,11 @@
       (and (symbol? pss) (path-string? (symbol->string pss)))))
 
 (struct special-redirect (type))
+;; null-redirect is supported by input, output, and error ports
 (define null-redirect (special-redirect 'null))
-(define string-port-redirect (special-redirect 'string-port))
-(define shared-string-port-redirect (special-redirect 'shared-string-port))
+;; The next ones are only supported by error ports
+(define stderr-capture-redirect (special-redirect 'stderr-capture))
+(define shared-stderr-capture-redirect (special-redirect 'shared-stderr-capture))
 (define stdout-redirect (special-redirect 'stdout))
+;; TODO - this one is not supported at all, but it should be (by output ports).
 (define stderr-redirect (special-redirect 'stderr))
