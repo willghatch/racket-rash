@@ -20,7 +20,6 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 
  ;; treat the pipeline as an object pipe if the command is bound in racket,
  ;; otherwise treat it as a unix command.
- =obj-if-def/basic-unix-if-undef=
  =obj-if-def/unix-if-undef=
 
  =map=
@@ -70,17 +69,11 @@ These are essentially a bunch of proof-of-concept pipeline operators.
                                [e #'e]))
                       pargs)))])
 
-(pipeop =obj-if-def/basic-unix-if-undef=
-        [(_ cmd arg ...)
-         (if (and (identifier? #'cmd) (identifier-binding #'cmd))
-             #'(=object-pipe= cmd arg ...)
-             #'(=quoting-basic-unix-pipe= cmd arg ...))])
-
 (pipeop =obj-if-def/unix-if-undef=
         [(_ cmd arg ...)
          (if (and (identifier? #'cmd) (identifier-binding #'cmd))
              #'(=object-pipe= cmd arg ...)
-             #'(=globbing-basic-unix-pipe= cmd arg ...))])
+             #'(=unix-pipe= cmd arg ...))])
 
 (define (cur-obj-standin)
   (error 'cur-obj-standin "this shouldn't happen..."))
@@ -168,7 +161,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 (require "../private/define-pipeline-alias.rkt")
 (define-pipeline-alias lsl
   (syntax-parser [(_ arg ...)
-                  #'(=quoting-basic-unix-pipe= 'ls '-l '--color=auto arg ...)]))
+                  #'(=unix-pipe= 'ls '-l '--color=auto arg ...)]))
 (define-simple-pipeline-alias ls 'ls '--color=auto)
 
 

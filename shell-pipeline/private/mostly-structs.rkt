@@ -11,7 +11,11 @@
 
   [rename mk-unix-pipeline-member-spec unix-pipeline-member-spec
           (->* ((listof any/c))
-               (#:err (or/c output-port? false/c path-string-symbol?
+               (#:err (or/c output-port?
+                            false/c
+                            path-string-symbol?
+                            file-redirection-spec?
+                            special-redirect?
                             (list/c path-string-symbol?
                                     (or/c 'error 'append 'truncate))
                             pipeline-default-option?)
@@ -26,12 +30,27 @@
                                                     object-pipeline-member-spec?
                                                     composite-pipeline-member-spec?))
                                       composite-pipeline-member-spec?)]
+  [rename mk-file-redirection-spec
+          file-redirect
+          (->* (path-string-symbol?)
+               (#:exists (or/c 'error 'append 'truncate))
+               file-redirection-spec?)]
   )
 
 
+ special-redirect?
+ null-redirect
+ stderr-capture-redirect
+ shared-stderr-capture-redirect
+ stdout-redirect
+ stderr-redirect
+
+
  ;; These ones are not really for public consumption.
+ special-redirect-type
  pipeline-default-option
  pipeline-default-option?
+ (struct-out file-redirection-spec)
 
  )
 
@@ -65,6 +84,20 @@
 
 (struct pipeline-default-option ())
 
+(struct file-redirection-spec (file exists-flag))
+(define (mk-file-redirection-spec f #:exists [exists 'error])
+  (file-redirection-spec f exists))
+
 (define (path-string-symbol? pss)
   (or (path-string? pss)
       (and (symbol? pss) (path-string? (symbol->string pss)))))
+
+(struct special-redirect (type))
+;; null-redirect is supported by input, output, and error ports
+(define null-redirect (special-redirect 'null))
+;; The next ones are only supported by error ports
+(define stderr-capture-redirect (special-redirect 'stderr-capture))
+(define shared-stderr-capture-redirect (special-redirect 'shared-stderr-capture))
+(define stdout-redirect (special-redirect 'stdout))
+;; TODO - this one is not supported at all, but it should be (by output ports).
+(define stderr-redirect (special-redirect 'stderr))

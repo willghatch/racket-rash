@@ -189,7 +189,7 @@
      #'(splicing-with-rash-config #:in (open-input-string "")
                                   #:out (λ (p) (string-trim (begin0 (port->string p)
                                                               (close-input-port p))))
-                                  #:err 'string-port
+                                  #:err stderr-capture-redirect
                                   ;#:starter =unix-pipe=
                                   ;#:line-macro run-pipeline
                                   body)]))
@@ -334,7 +334,7 @@ But how can it be done in a way that let those arguments affect the reader?
                 rest-stx)])
        (with-syntax ([mk-input (opref tab '#:in #'(open-input-string ""))]
                      [mk-output (opref tab '#:out #'default-output-port-transformer)]
-                     [mk-err-output (opref tab '#:err #''string-port)]
+                     [mk-err-output (opref tab '#:err #'stderr-capture-redirect)]
                      ;; TODO - make it possible for these to inherit
                      [mk-default-starter (opref tab '#:starter
                                                 #'=unix-pipe=)]
@@ -387,6 +387,6 @@ But how can it be done in a way that let those arguments affect the reader?
             #'(rash-expressions-begin
                ((open-input-string "")
                 default-output-port-transformer
-                'string-port)
+                shared-string-port-redirect)
                parsed-rash-code))])))))
 

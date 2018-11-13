@@ -168,14 +168,6 @@ Produces a unix-pipeline-member-spec with the given arguments as the process/fun
 
 Options all take an argument, must precede any arguments, and are as follows:
 
-@racket[#:as] - This is sugar for adding on an object pipeline member afterward that parses the output somehow.  This should be given either #f (no transformation), a port reading function (eg. @racket[port->string]), or one of a pre-set list of symbols:  @racket['string], @racket['trim], @racket['lines], or @racket['words].
-
-@racket[#:e>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Produces an error if the file exists.
-
-@racket[#:e>!] - Accepts a file name (as an identifier), redirects the error stream to that file.  Truncates the file if it exists.
-
-@racket[#:e>>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Appends to the file if it exists.
-
 @racket[#:err] - Takes an expression to produce an error redirection value suitable for @racket[unix-pipeline-member-spec].
 
 @racket[#:success] - Takes an expression suitable for the @racket[#:success] argument of @racket[unix-pipeline-member-spec].
@@ -186,24 +178,21 @@ Arguments are evaluated left-to-right, and the first argument (that does not pro
 
 }
 
-@defform[#:kind "pipeline-operator" (=quoting-basic-unix-pipe= options ... args ...+)]{
-Like @racket[=basic-unix-pipe=], except that it quotes all of its arguments that are identifiers.  All non-identifier arguments (notably parenthesized forms) are not quoted, and thus you can unquote by using parentheses.
-
-@codeblock|{
-(define x "/etc")
-(define-syntax id (syntax-parser [(_ x) #'x]))
-
-;; I find I really don't mind this as a means of unquoting here.
-(run-pipeline =quoting-basic-unix-pipe= ls (id x))
-}|
-}
-
 @defform[#:kind "pipeline-operator" (=unix-pipe= arg ...+)]{
 This is the pipe that does more or less what you expect.  It does tilde expansion (~ -> $HOME).  It does globbing.  When you have $identifiers-with-dollar-signs they are expanded into variable references.  When $DOLLAR_IDENTIFIERS_ARE_CAPITALIZED they are expanded to environment variable lookups.
 
-After all that expansion, it passes through to @racket[=quoting-basic-unix-pipe=].
+The operator quotes other arguments, and then passes through to @racket[=basic-unix-pipe=].  But it takes some extra optional arguments:
 
-However, if the first argument is a pipeline alias defined with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias], then the operator from that alias is swapped in instead, skipping everything else that this operator would normally do.
+@racket[#:as] - This is sugar for adding on an object pipeline member afterward that parses the output somehow.  This should be given either #f (no transformation), a port reading function (eg. @racket[port->string]), or one of a pre-set list of symbols:  @racket['string], @racket['trim], @racket['lines], or @racket['words].
+
+@racket[#:e>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Produces an error if the file exists.
+
+@racket[#:e>!] - Accepts a file name (as an identifier), redirects the error stream to that file.  Truncates the file if it exists.
+
+@racket[#:e>>] - Accepts a file name (as an identifier), redirects the error stream to that file.  Appends to the file if it exists.
+
+
+BUT: if the first argument is a pipeline alias defined with @racket[define-pipeline-alias] or @racket[define-simple-pipeline-alias], then the operator from that alias is swapped in instead, skipping everything else that this operator would normally do.
 
 @codeblock|{
 (run-pipeline =unix-pipe= echo $HOME/*.rkt)

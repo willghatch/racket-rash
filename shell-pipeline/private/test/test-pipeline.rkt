@@ -34,6 +34,7 @@
   ;; Only tests that only rely on functions should go here -- calling
   ;; external programs will fail in the test environment.
   (require rackunit)
+  (require racket/exn)
 
   (check-equal? (run-pipeline/out `(,my-echo hello))
                 "hello\n" )
@@ -61,7 +62,7 @@
                       (run-pipeline/out #:strictness 'permissive
                                         (pipeline-member-spec
                                          (list (λ () (error 'my-test-func "exceptional!")))
-                                         #:err 'stdout)
+                                         #:err stdout-redirect)
                                         (list (λ ()
                                                 (display (port->string (current-input-port)))
                                                 0))))
@@ -119,6 +120,52 @@
    (run-pipeline/out `(,(alias-func (λ _ `(,my-echo hellooooo)))
                        one two three four))
    "hellooooo\n")
+
+
+   (define p+ep-out-str  "p+ep stdout")
+   (define p+ep-err-str  "p+ep stderr")
+   (define (p+ep [flag #f])
+     (eprintf p+ep-err-str)
+     (flush-output (current-error-port))
+     (printf p+ep-out-str)
+     (flush-output (current-output-port))
+     (port->string (current-input-port))
+     (if (equal? flag 'error)
+         (error 'p+ep)
+         (void))
+     )
+
+   (check-exn
+    (λ (e)
+      (and
+       (string-contains?
+        (exn->string e)
+        p+ep-err-str)
+       (not (string-contains?
+             (exn->string e)
+             (string-append p+ep-err-str p+ep-err-str)))))
+    (λ ()
+      (run-subprocess-pipeline/out
+       (pipeline-member-spec `(,p+ep) #:err stderr-capture-redirect)
+       (pipeline-member-spec `(,p+ep error) #:err stderr-capture-redirect)
+       )))
+
+   (check-exn
+    (λ (e)
+      (and
+       (string-contains?
+        (exn->string e)
+        p+ep-err-str)
+       (string-contains?
+        (exn->string e)
+        (string-append p+ep-err-str p+ep-err-str))))
+    (λ ()
+      (run-subprocess-pipeline/out
+       (pipeline-member-spec `(,p+ep) #:err shared-stderr-capture-redirect)
+       (pipeline-member-spec `(,p+ep error) #:err shared-stderr-capture-redirect)
+       )))
+
+
 
   )
 

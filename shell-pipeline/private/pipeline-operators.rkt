@@ -35,7 +35,6 @@
  =object-pipe/form=
 
  =basic-unix-pipe=
- =quoting-basic-unix-pipe=
  )
 
 (require
@@ -276,11 +275,10 @@ re-appended).
             (arg ...))))]))
 
 
-(define (closing-port->string x)
-  (begin0 (port->string x) (close-input-port x)))
 (define-for-syntax (with-port-sugar pipe-stx)
   #`(=composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
-                                                      (closing-port->string x)
+                                                      (begin0 (port->string x)
+                                                        (close-input-port x))
                                                       x)))
                       #,pipe-stx))
 
@@ -299,32 +297,6 @@ re-appended).
 
 ;;;; unix-y pipes
 
-(define (apply-output-transformer transformer out-port)
-  (match transformer
-    ['port out-port]
-    ['string (closing-port->string out-port)]
-    ['trim (string-trim (closing-port->string out-port))]
-    ['lines (string-split (closing-port->string out-port) "\n")]
-    ['words (string-split (closing-port->string out-port))]
-    [tx (if (procedure? tx)
-            ;; TODO - if this doesn't read the whole port there could be problems
-            (tx out-port)
-            (error 'apply-output-transformer
-                   (format "Neither a procedure nor a known transformer name: ~a"
-                           tx)))]))
-
-
-
-(define-for-syntax unix-pipe-option-table
-  (list (list '#:as check-expression)
-        (list '#:e> check-expression)
-        (list '#:e>! check-expression)
-        (list '#:e>> check-expression)
-        (list '#:err check-expression)
-        (list '#:env check-expression)
-        ;; IE success predicate -- is returning 1 an error?
-        (list '#:success check-expression)
-        ))
 
 ;; This is to evaluate the command form before any arguments, so I can raise
 ;; an error early if the command doesn't exist.  This provides better error
@@ -363,34 +335,22 @@ re-appended).
     [(arg-maybe-opt ...+)
      (define-values (opts rest-stx)
        (parse-keyword-options #'(arg-maybe-opt ...)
-                              unix-pipe-option-table
-                              #:no-duplicates? #t
-                              #:incompatible '((#:e> #:e>! #:e>> #:err))))
+                              (list
+                               (list '#:err check-expression)
+                               (list '#:env check-expression)
+                               (list '#:success check-expression)
+                               )
+                              #:no-duplicates? #t))
      (syntax-parse rest-stx
        [(arg ...)
         (let ([success-pred (opref opts '#:success #'(pipeline-default-option))]
               ;; TODO - hook up env
               [env-extend (opref opts '#:env #''())]
-              [err (cond [(opref opts '#:e> #f)
-                          => (syntax-parser [out #'(list (quote out) 'error)])]
-                         [(opref opts '#:e>> #f)
-                          => (syntax-parser [out #'(list (quote out) 'append)])]
-                         [(opref opts '#:e>! #f)
-                          => (syntax-parser [out #'(list (quote out) 'truncate)])]
-                         [(opref opts '#:err #f)]
-                         [else #'(pipeline-default-option)])]
-              [as (opref opts '#:as #f)])
-          (if as
-              #`(composite-pipeline-member-spec
-                 (list
-                  (unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
-                                             #:err #,err
-                                             #:success #,success-pred)
-                  (object-pipeline-member-spec (λ (out-port)
-                                                 (apply-output-transformer #,as out-port)))))
-              #`(unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
-                                           #:err #,err
-                                           #:success #,success-pred)))])]))
+              [err (or (opref opts '#:err #f)
+                       #'(pipeline-default-option))])
+          #`(unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
+                                       #:err #,err
+                                       #:success #,success-pred))])]))
 
 (define-for-syntax (basic-unix-pipe stx)
   (syntax-parse stx
@@ -401,13 +361,3 @@ re-appended).
 
 (define-pipeline-operator =basic-unix-pipe=
   #:operator basic-unix-pipe)
-
-(pipeop =quoting-basic-unix-pipe=
-        [(_ arg ...+)
-         (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
-           #`(=basic-unix-pipe=
-              #,@kwargs
-              #,@(map (λ (s) (syntax-parse s
-                               [x:id #'(quote x)]
-                               [e #'e]))
-                      pargs)))])

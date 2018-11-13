@@ -27,7 +27,7 @@
    (check-not-exn
     (λ ()
       (for ([i (in-range exhaustion-number)])
-        {cat - &< $test-dir/file1 &>! $test-dir/file2})))
+        {cat - #:e>! $test-dir/file3 &< $test-dir/file1 &>! $test-dir/file2})))
    (check-equal?
     #{cat $test-dir/file1}
     #{cat $test-dir/file2})
