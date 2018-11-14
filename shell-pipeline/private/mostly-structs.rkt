@@ -50,7 +50,9 @@
  special-redirect-type
  pipeline-default-option
  pipeline-default-option?
- (struct-out file-redirection-spec)
+ file-redirection-spec?
+ file-redirection-spec-file
+ file-redirection-spec-exists-flag
 
  )
 

@@ -18,7 +18,7 @@ syntax/parse
 Linea is a line-oriented reader and one of the main components of the @hyperlink["https://docs.racket-lang.org/rash/index.html"]{Rash language}.  While it was designed for Rash, it is flexible and suited to many potential line-oriented languages.  Linea is simply another way to write s-expressions.@margin-note{Note that you can't represent any arbitrary s-expression with Linea, but you can represent a very useful subset of them.}
 
 @section{Stability}
-Not yet stable.  Things may still change a bit.
+Everything documented here is stable unless it says otherwise.
 
 
 @section{Linea Guide}
@@ -133,7 +133,7 @@ my-for f in file1.txt file2.txt do {
 }
 
 @defform[#:id default-line-macro default-line-macro]{
-Syntax parameter used to determine which line macro to place when one is not explicitly given.
+Used to determine which line macro to place when one is not explicitly given.
 
 Use @racket[with-default-line-macro] to set it for a region of code.
 }

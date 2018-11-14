@@ -35,7 +35,7 @@ syntax/parse
 
 @section{Stability}
 
-Some things in Rash are not entirely stable.  However, things from the GPCE paper are all stable.  If any of them don't work at any point it's a bug.
+Some things in Rash are not entirely stable.  However, things from the GPCE paper are all stable.  If any of them don't work at any point it's a bug.  Unstable things should all be labelled in the documentation.
 
 Rash is definitely usable as an interactive shell/repl as well as for writing scripts, and I'm anxious to hear feedback from more users to understand what they like and what can be improved.
 
@@ -306,15 +306,25 @@ TODO - options for changing the reader, etc.
 
 Note that the input/output/error-output have different defaults for the rash macro than for the #lang or repl.
 
+@bold{
+Unstable.
+
+I don't want to commit to this, yet.
+}
+
 }
 
 @defform[(make-rash-transformer options ...)]{
-Semi-deprecated.
-
 This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like @racket[rash], but with different default values for the available options.
 
 @(racketblock
 (define-syntax my-rash (make-rash-transformer #:starter =basic-object-pipe=)))
+
+@bold{
+Unstable.
+
+I don't want to commit to this, yet.
+}
 }
 
 @;@defform[(make-rash-module-begin-transformer options ...)]{
@@ -334,11 +344,19 @@ Note that the default #lang rash has its input/output/error-output as stdin/stdo
 
 
 @defform[#:kind "line-macro" (cd directory)]{
-Change directory to given directory.  The directory is quoted, so just put a literal path or a string.
+Change @racket[current-directory] to given directory.  The directory is quoted, so just put a literal path or a string.
 
 If no argument is given, it changes to the user's home directory.
 
-Eventually this will be replaced by a better version, but it should be backwards compatible.
+@bold{
+Unstable.
+
+The current version does dollar and tilde expansion, and the way that works may change in the future.
+
+Additionally, I may add support for things like @tt{cd -} a la bash and friends, as well as more general directiory history tracking.  But I'm not really sure yet.
+
+But basic @tt{cd my-directory} type stuff will definitely keep working the same.
+}
 }
 
 @defform[#:kind "line-macro" (run-pipeline arg ...)]{
@@ -349,13 +367,24 @@ Same as @racket[shell/pipeline-macro/run-pipeline], except wrapped as a line-mac
 Determines how expressions at the top of #lang rash modules (IE forms that aren't definitions) and expressions in the Rash REPL are printed.  Note that it doesn't actually do the printing -- it returns a string, which is then printed by the implicit printing wraps at the top of a module or (probably) by the @racket[current-prompt-function].
 
 The default takes the result out of terminated pipelines to print rather than the pipeline object itself.  I plan to change the default.  But the idea of having this parameter is that you can set up your repl to print things in a more useful way, and then have it print the same way in a #lang rash script.
+
+@bold{
+Unstable: the way things are printed may change.
+}
 }
 
 @section{Interactive Use}
 
 You can run the repl by running @code{racket -l rash/repl}.  An executable named @code{rash-repl} is installed in Racket's bin directory, so if you have it on your path you can run @code{rash-repl} instead.
 
+@bold{
+Unstable:
 Various details of the repl will change over time.
+
+But that basically just means the repl will get cooler over time.
+
+The biggest change to come is that at some point the line-editor will be swapped out.
+}
 
 Note that in the repl the default input/output/error-output are to the stdin/out/err connected to the terminal unless you change them.  This is different than the rash macro, and allows you to do things like run curses programs that have access to terminal ports.
 
@@ -378,6 +407,9 @@ All the following repl functions are not stable.
 
 @defproc[(result-n [n integer?]) any/c]{
 Only available in the repl.  Return the result of the @racket[n]th interactive command.
+@bold{
+Unstable.
+}
 }
 
 @defform[(set-default-pipeline-starter! new-starter)]{
@@ -386,6 +418,10 @@ A line-macro that mutates the default pipeline starter used in the repl.
 It's not really hygienic, so if you defined macros that used @racket[run-pipeline] without an explicit starter, this will change the result of new calls to that macro.
 Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
 Expect this to change eventually.
+
+@bold{
+Unstable.
+}
 }
 
 @defform[(set-default-line-macro! new-line-macro)]{
@@ -394,6 +430,10 @@ A line-macro that mutates the default line macro used in the repl.
 It's not really hygienic.
 Basically a hack to be able to set it since I haven't figured out a better way to do it yet, aside from maybe having people make their own repl modules that set some defaults, and I'm not sure I like that plan.
 Expect this to change eventually.
+
+@bold{
+Unstable.
+}
 }
 
 @defparam[current-prompt-function prompt procedure?]{
@@ -406,6 +446,10 @@ Keywords optionally given:
 @racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.  The default prompt function formats the return value with @racket[current-rash-top-level-print-formatter] before printing it.
 
 @racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[result-n].  The default prompt function prints the number of the result before printing the result itself.
+
+@bold{
+Unstable.  I may change how this works.  But probably it actually is stable, I just don't want to commit to it yet, especially given that the entire line editor will eventually change.
+}
 }
 
 
@@ -413,6 +457,8 @@ Keywords optionally given:
 @section{Prompt helpers}
 
 There are currently a few functions that can help you design a custom prompt.  Currently, they support things like changing foreground/background color and underlined text and getting git information, and they will be expanded in the future to include more useful ways of getting information for your prompt.
+
+@bold{Unstable.}
 
 @subsection{Styling Strings}
 
@@ -545,7 +591,9 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
 
 There are also some useful functions that help gather git information.
 
-Remember -- these functions are not yet stable, and may change.
+@bold{
+Remember -- these functions are unstable, and may change.
+}
 
 You can use them with @tt{(require rash/prompt-helpers/git-info)}
 @(declare-exporting rash/prompt-helpers/git-info)
@@ -611,7 +659,9 @@ If the timeout is reached before all information is gathered, the hash is return
 
 @section{Demo stuff reference}
 
+@bold{
 Nothing in the demo directory is remotely stable!  It can all change or go away at any moment.
+}
 
 I've written various pipeline operators and line macros that I use, but I haven't decided what should be in the default language yet.  So for now they are sitting in a demo directory.  But I need some examples.  So here I'm documenting a bit.
 
@@ -633,6 +683,10 @@ is equivalent to
 }
 
 The @racket[_] argument is appended to @racket[=map=]'s argument list if it is not written explicitly.
+
+@bold{
+Unstable in that it will probably be moved into the default rash module rather than the demo module.
+}
 }
 
 @defform[#:kind "pipeline-operator" (=filter= arg ...)]{
@@ -649,6 +703,10 @@ is equivalent to
 }
 
 The @racket[_] argument is appended to @racket[=filter=]'s argument list if it is not written explicitly.
+
+@bold{
+Unstable in that it will probably be moved into the default rash module rather than the demo module.
+}
 }
 
 
@@ -662,6 +720,10 @@ in-dir $HOME/projects/* {
   make clean
   make
 }
+}
+
+@bold{
+This is unstable in that the way it does globbing and dollar expansion may change, the way it handles globs that resolve to something that is not a directory may change, and it will probably be moved into the default rash module rather than the demo directory.
 }
 }
 

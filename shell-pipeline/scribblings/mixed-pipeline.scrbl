@@ -16,9 +16,7 @@ racket/contract
 
 @section{shell/mixed-pipeline stability}
 
-This library is not entirely stable.
-
-Some specific things that may change are the names of keyword arguments to run-mixed-pipeline, and the type of arguments and exact semantics of the redirection options for pipelines.
+Unstable features are flagged in the documentation.  There are few of them.
 
 @section{shell/mixed-pipeline guide}
 
@@ -41,8 +39,7 @@ Everything from this module is also provided by the pipeline-macro library.  Thi
 @;                (current-output-port)]
 [#:err err (or/c port? false/c path-string-symbol?
                 file-redirection-spec?
-                special-redirect?
-                (list/c path-string-symbol? (or/c 'append 'truncate 'error)))
+                special-redirect?)
                 stderr-capture-redirect]
 [#:strictness strictness (or/c 'strict 'lazy 'permissive) 'lazy]
 [#:lazy-timeout lazy-timeout real? 1]
@@ -64,6 +61,8 @@ The @racket[strictness] and @racket[lazy-timeout] options are also passed throug
 
 This function is run by @racket[run-pipeline] macro, and otherwise this function should probably only be used if you want to write a replacement for the pipeline-macro library.
 
+@bold{The semantics of @racket[bg] is not stable.}
+
 }
 
 @subsection{Specifying Mixed Pipelines}
@@ -77,8 +76,7 @@ This function is run by @racket[run-pipeline] macro, and otherwise this function
 @defproc[(unix-pipeline-member-spec [argl any/c]
 [#:err err (or/c port? false/c path-string-symbol?
                  file-redirection-spec?
-                 (list/c path-string-symbol? (or/c 'append 'truncate 'error))
-                 )
+                 special-redirect?)
                  hidden-default-value]
 [#:success success-pred (or/c false/c procedure? (listof any/c)) hidden-default-value])
 pipeline-member-spec?]{
@@ -91,7 +89,7 @@ This is the same as @racket[shell/pipeline/pipeline-member-spec].
 (listof (or/c unix-pipeline-member-spec?
 object-pipeline-member-spec?
 composite-pipeline-member-spec?))])
-boolean?]{
+composite-pipeline-member-spec?]{
 Creates a composite pipeline member spec.  This is essentially a convenience so that a user-facing function/macro for creating what looks like a single pipeline member can actually desugar into multiple pipeline stages.
 }
 

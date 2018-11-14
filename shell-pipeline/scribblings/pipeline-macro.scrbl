@@ -15,7 +15,7 @@
 
 @section{shell/pipeline-macro stability}
 
-This library is not entirely stable.
+Unstable features are flagged in the documentation.  There are few of them.
 
 The base set of pipeline operators is likely to change, and some of the names I want to review before a stable release.
 
@@ -80,7 +80,6 @@ I am really running out of steam for documenting right now... TODO - write a goo
                      (code:line &permissive)
                      (code:line &lazy)
                      (code:line &lazy-timeout timeout-expression)
-                     (code:line &env env-expression)
                      )]]{
 Run a pipeline.  This is a macro wrapper for @racket[shell/mixed-pipeline/run-mixed-pipeline] that uses pipeline operator macros to specify the pipeline to be run.  So you should read the docs about that as well.
 
@@ -130,6 +129,10 @@ These identifiers are all errors if used outside of @racket[run-pipeline].  They
 @racket[&<], @racket[&>], @racket[&>>], and @racket[&>!] each take a file name and cause (respectively) input redirection from the given file, output redirection to the given file erroring if the file exists, output redirection appending to the given file, and output redirection truncating the given file.  @racket[&in], @racket[&out], and @racket[&err] take an argument suitable to be passed to #:in, #:out, and #:err of @racket[shell/mixed-pipeline/run-mixed-pipeline].
 
 @racket[&bg] and @racket[&pipeline-ret] toggle #:bg and #:return-pipeline-object, and @racket[&strict], @racket[&permissive], and @racket[&lazy] set the #:strictness argument.
+@bold{
+Not stable:
+All of the file redirection flags may change how they do things like dollar, glob, and tilde expansion.
+}
 }
 
 
@@ -160,7 +163,7 @@ Like @racket[with-pipeline-config], except that it splices into definition conte
 The core module only provides a few simple pipeline operators.  There are many more in the demo/ directory in the source repository.  Most of them are hastily written experiments, but some good ones should eventually be standardized.
 
 @defform[#:kind "pipeline-operator" (=composite-pipe= (pipe-op arg ...) ...+)]{
-Produces a composite pipeline member spec made from the pipeline operators given.  This is really more for use when defining new pipeline operotars than for use in a pipeline itself.
+Produces a composite pipeline member spec made from the pipeline operators given.  This is really more for use when defining new pipeline operators than for use in a pipeline itself.
 }
 
 @defform[#:kind "pipeline-operator" (=basic-unix-pipe= options ... args ...+)]{
@@ -201,7 +204,17 @@ BUT: if the first argument is a pipeline alias defined with @racket[define-pipel
 (run-pipeline =unix-pipe= d $HOME/$dfdir)
 }|
 
+At runtime, the first argument is evaluated and tested to see if it exists as an executable on the path.  If it's not, an error is raised before the other arguments are evaluated.  (This is an optimization for error messages -- the executable could still be removed between evaluating other arguments and executing the program, in which case the error message is worse.)
+
 Usually @racket[\|] is used instead.
+
+@bold{
+Unstable:
+
+The way dollar, tilde, and glob expansion is done by default may change (though it will still be consistent with examples in the GPCE paper).
+
+The #:as flag may go away (it's redundant with just piping to a reader function).
+}
 }
 @defform[#:kind "pipeline-operator" (\| arg ...+)]{
 Alias for @racket[=unix-pipe=].
@@ -211,12 +224,20 @@ Note that the backslash is required in the normal racket reader because @bold{|}
 
 @defform[#:kind "pipeline-operator" (=basic-object-pipe/expression= e)]{
 The simplest object pipe.  @racket[e] is simply the body of a @racket[lambda].  When used as a pipeline starter, the lambda accepts no arguments.  Otherwise it is a single-argument function, and @racket[current-pipeline-argument] is used to refer to its argument.
+
+@bold{
+Unstable.  The name will probably change.
+}
 }
 
 @defform[#:kind "pipeline-operator" (=basic-object-pipe/form= arg ...+)]{
 Creates an object pipe where @code{(arg ...)} is the body of a function.
 
 As with other object pipes, when used as a pipeline starter it generates a lambda with no arguments, and as a pipeline joint it generates a lambda with one argument, @racket[current-pipeline-argument].
+
+@bold{
+Unstable.  The name will probably change.
+}
 }
 
 @defform[#:kind "pipeline-operator" (=basic-object-pipe= f-arg arg ...)]{
@@ -227,18 +248,34 @@ To discover whether @racket[current-pipeline-argument] is used, each argument is
 @bold{Note:}  If @racket[=basic-object-pipe=] follows a subprocess form, it should close the received port.  Operators that handle ports automatically such as @racket[\|>>] close the port automatically, but @racket[\|>] allows things like lazy reading into a stream, so it can not apply an automatic policy that will always work effectively.
 
 Usually @racket[\|>] is used instead.
+
+@bold{
+Unstable.  The name will probably change and/or this name may be given to a pipe of different meaning.  But the @racket[\|>] alias will NOT have its meaning changed (IE it is stable).
+}
 }
 @defform[#:kind "pipeline-operator" (\|> arg ...+)]{
 Alias for @racket[=basic-object-pipe=].
 
 Note that the backslash is required in the normal racket reader because @bold{|} is normally treated specially.  In the Rash reader, you can get this by typing just @bold{|>}.
+
+@bold{
+Unstable.  The name will probably change.
+}
 }
 
 @defform[#:kind "pipeline-operator" (=object-pipe/expression= arg ...+)]{
 Like @racket[=basic-object-pipe/expression=], but when it receives a port as an argument, it converts it to a string.
+
+@bold{
+Unstable.  The name will probably change.
+}
 }
 @defform[#:kind "pipeline-operator" (=object-pipe/form= arg ...+)]{
 Like @racket[=basic-object-pipe/form=], but when it receives a port as an argument, it converts it to a string.
+
+@bold{
+Unstable.  The name will probably change.
+}
 }
 @defform[#:kind "pipeline-operator" (=object-pipe= f-arg arg ...)]{
 Like @racket[=basic-object-pipe=], but when it receives a port as an argument, it converts it to a string.
@@ -246,6 +283,10 @@ Like @racket[=basic-object-pipe=], but when it receives a port as an argument, i
 The same caveat applies that @racket[f-arg] must NOT be a macro you expect to expand with the other arguments -- it must evaluate to a function.
 
 Usually @racket[\|>>] is used instead.
+
+@bold{
+Unstable.  The name will probably change.  But note that the @racket[\|>>] alias is stable.
+}
 }
 @defform[#:kind "pipeline-operator" (\|>> arg ...+)]{
 Alias for @racket[=object-pipe=].
@@ -256,6 +297,10 @@ Note that the backslash is required in the normal racket reader because @bold{|}
 @defidform[#:kind "pipeline-operator"
          default-pipeline-starter]{
 Syntax parameter determining which pipeline operator is inserted when a @racket[run-pipeline] form doesn't explicitly start with one.
+
+@bold{
+Unstable in that it will not be a syntax parameter in the future, but something with better semantics for what it's supposed to do.
+}
 }
 
 I've written various other pipeline operators that are a little more exciting and that are currently in the demo directory of the repository.  I'll eventually polish them up and put them somewhere stable.  They include things like unix pipes that automatically glob things, unix pipes that have lexically scoped alias resolution, =filter=, =map=, =for/stream=,=for/list/unix-arg=,=for/list/unix-input=...
@@ -266,15 +311,28 @@ I've written various other pipeline operators that are a little more exciting an
 #:grammar
 [(start-or-joint
 (code:line #:start transformer)
-(code:line #:joint transformer))
+(code:line #:joint transformer)
+(code:line #:operator transformer))
 ]]{
 Define a pipeline operator.  Pipeline operators can act differently when they are in the starting position of a pipeline or later (joint position).  Specifically, when an operator creates an @racket[object-pipeline-member-spec], it needs to have a function that accepts 0 arguments when in the start position and 1 argument in others.
+
+If you use the #:operator keyword, the same transformer is used in start and joint positions.
 
 If a transformer function is not specified for one of the options, a default implementation (that generates an error) is used.
 
 The transformer will receive a syntax object corresponding to @code{(name-of-pipe argument ...)}, so it will likely want to ignore its first argument like most macros do.  But simetimes it may be useful to recur.
 
+If a pipeline operator is used outside of @racket[run-pipeline], it raises a syntax error.
+
+The operator must desugar to code which produces a pipeline-member-spec.
+
 Example uses are in the demo directory in the repository.
+
+@bold{
+Unstable:
+
+Currently for operators to desugar to another operator, the new operator must be at the top-level of the returned syntax or it will raise an error (IE that a pipeline operator was used out of context).  This should be fixed later.
+}
 }
 
 
@@ -303,6 +361,10 @@ Defines an alias macro recognized by @racket[=unix-pipe=] and maybe others.
 (run-pipeline =unix-pipe= find-f ".")
 (run-pipeline =unix-pipe= find "." -type f)
 }|
+
+@bold{
+Unstable:  I might re-think this slightly...  if it changes it will be similar and existing aliases will probably still work, but I'm not 100% sure so I want to hedge.
+}
 }
 
 @defform[(define-simple-pipeline-alias name cmd arg ...)]{
@@ -316,6 +378,10 @@ Simple sugar for @racket[define-pipeline-alias].  It defines an alias transforme
 }|
 
 Note that arguments are passed through as-is to @racket[=unix-pipe=], so if you use the name of another alias it will cause alias replacement a second time unless you quote the command name or put it in a string.
+
+@bold{
+Unstable:  The name might change or something.  I just want to hedge the possibility that I want to re-look at aliases.
+}
 }
 
 @defform[#:id current-pipeline-argument current-pipeline-argument]{
@@ -329,6 +395,12 @@ Alias for @racket[current-pipeline-argument].  It's an underscore, if you're hav
 
 @defform[(expand-pipeline-arguments)]{
 TODO - document this.
+
+It's used to get the @racket[current-pipeline-argument] detected and inserted automatically if missing.
+
+@bold{
+Unstable -- this is not a great API and I don't want the burden of maintaining it.
+}
 }
 
 @subsection{Inspecting Pipelines}
@@ -341,5 +413,5 @@ These things are documented in the Rash documentation, but I'm adding these defi
 
 You can get these with @verbatim{(require rash/demo/setup)}
 
-@defform[#:kind "pipeline-operator" (=map= arg ...)]{}
-@defform[#:kind "pipeline-operator" (=filter= arg ...)]{}
+@defform[#:kind "pipeline-operator" (=map= arg ...)]{Unstable in that it will probably be moved into the main rash module, but I think it will stay the same now.}
+@defform[#:kind "pipeline-operator" (=filter= arg ...)]{Unstable in that it will probably be moved into the main rash module, but I think it will stay the same now.}
