@@ -47,3 +47,7 @@ Here's a quick demo video of Rash in action:[
 I published [a paper about Rash in GPCE 2018](http://willghatch.net/publications/rash-gpce-2018-preprint.pdf).
 
 This repo also contains the [shell-pipeline](https://docs.racket-lang.org/shell-pipeline/index.html) and [linea](http://docs.racket-lang.org/linea/index.html) packages.  They mostly support Rash itself, so they live in the same repo.
+
+### Talk
+
+Feel free to ask questions in issues, to join the [matrix room](https://matrix.to/#/!LWeFyHFMHOGSzzpoxN:matrix.org?via=matrix.org), to email me, etc.
