@@ -23,6 +23,9 @@ env:
     #
     # The RELEASE snapshot is only available during the release process.
     - RACKET_VERSION=HEAD
+    - RACKET_VERSION=HEADCS
+    - RACKET_VERSION=6.12 # The earliest version Rash claims to support
+    - RACKET_VERSION=7.1 # Current release version
 
 # You may want to test against certain versions of Racket, without
 # having them count against the overall success/failure.
