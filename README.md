@@ -50,4 +50,4 @@ This repo also contains the [shell-pipeline](https://docs.racket-lang.org/shell-
 
 ### Talk
 
-Feel free to ask questions in issues, to join the [matrix room](https://matrix.to/#/!LWeFyHFMHOGSzzpoxN:matrix.org?via=matrix.org), to email me, etc.
+Feel free to ask questions in issues, to join the [matrix room](https://matrix.to/#/#rash-lang:matrix.org), to email me, etc.
