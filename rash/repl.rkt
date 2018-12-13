@@ -111,8 +111,10 @@
                   (datum->syntax #f `(require (file ,(path->string rcfile))))))))
 
 (define (eval-rashrc rcfile)
-  (define stxs (port->list (λ (p) (linea-read-syntax (object-name p) p))
-                           (open-input-file rcfile)))
+  (define fport (open-input-file rcfile))
+  (port-count-lines! fport)
+  (define stxs (port->list (λ (p) (linea-read-syntax (object-name p) p)) fport))
+  (close-input-port fport)
   (if (null? stxs)
       (void)
       (repl-eval #:splice #t stxs)))
