@@ -185,3 +185,30 @@ Stuff to give quick demos.  Eventually most of this should be cleaned up and som
       (values k v))))
 
 
+#|
+Sometimes in your rashrc you may want to require a file if it exists.
+For example require "work-aliases.rkt" if it is there.
+|#
+(define-syntax (require-if-file-exists stx)
+  (syntax-parse stx
+    [(_ path-stx)
+     (define path-datum (syntax->datum #'path-stx))
+     (define source-file (syntax-source #'path-stx))
+     (define (path-dirname p)
+       (apply build-path (reverse (cdr (reverse (explode-path p))))))
+     (define full-path (if (absolute-path? path-datum)
+                           path-datum
+                           (build-path (path-dirname source-file) path-datum)))
+     (define full-path-string (if (string? full-path)
+                                  full-path
+                                  (path->string full-path)))
+     (define (s x)
+       (datum->syntax #'path-stx x))
+     (if (file-exists? full-path)
+         ;; The syntax context of the provided identifiers is determined by the
+         ;; syntax on the outermost bit of syntax to the right of require,
+         ;; which may be a parenthesis.
+         ;(datum->syntax stx `(require (file ,full-path-string)))
+         #`(require #,(datum->syntax #'path-stx (list #'file full-path-string)))
+         #`(void))]))
+
