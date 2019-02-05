@@ -3,7 +3,9 @@
 (require racket/list
          racket/class
          racket/set
-         racket/contract)
+         racket/contract/base
+         racket/contract/region
+         )
 
 
 (provide create-styled-string

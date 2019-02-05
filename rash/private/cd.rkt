@@ -7,7 +7,8 @@
 (require
  linea/line-macro
  (only-in shell/pipeline path-string-symbol?)
- racket/contract
+ racket/contract/base
+ racket/contract/region
  shell/utils/bourne-expansion-utils
  (for-syntax
   racket/base

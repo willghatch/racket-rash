@@ -4,7 +4,7 @@
 (require racket/exn)
 (require racket/list)
 (require racket/format)
-(require racket/contract)
+(require racket/contract/base)
 (require syntax/parse/define)
 (require "mostly-structs.rkt")
 (require "misc-utils.rkt")

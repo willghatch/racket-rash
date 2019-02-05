@@ -1,7 +1,7 @@
 #lang scribble/manual
 
 @(require (for-label racket/base
-                     racket/contract
+                     racket/contract/base
                      shell/pipeline
                      (prefix-in shell/mixed-pipeline/ shell/mixed-pipeline)
                      (prefix-in shell/pipeline-macro/ shell/pipeline-macro)

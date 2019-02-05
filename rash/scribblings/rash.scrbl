@@ -14,7 +14,7 @@ syntax/parse
 (for-label
 rash/prompt-helpers/string-style
 rash/prompt-helpers/git-info
-racket/contract
+racket/contract/base
 rash
 (only-in rash/demo/setup in-dir =map= =filter= =foldl=)
 (except-in racket/base _ do)
