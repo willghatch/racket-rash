@@ -41,8 +41,7 @@ Run with `racket -l rash/repl --`, or with `rash-repl` if you have Racket's pack
 
 Online documentation is [here](http://docs.racket-lang.org/rash@rash/index.html).  After installation, local documentation can be accessed with `raco docs rash`.
 
-Here's a quick demo video of Rash in action:[
-![asciicast](https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26.png)](https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26)
+The project web site has a [quick demo video of Rash in action](https://rash-lang.org).
 
 I published [a paper about Rash in GPCE 2018](http://willghatch.net/publications/rash-gpce-2018-preprint.pdf).
 

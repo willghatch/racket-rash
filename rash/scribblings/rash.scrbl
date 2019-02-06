@@ -248,8 +248,7 @@ Other operators like @racket[=map=] and @racket[=filter=] place @racket[_] like 
 A preprint of an academic paper about Rash is available @hyperlink["http://willghatch.net/publications/rash-gpce-2018-preprint.pdf"]{here}.
 It is much better documentation than the Rash guide, currently.
 
-I made a quick demo recording of an interactive repl
-@hyperlink["https://asciinema.org/a/mvBT1SNFDNqmKoOyMNnIPVk26"]{here}.
+I made a quick demo recording of an interactive repl that is on @hyperlink["https://rash-lang.org"]{the project website}.
 
 Also I gave a talk at RacketCon 2017 about it, which can be viewed
 @hyperlink["https://www.youtube.com/watch?v=yXcwK3XNU3Y&index=13&list=PLXr4KViVC0qIgkwFFzM-0we_aoOfAl16Y"]{here}, though it is outdated.
