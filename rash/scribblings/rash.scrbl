@@ -185,6 +185,20 @@ While you can use Rash as a #lang, you can also just use the bindings it exports
 
 Here are some miscellaneous little sections I am adding off-the-cuff based on discussions until I rewrite the whole Rash Guide to be better.
 
+@subsection{quoting globs}
+
+How do you stop globs and dollars from expanding without putting them in parenthesized forms?  Quote them.
+
+@irash{
+;; print "*.rkt" literally
+echo '*.rkt
+
+;; print "$HOME" literally
+echo '"$HOME"
+}
+
+TODO - I need a better documentation section on globbing generally.
+
 @subsection{Rash's names are terrible, how do I rename them?}
 
 Line macros (like @racket[cd]), pipeline operators (like @racket[\|>]), and pipeline option flags (like @racket[&>] and @racket[&bg]) are all macros, so you can rename them with @racket[make-rename-transformer]:
