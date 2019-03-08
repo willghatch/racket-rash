@@ -27,8 +27,8 @@ These are essentially a bunch of proof-of-concept pipeline operators.
  =foldl=
  )
 
-(provide lsl)
-(provide ls)
+;(provide lsl)
+;(provide ls)
 (provide =unix-with-xargs-behavior=)
 
 
@@ -158,11 +158,11 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 |#
 
 
-(require "../private/define-pipeline-alias.rkt")
-(define-pipeline-alias lsl
-  (syntax-parser [(_ arg ...)
-                  #'(=unix-pipe= 'ls '-l '--color=auto arg ...)]))
-(define-simple-pipeline-alias ls 'ls '--color=auto)
+;(require "../private/define-pipeline-alias.rkt")
+;(define-pipeline-alias lsl
+;  (syntax-parser [(_ arg ...)
+;                  #'(=unix-pipe= 'ls '-l '--color=auto arg ...)]))
+;(define-simple-pipeline-alias ls 'ls '--color=auto)
 
 
 (require racket/port racket/list)
