@@ -42,8 +42,6 @@ If you want to help, there are various things you might do:
 General Todos (written more for my memory than for something readable by others)
 --------------------------------------------------------------------------------
 
-* do double syntax-local-introduce for transformers so pipeline expansion is more properly hygienic
-
 * fix lexical scoping for redirection options in with-pipeline-config, and add the rest of the options to be configurable lexically
 * add a #:context optional argument to #%linea-line so it can be used by macros as well as being an implicit thing that is read.
 

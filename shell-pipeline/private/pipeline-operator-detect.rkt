@@ -18,8 +18,28 @@
  pipeline-operator
  )
 
-(require syntax/parse)
+(require
+ syntax/parse
+ (for-syntax
+  racket/base
+  syntax/parse
+  version/utils
+  ))
 
+;; I need to do the scope dance (double syntax-local-introduce + custom mark)
+;; to make it properly hygienic, but I want to use the new 7.0 API to do it.
+;; But I also don't want to bump the version required yet.
+;; Since in practice these hygiene conflicts don't happen much for
+;; pipeline operators, I'll just let users of old versions have potential
+;; hygiene bugs.
+(define-syntax (if7 stx)
+  (syntax-parse stx
+    [(_ then else)
+     (if (version<=? "7.0" (version))
+         #'then
+         #'else)]))
+
+(if7 (require syntax/apply-transformer) (void))
 
 (define-values (prop:pipeline-starter
                 pipeline-starter?
@@ -40,25 +60,30 @@
   (pattern (~and (~not x:pipeline-joint)
                  (~not x:pipeline-starter))))
 
+(define (pipeline-op-transform op op-form prop-ref)
+  (let* ([slv (syntax-local-value op (λ () #f))]
+         [prop-val (prop-ref slv)]
+         [transformer (cond [(procedure? prop-val)
+                             (λ (form) (prop-val slv form))]
+                            [(number? prop-val)
+                             {vector-ref (struct->vector slv)
+                                         (add1 prop-val)}]
+                            [else (raise-syntax-error
+                                   'pipeline-op-transform
+                                   "bad transformer value"
+                                   op)])])
+    (if7
+     (local-apply-transformer transformer op-form 'expression)
+     (transformer op-form))))
 
 (define (pipeline-starter-transform op-form)
   (syntax-parse op-form
     [(op:pipeline-starter arg:not-pipeline-op ...)
-     (let ([slv (syntax-local-value #'op (λ () #f))])
-       (let ([starter (pipeline-starter-ref slv)])
-         (cond [(procedure? starter) (starter slv op-form)]
-               [(number? starter) ({vector-ref (struct->vector slv)
-                                               (add1 starter)}
-                                   op-form)])))]))
+     (pipeline-op-transform #'op op-form pipeline-starter-ref)]))
 (define (pipeline-joint-transform op-form)
   (syntax-parse op-form
     [(op:pipeline-joint arg:not-pipeline-op ...)
-     (let ([slv (syntax-local-value #'op (λ () #f))])
-       (let ([joint (pipeline-joint-ref slv)])
-         (cond [(procedure? joint) (joint slv op-form)]
-               [(number? joint) ({vector-ref (struct->vector slv)
-                                             (add1 joint)}
-                                 op-form)])))]))
+     (pipeline-op-transform #'op op-form pipeline-joint-ref)]))
 
 
 (struct pipeline-operator
