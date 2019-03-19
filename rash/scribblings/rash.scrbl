@@ -54,7 +54,7 @@ echo How many Racket files do we have?
 ls *.rkt | wc -l
 }
 
-You can use Racket functions in pipelines.
+You can use Racket functions in pipelines.@margin-note{Note that @racket[port->string] is part of the @racket[racket/port] library, thus one must @racket[(require racket/port)] before using it.}
 
 @irash{
 ;; This returns the hostname as a string in all caps
@@ -505,7 +505,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
  If @racket[create-function?] is @racket[#t], then a function is returned instead of a string.  This function takes 1 argument and places that argument where @racket[to-style] would have went, and returns the resulting string.
 
  @margin-note{I cant display the actual colors here, but you can copy the resulting strings into a terminal and print them with @exec{echo "string"} or display them using @racket[display] in a terminal window.}
- 
+
  @interaction-eval[#:eval prompt-helper-eval
                    (require rash/prompt-helpers/string-style)]
  @examples[
@@ -514,7 +514,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
                        #:bg "red"
                        #:fg '(255 255 255)
                        #:underlined? #t)
- 
+
  (create-styled-string "example"
                        #:bg "red"
                        #:fg '(255 255 255)
@@ -522,7 +522,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
                        #:reset-before? #f)
  (define style-function (create-styled-string #:bg "red"
                                               #:create-function? #t))
- 
+
  (style-function "I'm red!")
  ]}
 
@@ -542,7 +542,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
                                [#:reset-customs? reset-customs? #f])
          styled-struct?]{
  Mostly the same as @racket[create-styled-string], except a structure with a list of strings/sub-structs and a style represented by a hash is produced.  This struct can be given to @racket[styled-struct->string] to turn it into a string.  An uninterned symbol is used as the @racket[default] value for some of the optional arguments.  The function treats the @racket[default] argument to mean "use the style the outer struct provides".
-                    
+
  @examples[
  #:eval prompt-helper-eval
  (create-styled-struct "I'm green. "
@@ -569,7 +569,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
  @examples[
  #:eval prompt-helper-eval
  #:label "Examples (Sorry for the long strings):"
- 
+
  (define example1
   (styled-struct->string
    (create-styled-struct
@@ -583,7 +583,7 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
     #:bg "blue")))
 
  (code:line (regexp-split #px"\\." example1) (code:comment "so it fits on the screen"))
- 
+
  (define example2
    (styled-struct->string
     (create-styled-struct
