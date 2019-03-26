@@ -16,8 +16,23 @@
    line-macro
    ))
 
-(require syntax/parse)
+(require
+ syntax/parse
+ (for-syntax
+  racket/base
+  syntax/parse
+  version/utils
+  ))
 
+;; Like pipeline-operator-detect.rkt, I need to do the scope dance for hygiene, but
+;; I don't want to require a new version of Racket yet.
+(define-syntax (if7 stx)
+  (syntax-parse stx
+    [(_ then else)
+     (if (version<=? "7.0" (version))
+         #'then
+         #'else)]))
+(if7 (require syntax/apply-transformer) (void))
 
 (define-values (prop:line-macro
                 line-macro?
@@ -31,12 +46,17 @@
 (define (linea-line-macro-transform stx)
   (syntax-parse stx
     [(lm:line-macro arg ...)
-     (let ([slv (syntax-local-value #'lm)])
-       (let ([transform (linea-line-macro-ref slv)])
-         (cond [(procedure? transform) (transform slv stx)]
-               [(number? transform) ({vector-ref (struct->vector slv)
-                                                 (add1 transform)}
-                                     stx)])))]))
+     (let* ([slv (syntax-local-value #'lm)]
+            [prop-val (linea-line-macro-ref slv)]
+            [transformer (cond [(procedure? prop-val)
+                                (λ (form) (prop-val slv form))]
+                               [(number? prop-val)
+                                (λ (form) ({vector-ref (struct->vector slv)
+                                                       (add1 prop-val)}
+                                           form))])])
+       (if7
+        (local-apply-transformer transformer stx 'expression)
+        (transformer stx)))]))
 
 (struct line-macro-struct
   (transformer)
