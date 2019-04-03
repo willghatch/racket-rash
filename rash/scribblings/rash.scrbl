@@ -414,7 +414,11 @@ A few nice things (like stderr highlighting) are in a demo-rc file you can requi
 
 (Rash actually follows the XDG basedir standard -- you can have rashrc.rkt or rashrc files in any directory of $XDG_CONFIG_HOME or $XDG_CONFIG_DIRS, and the rash repl will load all of them)
 
-The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit (or something like that) instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}).
+@subsection{Unicode and garbled glyphs}
+
+The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}).
+
+@subsection{Interactive functions (unstable)}
 
 All the following repl functions are not stable.
 
