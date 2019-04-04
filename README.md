@@ -34,6 +34,10 @@ OR
 
 use `raco pkg install --clone rash`
 
+#### Readline
+
+The Rash REPL currently relies on Racket's Readline FFI wrapper.  However, by default Racket uses libedit instead of libreadline for licensing reasons.  Libedit does not support unicode, so typing non-ASCII characters will result in sadness.  To use libreadline instead, run `raco pkg install readline-gpl`.
+
 
 ### Usage
 
