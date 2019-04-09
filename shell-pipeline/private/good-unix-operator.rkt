@@ -163,17 +163,16 @@ What more should the good unix pipe do (or at least have options to do)?
                                     (list '#:alias-support? check-expression)
                                     )
                               #:no-duplicates? #t))
-     (with-syntax ([tx-name (datum->syntax #'name (gensym 'unix-pipe-tx))])
-       #`(begin
-           (define-for-syntax tx-name
-             (mk-unix-pipe-tx #:tilde-expand? #,(opref opts '#:tilde-expand? #t)
-                              #:glob-expand? #,(opref opts '#:glob-expand? #t)
-                              #:dollar-string #,(opref opts '#:dollar-string "$")
-                              #:alias-support? #,(opref opts '#:alias-support? #t)
-                              ))
-           (define-pipeline-operator name
-             #:start tx-name
-             #:joint tx-name)))]))
+     #`(begin
+         (define-for-syntax tx-name
+           (mk-unix-pipe-tx #:tilde-expand? #,(opref opts '#:tilde-expand? #t)
+                            #:glob-expand? #,(opref opts '#:glob-expand? #t)
+                            #:dollar-string #,(opref opts '#:dollar-string "$")
+                            #:alias-support? #,(opref opts '#:alias-support? #t)
+                            ))
+         (define-pipeline-operator name
+           #:start tx-name
+           #:joint tx-name))]))
 
 (define-unix-pipe =unix-pipe=)
 

@@ -281,16 +281,14 @@ But how can it be done in a way that let those arguments affect the reader?
                    [mk-default-starter (opref tab '#:starter
                                               #'=unix-pipe=)]
                    [mk-default-line-macro (opref tab '#:line-macro
-                                                 #'run-pipeline)]
-                   [wrap-modbeg-name (datum->syntax stx (gensym
-                                                         'wrapping-modbeg-for-rash))])
+                                                 #'run-pipeline)])
        #'(begin
-           (define-syntax wrap-modbeg-name
+           (define-syntax wrapping-module-begin-for-rash
              (make-wrapping-module-begin #'top-level-wrap))
            (define-syntax rmb-name
              (syntax-parser
                [(_ arg (... ...))
-                #'(wrap-modbeg-name
+                #'(wrapping-module-begin-for-rash
                    (module configure-runtime racket/base
                      (require linea/read
                               rash/private/lang-funcs

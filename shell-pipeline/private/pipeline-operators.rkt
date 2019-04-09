@@ -108,27 +108,17 @@
                                     "Must be used as a rash pipeline operator"
                                     stx)))])
        (if (attribute o-impl)
-           (with-syntax ([parsername (datum->syntax
-                                      stx
-                                      (gensym (string-append
-                                               (symbol->string (syntax->datum #'name))
-                                               "-parser-")))])
-             #'(begin
-                 (define-for-syntax parsername o-impl)
-                 (define-pipeline-operator/no-kw name parsername parsername nmacro)))
+           #'(begin
+               (define-for-syntax parsername o-impl)
+               (define-pipeline-operator/no-kw name parsername parsername nmacro))
            #'(define-pipeline-operator/no-kw name starter joint nmacro)))]))
 
 (define-syntax (pipeop stx)
   (syntax-parse stx
     [(defpipe name:id clause ...+)
-     (with-syntax ([parsername (datum->syntax
-                                stx
-                                (gensym (string-append
-                                         (symbol->string (syntax->datum #'name))
-                                         "-parser-")))])
-       #'(begin
-           (define-for-syntax parsername (syntax-parser clause ...))
-           (define-pipeline-operator name #:operator parsername)))]))
+     #'(begin
+         (define-for-syntax parsername (syntax-parser clause ...))
+         (define-pipeline-operator name #:operator parsername))]))
 
 ;;;;;;;;;;;;;;;; Pipeline argument detection, replacement functions
 
