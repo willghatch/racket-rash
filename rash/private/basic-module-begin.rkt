@@ -6,16 +6,13 @@
  (all-from-out rash)
  )
 
-(require
- rash
- (for-syntax
-  racket/base))
+(require rash)
 
 (define-rash-module-begin basic-rash-module-begin
   #:this-module-path rash/private/basic-module-begin
-  #:in (current-input-port)
-  #:out (current-output-port)
-  #:err (current-error-port)
+  ;#:in (current-input-port)
+  ;#:out (current-output-port)
+  ;#:err (current-error-port)
   ;#:default-starter =unix-pipe=
   ;#:top-level-wrap println
   ;#:default-line-macro pipeline-line-macro

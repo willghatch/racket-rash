@@ -61,7 +61,6 @@
   linea/read-syntax-string
   udelim
   racket/port
-  syntax/strip-context
   shell/private/misc-utils
 
   (for-syntax
