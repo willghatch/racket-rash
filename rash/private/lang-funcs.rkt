@@ -171,9 +171,7 @@
          #`(#,@#'lm-param-form
             (#,@#'p-param-form
              body ...))))]))
-(begin-for-syntax
-  (define-splicing-syntax-class kw-opt
-    (pattern (~seq kw:keyword val:expr))))
+
 (define-syntax (with-rash-config stx)
   (with-rash-config* stx
     #'with-default-line-macro
