@@ -184,8 +184,7 @@
   (syntax-parse stx
     [(_ body:expr)
      #'(splicing-with-rash-config #:in (open-input-string "")
-                                  #:out (λ (p) (string-trim (begin0 (port->string p)
-                                                              (close-input-port p))))
+                                  #:out default-output-port-transformer
                                   #:err stderr-capture-redirect
                                   ;#:starter =unix-pipe=
                                   ;#:line-macro run-pipeline
