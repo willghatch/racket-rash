@@ -294,15 +294,17 @@ re-appended).
 (define-syntax (unix-args-eval stx)
   (syntax-parse stx
     [(_ arg ...)
-     #'(reverse
-        (for/fold ([argl-rev '()])
-                  ([t (list (λ () arg) ...)])
-          (define cur-arg (t))
-          (if (null? argl-rev)
-              (match (unix-args-eval-match cur-arg)
-                [(list) argl-rev]
-                [x (cons x argl-rev)])
-              (cons cur-arg argl-rev))))]))
+     #'(unix-args-eval-func (list (λ () arg) ...))]))
+(define (unix-args-eval-func arg-thunks)
+  (reverse
+   (for/fold ([argl-rev '()])
+             ([t arg-thunks])
+     (define cur-arg (t))
+     (if (null? argl-rev)
+         (match (unix-args-eval-match cur-arg)
+           [(list) argl-rev]
+           [x (cons x argl-rev)])
+         (cons cur-arg argl-rev)))))
 (define (unix-args-eval-match cmd-arg)
   (define (resolve c)
     (cond [(or (path? c) (string? c) (symbol? c))
