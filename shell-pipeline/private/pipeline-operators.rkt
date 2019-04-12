@@ -264,12 +264,14 @@ re-appended).
                                  (make-rename-transformer #'prev-ret)])
             (arg ...))))]))
 
+(define (port-sugar-transformer x)
+  (if (input-port? x)
+      (begin0 (port->string x)
+        (close-input-port x))
+      x))
 
 (define-for-syntax (with-port-sugar pipe-stx)
-  #`(=composite-pipe= (=basic-object-pipe= (λ (x) (if (input-port? x)
-                                                      (begin0 (port->string x)
-                                                        (close-input-port x))
-                                                      x)))
+  #`(=composite-pipe= (=basic-object-pipe= port-sugar-transformer)
                       #,pipe-stx))
 
 (define-pipeline-operator =object-pipe=
