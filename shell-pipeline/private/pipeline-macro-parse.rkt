@@ -18,7 +18,6 @@
  run-pipeline
  with-pipeline-config
  splicing-with-pipeline-config
- rash-pipeline-opt-hash
  &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
  )
 
@@ -163,11 +162,6 @@
     [(_ arg ...)
      #'(run-pipeline/split arg ...)]))
 
-;; To avoid passing more syntax through layers of macros
-(define rash-pipeline-opt-hash (make-parameter (hash)))
-(define (ropt key)
-  (hash-ref (rash-pipeline-opt-hash) key))
-
 (define-syntax (run-pipeline/split stx)
   ;; Parse out the beginning/ending whole-pipeline options, then
   ;; pass the pipeline specs to other macros to deal with.
@@ -254,82 +248,87 @@
                                        "redirection arguments can't be keywords"
                                        redirection-arg)]
                   [x (dollar-expand-syntax #'x)]))
-              #`(parameterize
-                    ([rash-pipeline-opt-hash
-                      (hash 'bg #,(if (or (attribute s-bg) (attribute e-bg))
-                                      #'#t #'#f)
-                            'pipeline-ret #,(if (or (attribute s-pr) (attribute e-pr))
-                                                #'#t #'#f)
-                            'env #,(cond [(attribute s-env-list)]
-                                         [(attribute e-env-list)]
-                                         [else #''()])
-                            'env-replace #,(cond [(attribute s-env-r-list)]
-                                                 [(attribute e-env-r-list)]
-                                                 [else #'#f])
-                            'lazy-timeout #,(or (attribute s-lazy-timeout)
-                                                (attribute e-lazy-timeout)
-                                                #'1)
-                            'strictness #,(cond
-                                            [(or (attribute s-strict)
-                                                 (attribute e-strict))
-                                             #''strict]
-                                            [(or (attribute s-lazy)
-                                                 (attribute e-lazy))
-                                             #''lazy]
-                                            [(or (attribute s-permissive)
-                                                 (attribute e-permissive))
-                                             #''permissive]
-                                            [else #''lazy])
-                            'in #,(cond [(attribute s-in)]
-                                        [(attribute e-in)]
-                                        [(or (attribute s-<)
-                                             (attribute e-<))
-                                         =>
-                                         (λ (f) (dollar-expand-maybe f))]
-                                        ;; TODO - respect outer macro default
-                                        [else #'default-pipeline-in])
-                            'out #,(cond [(attribute s-out)]
-                                         [(attribute e-out)]
-                                         [(or (attribute s->)
-                                              (attribute e->))
-                                          =>
-                                          (λ (f) #`(list #,(dollar-expand-maybe f)
-                                                         'error))]
-                                         [(or (attribute s->!)
-                                              (attribute e->!))
-                                          =>
-                                          (λ (f) #`(list #,(dollar-expand-maybe f)
-                                                         'truncate))]
-                                         [(or (attribute s->>)
-                                              (attribute e->>))
-                                          =>
-                                          (λ (f) #`(list #,(dollar-expand-maybe f)
-                                                         'append))]
-                                         ;; TODO - respect outer macro default
-                                         [else  #'default-pipeline-out])
-                            'err #,(cond [(attribute s-err)]
-                                         [(attribute s-err)]
-                                         ;; TODO - respect outer macro default
-                                         [else #'default-pipeline-err-out])
-                            'object-to-out #,(if (or (attribute s-out)
-                                                     (attribute e-out)
-                                                     (attribute s->)
-                                                     (attribute e->)
-                                                     (attribute s->!)
-                                                     (attribute e->!)
-                                                     (attribute s->>)
-                                                     (attribute e->>))
-                                                 #'#t
-                                                 #'#f)
-                            )])
-                  (rash-pipeline-splitter/start run-split-pipe
-                                                arg ...))])])])]))
+              (with-syntax
+                ([bg (if (or (attribute s-bg) (attribute e-bg))
+                         #'#t #'#f)]
+                 [pipeline-ret (if (or (attribute s-pr) (attribute e-pr))
+                                   #'#t #'#f)]
+                 [env (cond [(attribute s-env-list)]
+                            [(attribute e-env-list)]
+                            [else #''()])]
+                 [env-replace (cond [(attribute s-env-r-list)]
+                                    [(attribute e-env-r-list)]
+                                    [else #'#f])]
+                 [lazy-timeout (or (attribute s-lazy-timeout)
+                                   (attribute e-lazy-timeout)
+                                   #'1)]
+                 [strictness (cond
+                               [(or (attribute s-strict)
+                                    (attribute e-strict))
+                                #''strict]
+                               [(or (attribute s-lazy)
+                                    (attribute e-lazy))
+                                #''lazy]
+                               [(or (attribute s-permissive)
+                                    (attribute e-permissive))
+                                #''permissive]
+                               [else #''lazy])]
+                 [in (cond [(attribute s-in)]
+                           [(attribute e-in)]
+                           [(or (attribute s-<)
+                                (attribute e-<))
+                            =>
+                            (λ (f) (dollar-expand-maybe f))]
+                           ;; TODO - respect outer macro default
+                           [else #'default-pipeline-in])]
+                 [out (cond [(attribute s-out)]
+                            [(attribute e-out)]
+                            [(or (attribute s->)
+                                 (attribute e->))
+                             =>
+                             (λ (f) #`(list #,(dollar-expand-maybe f)
+                                            'error))]
+                            [(or (attribute s->!)
+                                 (attribute e->!))
+                             =>
+                             (λ (f) #`(list #,(dollar-expand-maybe f)
+                                            'truncate))]
+                            [(or (attribute s->>)
+                                 (attribute e->>))
+                             =>
+                             (λ (f) #`(list #,(dollar-expand-maybe f)
+                                            'append))]
+                            ;; TODO - respect outer macro default
+                            [else  #'default-pipeline-out])]
+                 [err (cond [(attribute s-err)]
+                            [(attribute s-err)]
+                            ;; TODO - respect outer macro default
+                            [else #'default-pipeline-err-out])]
+                 [object-to-out (if (or (attribute s-out)
+                                        (attribute e-out)
+                                        (attribute s->)
+                                        (attribute e->)
+                                        (attribute s->!)
+                                        (attribute e->!)
+                                        (attribute s->>)
+                                        (attribute e->>))
+                                    #'#t
+                                    #'#f)])
+                #`(rash-pipeline-splitter/start
+                   (
+                    bg pipeline-ret
+                    ;; env env-replace
+                    in out err
+                    strictness lazy-timeout
+                    object-to-out
+                    )
+                   arg ...))])])])]))
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
-    [(_ do-macro starter:pipeline-starter args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/joints do-macro ([starter args ...]) (rest ...))]
-    [(rps do-macro iargs:not-pipeline-op ...+ rest ...)
+    [(_ opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
+     #'(rash-pipeline-splitter/joints opts ([starter args ...]) (rest ...))]
+    [(rps opts iargs:not-pipeline-op ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
        (datum->syntax iarg1
@@ -337,7 +336,7 @@
                       iarg1))
      (syntax-parse implicit-starter
        [implicit-pipeline-starter:pipeline-starter
-        #'(rps do-macro
+        #'(rps opts
                implicit-pipeline-starter
                iargs ... rest ...)]
        [_ (raise-syntax-error
@@ -348,20 +347,29 @@
 
 (define-syntax (rash-pipeline-splitter/joints stx)
   (syntax-parse stx
-    [(rpsj do-macro (done-parts ...) ())
-     #'(do-macro done-parts ...)]
-    [(rpsj do-macro (done-parts ...)
+    [(rpsj opts (done-parts ...) ())
+     #'(run-split-pipe opts done-parts ...)]
+    [(rpsj opts (done-parts ...)
            (op:pipeline-joint arg:not-pipeline-op ... rest ...))
-     #'(rpsj do-macro (done-parts ... [op arg ...]) (rest ...))]))
+     #'(rpsj opts (done-parts ... [op arg ...]) (rest ...))]))
 
 (define-syntax (run-split-pipe stx)
   (syntax-parse stx
-    [(_ (starter startarg ...) (joint joinarg ...) ...)
+    [(_
+      ;; opts group first
+      (
+       bg return-pipeline-object
+       ;; env env-replace
+       in out err
+       strictness lazy-timeout
+       object-to-out
+       )
+      (starter startarg ...) (joint joinarg ...) ...)
      #'(rash-do-transformed-pipeline
-        #:bg (ropt 'bg) #:return-pipeline-object (ropt 'pipeline-ret)
-        #:in (ropt 'in) #:out (ropt 'out) #:err (ropt 'err)
-        #:strictness (ropt 'strictness) #:lazy-timeout (ropt 'lazy-timeout)
-        #:object-to-out (ropt 'object-to-out)
+        #:bg bg #:return-pipeline-object return-pipeline-object
+        #:in in #:out out #:err err
+        #:strictness strictness #:lazy-timeout lazy-timeout
+        #:object-to-out object-to-out
         (transform-starter-segment starter startarg ...)
         (transform-joint-segment joint joinarg ...) ...)]))
 
