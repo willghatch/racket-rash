@@ -151,11 +151,11 @@
 (define-syntax (pipeline-start-segment stx)
   (syntax-parse stx
     [(_ arg ...+)
-     #'(rash-pipeline-splitter/start first-class-split-pipe/start arg ...)]))
+     #'(rash-pipeline-splitter/start first-class-split-pipe/start () arg ...)]))
 (define-syntax (pipeline-joint-segment stx)
   (syntax-parse stx
     [(_ arg ...+)
-     #'(rash-pipeline-splitter/joints first-class-split-pipe/joint () (arg ...))]))
+     #'(rash-pipeline-splitter/joints first-class-split-pipe/joint () () (arg ...))]))
 
 (define-syntax (run-pipeline stx)
   (syntax-parse stx
@@ -315,6 +315,8 @@
                                     #'#t
                                     #'#f)])
                 #`(rash-pipeline-splitter/start
+                   run-split-pipe
+                   ;; Opts here are just passed through until the last macro.
                    (
                     bg pipeline-ret
                     ;; env env-replace
@@ -326,9 +328,12 @@
 
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
-    [(_ opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/joints opts ([starter args ...]) (rest ...))]
-    [(rps opts iargs:not-pipeline-op ...+ rest ...)
+    ;; This is a continuation-passing style macro because I may want to run
+    ;; the pipeline OR just create a first-class pipeline object.
+    [(_ split-done-k opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
+     #'(rash-pipeline-splitter/joints
+        split-done-k opts ([starter args ...]) (rest ...))]
+    [(rps split-done-k opts iargs:not-pipeline-op ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
        (datum->syntax iarg1
@@ -336,7 +341,7 @@
                       iarg1))
      (syntax-parse implicit-starter
        [implicit-pipeline-starter:pipeline-starter
-        #'(rps opts
+        #'(rps split-done-k opts
                implicit-pipeline-starter
                iargs ... rest ...)]
        [_ (raise-syntax-error
@@ -347,11 +352,11 @@
 
 (define-syntax (rash-pipeline-splitter/joints stx)
   (syntax-parse stx
-    [(rpsj opts (done-parts ...) ())
-     #'(run-split-pipe opts done-parts ...)]
-    [(rpsj opts (done-parts ...)
+    [(rpsj split-done-k opts (done-parts ...) ())
+     #'(split-done-k opts done-parts ...)]
+    [(rpsj split-done-k opts (done-parts ...)
            (op:pipeline-joint arg:not-pipeline-op ... rest ...))
-     #'(rpsj opts (done-parts ... [op arg ...]) (rest ...))]))
+     #'(rpsj split-done-k opts (done-parts ... [op arg ...]) (rest ...))]))
 
 (define-syntax (run-split-pipe stx)
   (syntax-parse stx
@@ -393,12 +398,12 @@
 
 (define-syntax (first-class-split-pipe/start stx)
   (syntax-parse stx
-    [(_ (starter startarg ...) (joint joinarg ...) ...)
+    [(_ ignored-opts (starter startarg ...) (joint joinarg ...) ...)
      #'(mp:composite-pipeline-member-spec
         (list (transform-starter-segment starter startarg ...)
               (transform-joint-segment joint joinarg ...) ...))]))
 (define-syntax (first-class-split-pipe/joint stx)
   (syntax-parse stx
-    [(_ (joint joinarg ...) ...+)
+    [(_ ignored-opts (joint joinarg ...) ...+)
      #'(mp:composite-pipeline-member-spec
         (list (transform-joint-segment joint joinarg ...) ...))]))
