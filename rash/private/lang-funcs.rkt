@@ -17,6 +17,7 @@
 
  make-rash-reader-submodule
  define-rash-module-begin
+ rash-hash-lang-setup
  (for-syntax
   make-rash-transformer
   ))
@@ -221,7 +222,46 @@ And then be able to use the module path for that module as a #lang.
 
 Also it might be nice for #lang rash to take arguments that affect it somehow.
 But how can it be done in a way that let those arguments affect the reader?
+
+I'm not really sure what I want to do around this.  This form certainly makes
+it easy to define a new hash-lang that is very close to vanilla rash, but
+I'm not sure how often anyone wants a version of rash that is so close.
+Maybe I can also add a keyword to add things to the beginning or end of
+the module-begin form (as is done in the demo `make` language).
+
+Also, I really hate the `this-module-path` argument.  Is there a way to get
+the current module path automatically?
 |#
+(define-syntax (rash-hash-lang-setup stx)
+  (syntax-parse stx
+    [(_ mb-name arg ...)
+     (define-values (tab rest-stx)
+       (parse-keyword-options #'(arg ...)
+                              (list*
+                               (list '#:this-module-path check-expression)
+                               (list '#:top-level-wrap check-expression)
+                               rash-keyword-table)
+                              #:context stx
+                              #:no-duplicates? #t))
+     (define (maybe-kw kw)
+       (let ([a (opref tab kw #f)])
+         (if a (list kw a) '())))
+     #`(begin
+         (make-rash-reader-submodule
+          #,(opref tab '#:this-module-path
+                   #'(raise-syntax-error
+                      'make-rash-module-begin-transformer
+                      "expected #:this-module-path argument.")))
+         (define-rash-module-begin
+           mb-name
+           #,@(maybe-kw '#:this-module-path)
+           #,@(maybe-kw '#:top-level-wrap)
+           #,@(maybe-kw '#:in)
+           #,@(maybe-kw '#:out)
+           #,@(maybe-kw '#:err)
+           #,@(maybe-kw '#:starter)
+           #,@(maybe-kw '#:line-macro)
+           ))]))
 
 (define-syntax (make-rash-reader-submodule stx)
   (syntax-parse stx
