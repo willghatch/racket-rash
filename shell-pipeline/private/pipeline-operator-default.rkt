@@ -10,7 +10,7 @@
  (for-syntax
   racket/base
   syntax/parse
-  "pipeline-operator-detect.rkt"))
+  ))
 
 (define-for-syntax (default-pipeline-error stx)
   (syntax-parse stx
@@ -20,8 +20,6 @@
       "No explicit pipeline starter given in a context with no default set."
       #'e1)]))
 
-(define-syntax #%shell-pipeline/default-pipeline-starter
-  (pipeline-operator default-pipeline-error
-                     default-pipeline-error
-                     default-pipeline-error))
+(define-pipeline-operator #%shell-pipeline/default-pipeline-starter
+  #:operator default-pipeline-error)
 

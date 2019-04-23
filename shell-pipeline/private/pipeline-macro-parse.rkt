@@ -10,6 +10,10 @@
    run-pipeline
    with-pipeline-config
    splicing-with-pipeline-config
+   (for-syntax
+    pipeline-starter
+    pipeline-joint
+    )
    ))
 
 (provide
@@ -30,15 +34,14 @@
  (prefix-in mp: shell/mixed-pipeline)
  "pipeline-operator-default.rkt"
  "pipeline-operators.rkt"
- "pipeline-operator-transform.rkt"
  "../utils/bourne-expansion-utils.rkt"
+ "pipeline-operator-generics.rkt"
  (for-syntax
   racket/base
   syntax/parse
   racket/stxparam-exptime
   syntax/keyword
   racket/dict
-  "pipeline-operator-detect.rkt"
   "misc-utils.rkt"
   (for-syntax
    racket/base
