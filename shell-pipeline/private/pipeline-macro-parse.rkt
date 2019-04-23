@@ -335,8 +335,10 @@
     ;; This is a continuation-passing style macro because I may want to run
     ;; the pipeline OR just create a first-class pipeline object.
     [(_ split-done-k opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
-     #'(rash-pipeline-splitter/joints
-        split-done-k opts ([starter args ...]) (rest ...))]
+     (with-syntax ([starter-segment-expression
+                    (dispatch-pipeline-starter #'(starter args ...))])
+       #'(rash-pipeline-splitter/joints
+          split-done-k opts (starter-segment-expression) (rest ...)))]
     [(rps split-done-k opts iargs:not-pipeline-op ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
@@ -360,7 +362,11 @@
      #'(split-done-k opts done-parts ...)]
     [(rpsj split-done-k opts (done-parts ...)
            (op:pipeline-joint arg:not-pipeline-op ... rest ...))
-     #'(rpsj split-done-k opts (done-parts ... [op arg ...]) (rest ...))]))
+     (with-syntax ([joint-segment-expression
+                    (dispatch-pipeline-joint #'(op arg ...))])
+       #'(rpsj split-done-k opts
+               (done-parts ... joint-segment-expression)
+               (rest ...)))]))
 
 (define-syntax (run-split-pipe stx)
   (syntax-parse stx
@@ -373,14 +379,13 @@
        strictness lazy-timeout
        object-to-out
        )
-      (starter startarg ...) (joint joinarg ...) ...)
+      pipe-segment-expressions ...)
      #'(rash-do-transformed-pipeline
         #:bg bg #:return-pipeline-object return-pipeline-object
         #:in in #:out out #:err err
         #:strictness strictness #:lazy-timeout lazy-timeout
         #:object-to-out object-to-out
-        (transform-starter-segment starter startarg ...)
-        (transform-joint-segment joint joinarg ...) ...)]))
+        pipe-segment-expressions ...)]))
 
 
 (define (rash-do-transformed-pipeline #:bg bg
@@ -402,12 +407,11 @@
 
 (define-syntax (first-class-split-pipe/start stx)
   (syntax-parse stx
-    [(_ ignored-opts (starter startarg ...) (joint joinarg ...) ...)
+    [(_ ignored-opts starter-expression joint-expression ...)
      #'(mp:composite-pipeline-member-spec
-        (list (transform-starter-segment starter startarg ...)
-              (transform-joint-segment joint joinarg ...) ...))]))
+        (list starter-expression joint-expression ...))]))
 (define-syntax (first-class-split-pipe/joint stx)
   (syntax-parse stx
-    [(_ ignored-opts (joint joinarg ...) ...+)
+    [(_ ignored-opts joint-expression ...+)
      #'(mp:composite-pipeline-member-spec
-        (list (transform-joint-segment joint joinarg ...) ...))]))
+        (list joint-expression ...))]))
