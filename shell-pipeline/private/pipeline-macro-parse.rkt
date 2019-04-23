@@ -336,7 +336,8 @@
     ;; the pipeline OR just create a first-class pipeline object.
     [(_ split-done-k opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
      (with-syntax ([starter-segment-expression
-                    (dispatch-pipeline-starter #'(starter args ...))])
+                    (dispatch-pipeline-starter (syntax/loc #'starter
+                                                 (starter args ...)))])
        #'(rash-pipeline-splitter/joints
           split-done-k opts (starter-segment-expression) (rest ...)))]
     [(rps split-done-k opts iargs:not-pipeline-op ...+ rest ...)
@@ -363,7 +364,8 @@
     [(rpsj split-done-k opts (done-parts ...)
            (op:pipeline-joint arg:not-pipeline-op ... rest ...))
      (with-syntax ([joint-segment-expression
-                    (dispatch-pipeline-joint #'(op arg ...))])
+                    (dispatch-pipeline-joint (syntax/loc #'op
+                                               (op arg ...)))])
        #'(rpsj split-done-k opts
                (done-parts ... joint-segment-expression)
                (rest ...)))]))
