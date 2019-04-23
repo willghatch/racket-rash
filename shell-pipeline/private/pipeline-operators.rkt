@@ -44,14 +44,13 @@
  racket/match
  racket/string
  shell/mixed-pipeline
- "pipeline-operator-transform.rkt"
  "mostly-structs.rkt"
  (submod "subprocess-pipeline.rkt" resolve-command-path)
+ "pipeline-operator-generics.rkt"
  (for-syntax
   racket/base
   syntax/parse
   syntax/keyword
-  "pipeline-operator-detect.rkt"
   "misc-utils.rkt"
   "filter-keyword-args.rkt"
   racket/stxparam-exptime
@@ -60,14 +59,6 @@
 
 ;;;;;;;;; Defining forms
 
-(define-syntax (define-pipeline-operator/no-kw stx)
-  (syntax-parse stx
-    [(def name as-starter as-joint outside-of-rash)
-     #'(define-syntax name
-         (pipeline-operator
-          as-starter
-          as-joint
-          outside-of-rash))]))
 
 (define-syntax (define-pipeline-operator stx)
   (syntax-parse stx
@@ -195,28 +186,6 @@ re-appended).
 
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;; Basic pipe operators
-
-(define-pipeline-operator =composite-pipe=
-  #:start
-  (syntax-parser
-    [(_ (start-op:pipeline-starter start-arg:not-pipeline-op ...)
-        (join-op:pipeline-joint join-arg:not-pipeline-op ...) ...)
-     #'(composite-pipeline-member-spec
-        (list (transform-starter-segment start-op start-arg ...)
-              (transform-joint-segment join-op join-arg ...) ...))])
-  #:joint
-  (syntax-parser
-    [(_ (op:pipeline-joint arg:not-pipeline-op ...) ...+)
-     #'(composite-pipeline-member-spec
-        (list (transform-joint-segment op arg ...) ...))]))
-
-;; operator for receiving first-class segments (IE possibly-composite member specs)
-(define-pipeline-operator =pipeline-segment=
-  #:operator
-  (syntax-parser
-    [(_ segment ...)
-     #'(composite-pipeline-member-spec (list segment ...))]))
 
 ;;;; object pipes
 
@@ -229,40 +198,31 @@ re-appended).
       (λ (expanded-stx)
         (syntax-parse expanded-stx
           [(#t narg ...)
-           #'(object-pipeline-member-spec (λ (prev-ret) ((narg prev-ret) ...)))]
+           #'(=pipeline-segment=
+              (object-pipeline-member-spec (λ (prev-ret) ((narg prev-ret) ...))))]
           [(#f narg ...)
-           #'(object-pipeline-member-spec (λ ([prev-ret (pipeline-default-option)])
-                                            (if (pipeline-default-option? prev-ret)
-                                                ((narg prev-ret) ...)
-                                                ((narg prev-ret) ... prev-ret))))])))]))
+           #'(=pipeline-segment=
+              (object-pipeline-member-spec (λ ([prev-ret (pipeline-default-option)])
+                                             (if (pipeline-default-option? prev-ret)
+                                                 ((narg prev-ret) ...)
+                                                 ((narg prev-ret) ... prev-ret)))))])))]))
 
-;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
-(define-pipeline-operator =basic-object-pipe/expression=
-  #:start
-  (syntax-parser
-    [(_ e) #'(object-pipeline-member-spec (λ () e))])
-  #:joint
-  (syntax-parser
-    [(_ e)
-     #'(object-pipeline-member-spec
-        (λ (prev-ret)
-          (syntax-parameterize ([current-pipeline-argument
-                                 (make-rename-transformer #'prev-ret)])
-            e)))]))
 
 ;; Like =basic-object-pipe=, but doesn't local-expand each argument separately.
 (define-pipeline-operator =basic-object-pipe/form=
   #:start
   (syntax-parser
-    [(_ arg ...+) #'(object-pipeline-member-spec (λ () (arg ...)))])
+    [(_ arg ...+) #'(=pipeline-segment=
+                     (object-pipeline-member-spec (λ () (arg ...))))])
   #:joint
   (syntax-parser
     [(_ arg ...+)
-     #'(object-pipeline-member-spec
-        (λ (prev-ret)
-          (syntax-parameterize ([current-pipeline-argument
-                                 (make-rename-transformer #'prev-ret)])
-            (arg ...))))]))
+     #'(=pipeline-segment=
+        (object-pipeline-member-spec
+         (λ (prev-ret)
+           (syntax-parameterize ([current-pipeline-argument
+                                  (make-rename-transformer #'prev-ret)])
+             (arg ...)))))]))
 
 (define (port-sugar-transformer x)
   (if (input-port? x)
@@ -287,71 +247,4 @@ re-appended).
   #:joint
   (syntax-parser [(_ e) (with-port-sugar #'(=basic-object-pipe/form= e))]))
 
-;;;; unix-y pipes
 
-
-;; This is to evaluate the command form before any arguments, so I can raise
-;; an error early if the command doesn't exist.  This provides better error
-;; messages for eg. line-macro names that are misspelled or not required.
-(define-syntax (unix-args-eval stx)
-  (syntax-parse stx
-    [(_ arg ...)
-     #'(unix-args-eval-func (list (λ () arg) ...))]))
-(define (unix-args-eval-func arg-thunks)
-  (reverse
-   (for/fold ([argl-rev '()])
-             ([t arg-thunks])
-     (define cur-arg (t))
-     (if (null? argl-rev)
-         (match (unix-args-eval-match cur-arg)
-           [(list) argl-rev]
-           [x (cons x argl-rev)])
-         (cons cur-arg argl-rev)))))
-(define (unix-args-eval-match cmd-arg)
-  (define (resolve c)
-    (cond [(or (path? c) (string? c) (symbol? c))
-           (resolve-command-path c)]
-          [(or (procedure? c) (prop:alias-func? c)) c]
-          [else (error '=basic-unix-pipe=
-                       "bad command, expected a path/string/symbol or function: ~a"
-                       c)]))
-  (match cmd-arg
-    [(list a ...)
-     (define flat-cmdlist (flatten a))
-     (match flat-cmdlist
-       [(list cmd arg ...)
-        (cons (resolve cmd) arg)]
-       [(list) (list)])]
-    [cmd (resolve cmd)]))
-
-(define-for-syntax (basic-unix-pipe/ordered-args stx)
-  (syntax-parse stx
-    [(arg-maybe-opt ...+)
-     (define-values (opts rest-stx)
-       (parse-keyword-options #'(arg-maybe-opt ...)
-                              (list
-                               (list '#:err check-expression)
-                               (list '#:env check-expression)
-                               (list '#:success check-expression)
-                               )
-                              #:no-duplicates? #t))
-     (syntax-parse rest-stx
-       [(arg ...)
-        (let ([success-pred (opref opts '#:success #'(pipeline-default-option))]
-              ;; TODO - hook up env
-              [env-extend (opref opts '#:env #''())]
-              [err (or (opref opts '#:err #f)
-                       #'(pipeline-default-option))])
-          #`(unix-pipeline-member-spec (flatten (unix-args-eval arg ...))
-                                       #:err #,err
-                                       #:success #,success-pred))])]))
-
-(define-for-syntax (basic-unix-pipe stx)
-  (syntax-parse stx
-    [(_ arg ...+)
-     (let-values ([(kwargs pargs) (filter-keyword-args #'(arg ...))])
-       (basic-unix-pipe/ordered-args
-        (datum->syntax #f (append kwargs pargs))))]))
-
-(define-pipeline-operator =basic-unix-pipe=
-  #:operator basic-unix-pipe)

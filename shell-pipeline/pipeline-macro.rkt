@@ -29,7 +29,7 @@
 (require
  (submod "private/pipeline-macro-parse.rkt" for-public)
  "private/pipeline-operator-default.rkt"
- (for-syntax "private/pipeline-operator-detect.rkt")
+ ;(for-syntax "private/pipeline-operator-detect.rkt")
  "private/pipeline-operators.rkt"
  "private/good-unix-operator.rkt"
  "private/define-pipeline-alias.rkt"
