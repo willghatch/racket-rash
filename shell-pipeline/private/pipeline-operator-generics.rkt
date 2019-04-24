@@ -84,6 +84,12 @@
         (apply-as-transformer pipeline-joint-macro 'expression #f stx))]
       [else (error 'pipeline-joint->core "not a pipeline joint ~a\n" stx)]))
 
+  #|
+  For binding, I need the core desugaring thing to return the syntax to make a pipeline-member-spec, but also the names of any bindings (in both original and transformed form).  Then the next pipeline segment will need to be in a new context that can see that binding and has it bound to... maybe a transformer that will get a value out of a box?  And the spec form for that binding will need to run code that sets that box.  So I need to generate a getter and setter, and in the binding-spec-generator expression I need to let-syntax it to the setter, and further in the pipeline I need to let-syntax it to the getter.  Except I also want to be able to set! it later, so I need the getter to be a set!-transformer.
+  Then the outer driver thing will have the original and transformed binding names, and can arrange all the let-syntax stuff as well as an outer definition of the given names if it is in a definition context.
+
+  What arguments does it need to accept?  It needs the syntax object itself, obviously.  It needs a definition context, I guess?  Does it need a new one for each new expansion?  They should probably be parent/child definition contexts.
+  |#
   (define (dispatch-pipeline-starter stx)
     (define core-stx (pipeline-starter->core stx))
     (apply-as-transformer core-pipeline-starter 'expression #f core-stx))
@@ -114,14 +120,28 @@
     (syntax-parser
       [(_ (start-op:pipeline-starter start-arg:not-pipeline-op ...)
           (join-op:pipeline-joint join-arg:not-pipeline-op ...) ...)
+       (define-values (spec-syntax orig-name def-name ref-name)
+         (dispatch-pipeline-start #'(start-op start-arg ...) TODO))
+       (aoeu TODO)
        #'(composite-pipeline-member-spec
           (list (transform-starter-segment start-op start-arg ...)
                 (transform-joint-segment join-op join-arg ...) ...))])]
    [core-pipeline-joint
     (syntax-parser
       [(_ (op:pipeline-joint arg:not-pipeline-op ...) ...+)
-       #'(composite-pipeline-member-spec
-          (list (transform-joint-segment op arg ...) ...))])]))
+       (define-values (spec-syntaxes-rev orig-names def-names ref-names)
+         (for/fold ([spec-syntaxes '()]
+                    [binders-orig '()]
+                    [binders-set '()]
+                    [binders-use '()])
+                   ([joint (syntax->list #'((op arg ...) ...))])
+           (define-values (spec-stx origs sets uses)
+             (dispatch-pipeline-joint joint context TODO))
+           (values (cons spec-stx spec-syntaxes)
+                   (append origs binders-orig)
+                   (append sets binders-set)
+                   (append uses binders-use))))
+       (values (reverse spec-syntaxes-rev orig-names def-names ref-names))])]))
 
 ;; For first-class segments or as an escape to construct specs with the function API.
 (define-syntax =pipeline-segment=
