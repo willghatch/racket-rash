@@ -17,8 +17,8 @@
    ))
 
 (provide
- pipeline-start-segment
- pipeline-joint-segment
+ ;pipeline-start-segment
+ ;pipeline-joint-segment
  run-pipeline
  with-pipeline-config
  splicing-with-pipeline-config
@@ -105,7 +105,8 @@
       (~or (~optional (~seq #:in in))
            (~optional (~seq #:out out))
            (~optional (~seq #:err err))
-           (~optional (~seq #:starter starter:pipeline-starter))
+           ;(~optional (~seq #:starter starter:pipeline-starter))
+           (~optional (~seq #:starter starter))
            (~optional (~seq #:context context)))
       ...
       body:expr ...)
@@ -330,17 +331,40 @@
                     )
                    arg ...))])])])]))
 
+(define-for-syntax (pipeline-split-loop stx def-ctx stxs names)
+  (syntax-parse stx
+    [() (values stxs names)]
+    [((~var op (pipeline-joint def-ctx))
+      (~var arg (not-pipeline-op def-ctx)) ...
+      rest ...)
+     (define-values (out-stx new-names)
+       (dispatch-pipeline-joint (syntax/loc #'op
+                                  (op arg ...))
+                                def-ctx))
+     (pipeline-split-loop #'(rest ...)
+                          def-ctx
+                          (append stxs (list out-stx))
+                          (append names new-names))]))
+
+(require racket/undefined)
+
 (define-syntax (rash-pipeline-splitter/start stx)
   (syntax-parse stx
     ;; This is a continuation-passing style macro because I may want to run
     ;; the pipeline OR just create a first-class pipeline object.
-    [(_ split-done-k opts starter:pipeline-starter args:not-pipeline-op ... rest ...)
-     (with-syntax ([starter-segment-expression
-                    (dispatch-pipeline-starter (syntax/loc #'starter
-                                                 (starter args ...)))])
-       #'(rash-pipeline-splitter/joints
-          split-done-k opts (starter-segment-expression) (rest ...)))]
-    [(rps split-done-k opts iargs:not-pipeline-op ...+ rest ...)
+    [(_ split-done-k opts (~var starter (pipeline-starter #f))
+        (~var args (not-pipeline-op #f)) ... rest ...)
+     (define def-ctx (syntax-local-make-definition-context))
+     (define-values (stx1 names1) (dispatch-pipeline-starter (syntax/loc #'starter
+                                                             (starter args ...))))
+     (define-values (stxs2 names2)
+       (pipeline-split-loop #'(rest ...) def-ctx (list stx1) names1))
+     #`(split-done-k
+        opts
+        (let (#,@(map (λ (n) #`(#,n undefined))
+                      names2))
+          (list #,@stxs2)))]
+    [(rps split-done-k opts (~var iargs (not-pipeline-op #f)) ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
        (datum->syntax iarg1
@@ -357,7 +381,7 @@
            #'(iargs ... rest ...)
            iarg1)])]))
 
-(define-syntax (rash-pipeline-splitter/joints stx)
+#;(define-syntax (rash-pipeline-splitter/joints stx)
   (syntax-parse stx
     [(rpsj split-done-k opts (done-parts ...) ())
      #'(split-done-k opts done-parts ...)]
@@ -381,13 +405,13 @@
        strictness lazy-timeout
        object-to-out
        )
-      pipe-segment-expressions ...)
+      pipe-segment-expressions-list)
      #'(rash-do-transformed-pipeline
         #:bg bg #:return-pipeline-object return-pipeline-object
         #:in in #:out out #:err err
         #:strictness strictness #:lazy-timeout lazy-timeout
         #:object-to-out object-to-out
-        pipe-segment-expressions ...)]))
+        pipe-segment-expressions-list)]))
 
 
 (define (rash-do-transformed-pipeline #:bg bg
@@ -398,7 +422,7 @@
                                       #:strictness strictness
                                       #:lazy-timeout lazy-timeout
                                       #:object-to-out object-to-out
-                                      . args)
+                                      args)
   ;; TODO - environment extension/replacement
   (apply mp:run-mixed-pipeline
          #:bg bg #:return-pipeline-object return-pipeline-object
@@ -407,12 +431,12 @@
          #:object-to-out object-to-out
          args))
 
-(define-syntax (first-class-split-pipe/start stx)
+#;(define-syntax (first-class-split-pipe/start stx)
   (syntax-parse stx
     [(_ ignored-opts starter-expression joint-expression ...)
      #'(mp:composite-pipeline-member-spec
         (list starter-expression joint-expression ...))]))
-(define-syntax (first-class-split-pipe/joint stx)
+#;(define-syntax (first-class-split-pipe/joint stx)
   (syntax-parse stx
     [(_ ignored-opts joint-expression ...+)
      #'(mp:composite-pipeline-member-spec

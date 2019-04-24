@@ -56,15 +56,15 @@
   |#
 
   ;; For splitting macro to delimit pipeline segments
-  (define-syntax-class pipeline-starter
-    (pattern op:id #:when (or (core-pipeline-starter? #'(op))
-                              (pipeline-starter-macro? #'(op)))))
-  (define-syntax-class pipeline-joint
-    (pattern op:id #:when (or (core-pipeline-joint? #'(op))
-                              (pipeline-joint-macro? #'(op)))))
-  (define-syntax-class not-pipeline-op
-    (pattern (~and (~not x:pipeline-joint)
-                   (~not x:pipeline-starter))))
+  (define-syntax-class (pipeline-starter def-ctx)
+    (pattern op:id #:when (or (core-pipeline-starter? #'(op) def-ctx)
+                              (pipeline-starter-macro? #'(op) def-ctx))))
+  (define-syntax-class (pipeline-joint def-ctx)
+    (pattern op:id #:when (or (core-pipeline-joint? #'(op) def-ctx)
+                              (pipeline-joint-macro? #'(op) def-ctx))))
+  (define-syntax-class (not-pipeline-op def-ctx)
+    (pattern (~and (~not (~var x (pipeline-joint def-ctx)))
+                   (~not (~var x (pipeline-starter def-ctx))))))
 
 
 
@@ -89,13 +89,15 @@
   Then the outer driver thing will have the original and transformed binding names, and can arrange all the let-syntax stuff as well as an outer definition of the given names if it is in a definition context.
 
   What arguments does it need to accept?  It needs the syntax object itself, obviously.  It needs a definition context, I guess?  Does it need a new one for each new expansion?  They should probably be parent/child definition contexts.
+
+  (-> stx definition-context (values syntax (listof id)))
   |#
-  (define (dispatch-pipeline-starter stx)
+  (define (dispatch-pipeline-starter stx def-ctx)
     (define core-stx (pipeline-starter->core stx))
-    (apply-as-transformer core-pipeline-starter 'expression #f core-stx))
-  (define (dispatch-pipeline-joint stx)
+    (apply-as-transformer core-pipeline-starter 'expression #f core-stx def-ctx))
+  (define (dispatch-pipeline-joint stx def-ctx)
     (define core-stx (pipeline-joint->core stx))
-    (apply-as-transformer core-pipeline-joint 'expression #f core-stx))
+    (apply-as-transformer core-pipeline-joint 'expression #f core-stx def-ctx))
   )
 
 ;; basic definition form, wrapped by the better one in "pipeline-operators.rkt"
@@ -114,40 +116,53 @@
 (define-syntax (transform-joint-segment stx)
   (syntax-parse stx [(_ arg ...) (dispatch-pipeline-joint #'(arg ...))]))
 
+(define-for-syntax (composite-pipe-helper segments def-ctx)
+  (for/fold ([done-stx-list '()]
+             [lifted-ids '()])
+            ([segment segments])
+    (let-values ([(done-stx ids) (dispatch-pipeline-joint segment def-ctx)])
+      (values (append done-stx-list (list done-stx))
+              (append lifted-ids ids)))))
+
 (define-syntax =composite-pipe=
   (generics
    [core-pipeline-starter
-    (syntax-parser
-      [(_ (start-op:pipeline-starter start-arg:not-pipeline-op ...)
-          (join-op:pipeline-joint join-arg:not-pipeline-op ...) ...)
-       (define-values (spec-syntax orig-name def-name ref-name)
-         (dispatch-pipeline-start #'(start-op start-arg ...) TODO))
-       (aoeu TODO)
-       #'(composite-pipeline-member-spec
-          (list (transform-starter-segment start-op start-arg ...)
-                (transform-joint-segment join-op join-arg ...) ...))])]
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(_ ((~var start-op (pipeline-starter def-ctx))
+             (~var start-arg (not-pipeline-op def-ctx)) ...)
+            ((~var join-op (pipeline-joint def-ctx))
+             (~var join-arg (not-pipeline-op def-ctx)) ...) ...)
+         (define-values (stx1 ids1)
+           (dispatch-pipeline-starter #'(start-op start-arg ...) def-ctx))
+         (define-values (stxs2 ids2)
+           (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))
+                                  def-ctx))
+         (define stxs (cons stx1 stxs2))
+         (define ids (append ids1 ids2))
+         (values
+          #`(composite-pipeline-member-spec (list #,@stxs))
+          ids)]))]
    [core-pipeline-joint
-    (syntax-parser
-      [(_ (op:pipeline-joint arg:not-pipeline-op ...) ...+)
-       (define-values (spec-syntaxes-rev orig-names def-names ref-names)
-         (for/fold ([spec-syntaxes '()]
-                    [binders-orig '()]
-                    [binders-set '()]
-                    [binders-use '()])
-                   ([joint (syntax->list #'((op arg ...) ...))])
-           (define-values (spec-stx origs sets uses)
-             (dispatch-pipeline-joint joint context TODO))
-           (values (cons spec-stx spec-syntaxes)
-                   (append origs binders-orig)
-                   (append sets binders-set)
-                   (append uses binders-use))))
-       (values (reverse spec-syntaxes-rev orig-names def-names ref-names))])]))
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(_ ((~var op (pipeline-joint def-ctx))
+             (~var arg (not-pipeline-op def-ctx)) ...) ...+)
+         (define-values (stxs ids)
+           (composite-pipe-helper (syntax->list #'((op arg ...) ...)) def-ctx))
+         (values
+          #`(composite-pipeline-member-spec
+             (list #,@stxs))
+          ids)]))]))
 
 ;; For first-class segments or as an escape to construct specs with the function API.
 (define-syntax =pipeline-segment=
-  (let ([op (syntax-parser
-              [(_ segment ...)
-               #'(composite-pipeline-member-spec (list segment ...))])])
+  (let ([op (λ (stx def-ctx)
+              (syntax-parse stx
+                [(_ segment ...)
+                 (values 
+                  #'(composite-pipeline-member-spec (list segment ...))
+                  '())]))])
     (generics
      [core-pipeline-starter op]
      [core-pipeline-joint op])))
@@ -156,33 +171,47 @@
 (define-syntax =basic-object-pipe/expression=
   (generics
    [core-pipeline-starter
-    (syntax-parser
-      [(_ e) #'(object-pipeline-member-spec (λ () e))])]
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(_ e) (values #'(object-pipeline-member-spec (λ () e)) '())]))]
    [core-pipeline-joint
-    (syntax-parser
-      [(_ e)
-       #'(object-pipeline-member-spec
-          (λ (prev-ret)
-            (syntax-parameterize ([current-pipeline-argument
-                                   (make-rename-transformer #'prev-ret)])
-              e)))])]))
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(_ e)
+         (values
+          #'(object-pipeline-member-spec
+             (λ (prev-ret)
+               (syntax-parameterize ([current-pipeline-argument
+                                      (make-rename-transformer #'prev-ret)])
+                 e)))
+          '())]))]))
 
+
+(define-for-syntax (basic-unix-pipe-tx stx def-ctx)
+  (values (basic-unix-pipe-transformer stx)
+          '()))
 
 (define-syntax =basic-unix-pipe=
   (generics
-   [core-pipeline-starter basic-unix-pipe-transformer]
-   [core-pipeline-joint basic-unix-pipe-transformer]))
+   [core-pipeline-starter basic-unix-pipe-tx]
+   [core-pipeline-joint basic-unix-pipe-tx]))
 
-#;(define-syntax =bind=
+(define-syntax =bind=
   (generics
    [core-pipeline-starter
-    (syntax-parser [(~and stx (_ arg1 arg ...))
-                    (raise-syntax-error '=bind=
-                                        "Can't be used as a pipeline starter"
-                                        #'stx
-                                        #'arg1)])]
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(~and stx (_ arg1 arg ...))
+         (raise-syntax-error '=bind=
+                             "Can't be used as a pipeline starter"
+                             #'stx
+                             #'arg1)]))]
    [core-pipeline-joint
-    (λ (stx)
-      ;; TODO - this should call the `bind!` function.  To do that I need a defenition context made with make-def-ctx (which should have a longer name).  I also need a fresh scope probably.  So maybe I need to thread these things through the splitter function?  And this needs different handling for the first-class-pipeline-spec generator case vs the run-pipeline case (the first-class case should allow bindings to be seen later in the pipeline, but nowhere else).  And I need special handling when I'm in an expression context vs a definition context -- in a definition context I should collect all the bindings and re-bind them outside, maybe with a define-values form that is just assigned to the inner version of the variables.
-      aoeu)]))
+    (λ (stx def-ctx)
+      (syntax-parse stx
+        [(_ name)
+         (define re-name (bind! def-ctx #'name #f))
+         (values
+          #`(object-pipeline-member-spec (λ (arg) (set! #,re-name arg) arg))
+          (list (syntax-local-introduce re-name)))]))]))
 
