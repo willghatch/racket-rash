@@ -301,7 +301,7 @@
                             ;; TODO - respect outer macro default
                             [else  #'default-pipeline-out])]
                  [err (cond [(attribute s-err)]
-                            [(attribute s-err)]
+                            [(attribute e-err)]
                             ;; TODO - respect outer macro default
                             [else #'default-pipeline-err-out])]
                  [object-to-out (if (or (attribute s-out)
