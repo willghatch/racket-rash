@@ -27,4 +27,9 @@
                  =basic-object-pipe= string-upcase)
    "TO BE SURE THINGS\nARE GENERALLY WORKING.\n")
 
+  (check-equal?
+   (call-with-output-string
+    (λ (out) (run-pipeline =unix-pipe= (λ () (eprintf "some error output")) &err out)))
+   "some error output")
+
   )
