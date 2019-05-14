@@ -11,6 +11,8 @@
  racket/stxparam
  racket/port
 
+ shell/private/job-control-ffi
+
  basedir
  racket/exn
 
@@ -31,6 +33,7 @@
                          current-rash-top-level-print-formatter)
                 rash/private/repl-namespace
                 (submod rash/private/top-level-print default-rash-formatter)
+                (submod shell/private/job-control-ffi repl)
                 rash/private/help-line-macro
                 rash/private/repl-startup-hint
                 (for-syntax racket/base syntax/parse))
@@ -139,6 +142,12 @@
    )
 
   (define input-port-for-repl (current-input-port))
+  (with-handlers ([(λ(e)#t)
+                   (λ(e) (eprintf "Job control failed to initialize: ~s\n" e))])
+    (eval
+     '(initialize-job-control!
+       (list (current-input-port) (current-output-port) (current-error-port)))
+     repl-namespace))
   (when use-readline?
     (let ()
       (define pre-readline-input-port

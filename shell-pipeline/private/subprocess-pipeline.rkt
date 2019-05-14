@@ -467,17 +467,15 @@
                #;(or (terminal-port? in)
                      (terminal-port? out)))
       ;; make the group the controlling group of the terminal
-      (set-controlling-process-group (list in out default-err) group)
-      (send-sigcont-to-process-group group))
+      (eprintf "setting controlling process group for foreground job\n")
+      (set-terminal-controlling-process-group! group)
+      (send-sigcont-to-process-group! group))
     (if bg?
         pline
         (begin (pipeline-wait pline)
                (when group
                  ;; TODO - this doesn't seem to be working
-                 (let ([my-group (getpgid 0)])
-                   (set-controlling-process-group
-                    (list in out default-err)
-                    my-group)))
+                 (return-terminal-control!))
                pline))))
 
 (define (run-subprocess-pipeline/out #:strictness [strictness 'lazy]
@@ -533,13 +531,13 @@
   (let* ([members-pre-resolve (pipeline-members pipeline-spec)]
          [default-err (pipeline-default-err pipeline-spec)]
          [members (map (resolve-spec default-err) members-pre-resolve)]
-         [all-subprocess? (map (λ (m) (not (procedure?
-                                            (car (pipeline-member-spec-argl m)))))
-                               members)]
+         [all-subprocess? (andmap (λ (m) (not (procedure?
+                                               (car (pipeline-member-spec-argl m)))))
+                                  members)]
          [strictness (pipeline-strictness pipeline-spec)]
          [lazy-timeout (pipeline-lazy-timeout pipeline-spec)]
          [bg? (pipeline-start-bg? pipeline-spec)]
-         [group-initial (and job-control-available?
+         [group-initial (and (job-control-initialized?)
                              (pipeline-group pipeline-spec))]
          [group-use (cond [(not all-subprocess?)
                            #f]
