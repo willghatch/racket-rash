@@ -473,7 +473,6 @@
                #;(or (terminal-port? in)
                      (terminal-port? out)))
       ;; make the group the controlling group of the terminal
-      (eprintf "setting controlling process group for foreground job\n")
       (set-terminal-controlling-process-group! group)
       (send-sigcont-to-process-group! group))
     (cond

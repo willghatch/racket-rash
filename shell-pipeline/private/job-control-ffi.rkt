@@ -241,7 +241,6 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
 
       ;; take control of terminal
       (tcsetpgrp terminal-fd shell-pid)
-      (eprintf "terminal control taken\n")
 
       ;; TODO - save default terminal attributes for shell with tcgetattr
 
