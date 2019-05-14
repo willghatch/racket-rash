@@ -107,6 +107,9 @@
 (module+ resolve-command-path
   (provide resolve-command-path prop:alias-func?))
 
+(module+ repl
+  (provide pipeline-waitpid))
+
 (define mk-pipeline-member-spec unix-pipeline-member-spec)
 (define pipeline-member-spec? unix-pipeline-member-spec?)
 (define (cp-spec base
@@ -314,6 +317,9 @@
   ;#:transparent
   )
 
+(define (pipeline-waitpid pline)
+  (waitpid-wrap (pipeline-group pline)))
+
 (define (pipeline-spec? pline)
   (for/and ([m (pipeline-members pline)])
     (pipeline-member-spec? m)))
@@ -470,13 +476,13 @@
       (eprintf "setting controlling process group for foreground job\n")
       (set-terminal-controlling-process-group! group)
       (send-sigcont-to-process-group! group))
-    (if bg?
-        pline
-        (begin (pipeline-wait pline)
-               (when group
-                 ;; TODO - this doesn't seem to be working
-                 (return-terminal-control!))
-               pline))))
+    (cond
+      [(and bg? group) (begin (job-control pline 'background) pline)]
+      [bg? pline]
+      [group (begin
+               (job-control pline 'foreground)
+               pline)]
+      [else (begin (pipeline-wait pline) pline)])))
 
 (define (run-subprocess-pipeline/out #:strictness [strictness 'lazy]
                           #:lazy-timeout [lazy-timeout 1]

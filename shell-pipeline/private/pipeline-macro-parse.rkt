@@ -5,6 +5,7 @@
    &bg &pipeline-ret &env
    &in &< &out &> &>! &>> &err
    &strict &permissive &lazy &lazy-timeout
+   &unix-job-control
    pipeline-start-segment
    pipeline-joint-segment
    run-pipeline
@@ -18,7 +19,7 @@
  run-pipeline
  with-pipeline-config
  splicing-with-pipeline-config
- &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err
+ &bg &pipeline-ret &env &env-replace &in &< &out &> &>! &>> &err &unix-job-control
  )
 
 (require
@@ -70,18 +71,23 @@
 (def-pipeline-opt &permissive)
 (def-pipeline-opt &lazy)
 (def-pipeline-opt &lazy-timeout)
+(def-pipeline-opt &unix-job-control)
 
 
 (begin-for-syntax
   (define-literal-set pipeline-opts
     (&bg &pipeline-ret &env &env-replace
          &in &< &out &> &>! &>> &err
-         &strict &permissive &lazy &lazy-timeout))
+         &strict &permissive &lazy &lazy-timeout
+         &unix-job-control
+         ))
   (define-syntax-class not-opt
     #:literal-sets (pipeline-opts)
     (pattern (~not (~or &bg &pipeline-ret &env &env-replace
                         &in &out &err &< &> &>! &>>
-                        &strict &permissive &lazy &lazy-timeout)))))
+                        &strict &permissive &lazy &lazy-timeout
+                        &unix-job-control
+                        )))))
 
 ;; TODO - maybe these should be used by mixed-pipeline as well?
 (define-syntax-parameter default-pipeline-in
@@ -189,6 +195,8 @@
                               (~seq &>> s->>:expr))
                          #:name "&out, &>, &>!, and &>> options")
               (~optional (~seq &err s-err:expr) #:name "&err option")
+              (~optional (~seq &unix-job-control s-jc:expr)
+                         #:name "&unix-job-control option")
               )
          ...
          args1-head:not-opt args1 ...)
@@ -215,6 +223,8 @@
                                  (~seq e->>:expr &>>))
                             #:name "&out, &>, &>!, and &>> options")
                  (~optional (~seq e-err:expr &err) #:name "&err option")
+                 (~optional (~seq &unix-job-control e-jc:expr)
+                            #:name "&unix-job-control option")
                  )
             ...
             argrev-head:not-opt argrev ...)
@@ -240,6 +250,7 @@
               (noboth (s-in s-<) (e-in e-<))
               (noboth (s-out s-> s->! s->>) (e-out e-> e->! e->>))
               (noboth s-err e-err)
+              (noboth s-jc e-jc)
               (define (dollar-expand-maybe redirection-arg)
                 (syntax-parse redirection-arg
                   [(e1:expr e ...) redirection-arg]
@@ -304,6 +315,9 @@
                             [(attribute e-err)]
                             ;; TODO - respect outer macro default
                             [else #'default-pipeline-err-out])]
+                 [job-control (cond [(attribute s-jc)]
+                                    [(attribute e-jc)]
+                                    [else #'#f])]
                  [object-to-out (if (or (attribute s-out)
                                         (attribute e-out)
                                         (attribute s->)
@@ -323,6 +337,7 @@
                     in out err
                     strictness lazy-timeout
                     object-to-out
+                    job-control
                     )
                    arg ...))])])])]))
 
@@ -368,6 +383,7 @@
        in out err
        strictness lazy-timeout
        object-to-out
+       job-control
        )
       (starter startarg ...) (joint joinarg ...) ...)
      #'(rash-do-transformed-pipeline
@@ -375,6 +391,7 @@
         #:in in #:out out #:err err
         #:strictness strictness #:lazy-timeout lazy-timeout
         #:object-to-out object-to-out
+        #:unix-job-control job-control
         (transform-starter-segment starter startarg ...)
         (transform-joint-segment joint joinarg ...) ...)]))
 
@@ -387,6 +404,7 @@
                                       #:strictness strictness
                                       #:lazy-timeout lazy-timeout
                                       #:object-to-out object-to-out
+                                      #:unix-job-control job-control
                                       . args)
   ;; TODO - environment extension/replacement
   (apply mp:run-mixed-pipeline
@@ -394,6 +412,7 @@
          #:in in #:out out #:err err
          #:strictness strictness #:lazy-timeout lazy-timeout
          #:object-to-out object-to-out
+         #:unix-job-control job-control
          args))
 
 (define-syntax (first-class-split-pipe/start stx)

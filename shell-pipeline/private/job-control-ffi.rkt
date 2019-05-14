@@ -10,6 +10,7 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
  initialize-job-control!
  job-control-initialized?
  getpgid
+ waitpid-wrap
  ;tcsetpgrp
  set-terminal-controlling-process-group!
  return-terminal-control!
@@ -20,6 +21,7 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
 
 (require
  ffi/unsafe
+ racket/match
  )
 
 (define os (system-type 'os))
@@ -142,6 +144,27 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
             (kill (- (getpgid 0))
                   SIGTTIN)
             (loop))))))
+
+;; TODO - these are the values on NixOS today, but I should get these from headers somehow...
+(define CLD_STOPPED 5)
+(define CLD_CONTINUED 6)
+
+(define waitpid
+  (get-ffi-obj "waitpid"
+               ;; in sys/wait.h
+               #f
+               (_fun (pid : _int)
+                     (wstatus : (_ptr o _int))
+                     (options : _int)
+                     -> (child-with-new-status/r : _int)
+                     -> (if (< child-with-new-status/r 0)
+                            (error 'rash "waitpid failed")
+                            (match child-with-new-status/r
+                              [CLD_STOPPED 'stopped]
+                              [CLD_CONTINUED 'continued]
+                              [else 'dead])))))
+(define (waitpid-wrap pid)
+  (waitpid pid 0))
 
 (define kill
   (get-ffi-obj "kill"

@@ -11,7 +11,8 @@
  racket/stxparam
  racket/port
 
- shell/private/job-control-ffi
+ ;shell/private/job-control-ffi
+ ;(submod shell/private/subprocess-pipeline repl)
 
  basedir
  racket/exn
@@ -47,6 +48,7 @@
 (define (result-n n)
   (hash-ref interactive-return-values n))
 (namespace-set-variable-value! 'result-n result-n)
+
 
 (define (clean/exit)
   ;; TODO - I should keep a list of background jobs and send them sighup.
@@ -124,6 +126,7 @@
 
 (define (main)
   (define use-readline? (not (equal? (system-type 'os) 'windows)))
+  (define use-job-control? #f)
   (define (cmdline-bool->bool b)
     (match (string-downcase b)
       ["true" #t]
@@ -139,15 +142,58 @@
    ["--readline" readline?
                  "use readline (true or false)"
                  (set! use-readline? (cmdline-bool->bool readline?))]
+   ["--job-control" job-control?
+                    "use job control (true or false)"
+                    (set! use-job-control? (cmdline-bool->bool job-control?))]
    )
 
   (define input-port-for-repl (current-input-port))
-  (with-handlers ([(λ(e)#t)
-                   (λ(e) (eprintf "Job control failed to initialize: ~s\n" e))])
-    (eval
-     '(initialize-job-control!
-       (list (current-input-port) (current-output-port) (current-error-port)))
-     repl-namespace))
+  (when use-job-control?
+    (with-handlers ([(λ(e)#t)
+                     (λ(e) (eprintf "Job control failed to initialize: ~s\n" e))])
+      (eval
+       '(initialize-job-control!
+         (list (current-input-port) (current-output-port) (current-error-port)))
+       repl-namespace)
+      (eval
+       '(begin
+          (require (only-in shell/private/job-control-ffi
+                            [return-terminal-control! %%%%return-terminal-control!]))
+          (require (only-in (submod shell/private/subprocess-pipeline repl)
+                            [pipeline-waitpid %%%%pipeline-waitpid]))
+          (define %%%%background-job-list-box (box (list)))
+          (define %%%%stopped-job-list-box (box (list)))
+
+          (define (%%%%set-foreground-job! pline)
+            (define status (%%%%pipeline-waitpid pline))
+            (case status
+              ['dead (void)]
+              ['stopped (%%%%add-stopped-job! pline)]
+              ['continued (%%%%add-background-job! pline)])
+            (%%%%return-terminal-control!))
+          (define (%%%%add-background-job! pline)
+            (set-box! %%%%background-job-list-box
+                      (cons pline (unbox %%%%background-job-list-box))))
+          (define (%%%%add-stopped-job! pline)
+            (set-box! %%%%stopped-job-list-box
+                      (cons pline (unbox %%%%stopped-job-list-box))))
+
+          (define (%%%%job-control-callback pline fg/bg)
+            (case fg/bg
+              ['foreground (%%%%set-foreground-job! pline)]
+              ['background (%%%%add-background-job! pline)]))
+          )
+       repl-namespace)
+      (eval
+       '(define-syntax (%%%%repl-default-line-macro stx)
+          (syntax-parse stx
+            [(_ arg ...)
+             #'(run-pipeline &unix-job-control %%%%job-control-callback arg ...)]))
+       repl-namespace)
+      (eval
+       '(set-default-line-macro! %%%%repl-default-line-macro)
+       repl-namespace)
+      ))
   (when use-readline?
     (let ()
       (define pre-readline-input-port

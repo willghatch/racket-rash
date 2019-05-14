@@ -28,6 +28,7 @@
          #:bg any/c
          #:return-pipeline-object any/c
          #:object-to-out any/c
+         #:unix-job-control any/c
          )
         #:rest (listof (or/c unix-pipeline-member-spec?
                              object-pipeline-member-spec?
@@ -254,6 +255,12 @@
   (string-trim (begin0 (port->string p)
                  (close-input-port p))))
 
+(define (all-subprocess? specs)
+  (andmap (λ (ms) (and (unix-pipeline-member-spec? ms)
+                       (not (procedure?
+                             (car (pipeline-member-spec-argl ms))))))
+          (flatten-specs specs)))
+
 (define (run-mixed-pipeline
          #:in [init-in-port (open-input-string "")]
          #:out [final-output-port-or-transformer
@@ -263,24 +270,38 @@
          #:lazy-timeout [lazy-timeout 1]
          ;; TODO - make consistent with other run-pipelines
          #:bg [bg #f]
+         #:unix-job-control [job-control #f]
          ;; TODO - better name
          #:return-pipeline-object [return-pipeline-object #f]
          #:object-to-out [object-to-out #f]
          .
          specs)
-  (define pline (-run-pipeline specs init-in-port
-                               final-output-port-or-transformer
-                               default-err strictness lazy-timeout
-                               object-to-out))
-  (when (not bg) (pipeline-wait pline))
-  (if (or bg return-pipeline-object)
-      pline
-      (let ([ret (pipeline-return pline)]
-            [last-seg (car (unbox (pipeline-segment-box pline)))])
-        (cond
-          [(pipeline-success? pline) ret]
-          [else (raise ret)])
-        )))
+  (define job-control-use (and job-control
+                               (not (procedure? final-output-port-or-transformer))
+                               (all-subprocess? specs)
+                               job-control))
+  (if job-control-use
+      (apply u-run-subprocess-pipeline
+                                #:in init-in-port
+                                #:out final-output-port-or-transformer
+                                #:err default-err
+                                #:strictness strictness
+                                #:lazy-timeout lazy-timeout
+                                #:background? bg
+                                #:unix-job-control job-control-use
+                                (flatten-specs specs))
+      (let ([pline (-run-pipeline specs init-in-port
+                                  final-output-port-or-transformer
+                                  default-err strictness lazy-timeout
+                                  object-to-out)])
+        (when (not bg) (pipeline-wait pline))
+        (if (or bg return-pipeline-object)
+            pline
+            (let ([ret (pipeline-return pline)]
+                  [last-seg (car (unbox (pipeline-segment-box pline)))])
+              (cond
+                [(pipeline-success? pline) ret]
+                [else (raise ret)]))))))
 
 (define (-run-pipeline specs init-in-port final-out-transformer
                        default-err strictness lazy-timeout
