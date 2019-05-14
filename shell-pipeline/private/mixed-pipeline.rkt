@@ -281,15 +281,16 @@
                                (all-subprocess? specs)
                                job-control))
   (if job-control-use
-      (apply u-run-subprocess-pipeline
-                                #:in init-in-port
-                                #:out final-output-port-or-transformer
-                                #:err default-err
-                                #:strictness strictness
-                                #:lazy-timeout lazy-timeout
-                                #:background? bg
-                                #:unix-job-control job-control-use
-                                (flatten-specs specs))
+      (void
+       (apply u-run-subprocess-pipeline
+              #:in init-in-port
+              #:out final-output-port-or-transformer
+              #:err default-err
+              #:strictness strictness
+              #:lazy-timeout lazy-timeout
+              #:background? bg
+              #:unix-job-control job-control-use
+              (flatten-specs specs)))
       (let ([pline (-run-pipeline specs init-in-port
                                   final-output-port-or-transformer
                                   default-err strictness lazy-timeout
