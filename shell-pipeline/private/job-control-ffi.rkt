@@ -159,21 +159,58 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
   (kill (- pgid) signal-number))
 
 ;; TODO
-;; My `man 7 signal` lists SIGCONT as 19,18,25... hmmm... may be more system-dependent.
 ;; I need a good way to get signal numbers from system headers...
+;; These are just taken from `man 7 signal` for x86/ARM/most others...
+(define SIGINT 2)
+(define SIGQUIT 3)
+(define SIGCHLD 17)
 (define SIGCONT 18)
+(define SIGSTOP 19)
+(define SIGTSTP 20)
 (define SIGTTIN 21)
+(define SIGTTOU 22)
+
 
 (define (send-sigcont-to-process-group! pgid)
   (kill-process-group pgid SIGCONT))
 
+
+;; These are signal handler values
+(define SIG_ERR -1)
+(define SIG_DFL 0)
+(define SIG_IGN 1)
+
+(define signal
+  (get-ffi-obj "signal"
+               ;; in signal.h
+               #f
+               (_fun (signum : _int)
+                     (handler : _int)
+                     ->
+                     (oldhandler : _int)
+                     ->
+                     (if (equal? oldhandler SIG_ERR)
+                         (error 'rash "job control signal masking error")
+                         oldhandler))))
+
 (define (initialize-job-control! ports)
+  ;; This series of steps is basically taken from:
+  ;; https://www.gnu.org/software/libc/manual/html_node/Initializing-the-Shell.html#Initializing-the-Shell
   (define success
     (with-handlers ([(λ(e)#t)(λ(e)#f)])
       (define terminal-fd (ports->terminal-fd ports))
       (set! my-terminal-fd terminal-fd)
       (loop-until-foreground terminal-fd)
-      ;; TODO - mask off interactive signals
+
+      ;; TODO - Which of these signals are used specially in Racket?
+      ;;        And what should I do about it?
+      ;(signal SIGINT SIG_IGN)
+      ;(signal SIGQUIT SIG_IGN)
+      (signal SIGTSTP SIG_IGN)
+      (signal SIGTTIN SIG_IGN)
+      (signal SIGTTOU SIG_IGN)
+      ;(signal SIGCHLD SIG_IGN)
+
       (define shell-pid (getpid))
       ;; make our own process group
       (define setpgid-ret (setpgid shell-pid shell-pid))
