@@ -501,6 +501,7 @@
                                          #:strictness strictness
                                          #:lazy-timeout lazy-timeout
                                          #:background? #f
+                                         #:unix-job-control #f
                                          #:err err
                                          members)]
          [pline (parameterize ([current-output-port out]
