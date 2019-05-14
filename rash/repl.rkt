@@ -165,6 +165,7 @@
           (define %%%%stopped-job-list-box (box (list)))
 
           (define (%%%%set-foreground-job! pline)
+            ;; TODO - this isn't working reliably.
             (define status (%%%%pipeline-waitpid pline))
             (case status
               ['dead (void)]
@@ -182,6 +183,8 @@
             (case fg/bg
               ['foreground (%%%%set-foreground-job! pline)]
               ['background (%%%%add-background-job! pline)]))
+
+          ;; TODO - a foreground function that takes a job out of the stopped list and runs it (but that has to give it a hook to put it back in the stop list if it stops again...), and a background function that starts a stopped job and moves it to the background list.
           )
        repl-namespace)
       (eval
@@ -193,6 +196,9 @@
       (eval
        '(set-default-line-macro! %%%%repl-default-line-macro)
        repl-namespace)
+      (eprintf "Job control is activated, but it is not yet fully implemented.\n")
+      (eprintf "It won't work the way you expect or hope.\n")
+      (eprintf "Basically, it's still totally broken.\n")
       ))
   (when use-readline?
     (let ()

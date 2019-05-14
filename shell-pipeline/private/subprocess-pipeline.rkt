@@ -40,6 +40,14 @@
                      special-redirect?
                      (list/c path-string-symbol?
                              (or/c 'error 'append 'truncate)))
+         #|
+         The unix-job-control argument should be either #f for no job control, or:
+         A function that takes a pipeline (from this module) and a symbol that is
+         either 'background or 'foreground.  The function should then do any
+         housekeeping necessary to keep track of jobs.
+         I imagine there will really only be one implementation of this, which
+         rash-repl will use.
+         |#
          #:unix-job-control any/c
          )
         #:rest (listof (or/c list? pipeline-member-spec?))
