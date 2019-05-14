@@ -326,7 +326,7 @@
   )
 
 (define (pipeline-waitpid pline)
-  (waitpid-wrap (pipeline-group pline)))
+  (waitpid-wrap (- (pipeline-group pline))))
 
 (define (pipeline-spec? pline)
   (for/and ([m (pipeline-members pline)])

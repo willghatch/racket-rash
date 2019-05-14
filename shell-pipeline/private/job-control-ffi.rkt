@@ -149,6 +149,11 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
 (define CLD_STOPPED 5)
 (define CLD_CONTINUED 6)
 
+(define WNOHANG 1)
+(define WUNTRACED 2)
+(define WSTOPPED 2)
+(define WCONTINUED 8)
+
 (define waitpid
   (get-ffi-obj "waitpid"
                ;; in sys/wait.h
@@ -164,7 +169,9 @@ https://www.gnu.org/software/libc/manual/html_node/Implementing-a-Shell.html
                               [CLD_CONTINUED 'continued]
                               [else 'dead])))))
 (define (waitpid-wrap pid)
-  (waitpid pid 0))
+  ;; TODO - this is not working the way I hoped...
+  ;; I think since Racket also uses waitpid, I should use WNOHANG and actively poll.
+  (waitpid pid (bitwise-ior WCONTINUED WSTOPPED WUNTRACED)))
 
 (define kill
   (get-ffi-obj "kill"
