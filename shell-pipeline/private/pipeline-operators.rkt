@@ -22,6 +22,7 @@
 
  (for-syntax expand-pipeline-arguments)
 
+ =bind=
  =composite-pipe=
  =pipeline-segment=
 

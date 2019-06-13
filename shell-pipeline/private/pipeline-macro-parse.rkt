@@ -355,7 +355,8 @@
         (~var args (not-pipeline-op #f)) ... rest ...)
      (define def-ctx (syntax-local-make-definition-context))
      (define-values (stx1 names1) (dispatch-pipeline-starter (syntax/loc #'starter
-                                                             (starter args ...))))
+                                                               (starter args ...))
+                                                             def-ctx))
      (define-values (stxs2 names2)
        (pipeline-split-loop #'(rest ...) def-ctx (list stx1) names1))
      #`(split-done-k
@@ -369,8 +370,11 @@
        (datum->syntax iarg1
                       '#%shell-pipeline/default-pipeline-starter
                       iarg1))
+     ;; TODO - do I need to thread these def-ctx objects around to keep the same one?  probably.
+     ;; I should refactor this to be a define-for-syntax function that recurs to itself rather than a macro that rewrites to itself.
+     (define def-ctx (syntax-local-make-definition-context))
      (syntax-parse implicit-starter
-       [implicit-pipeline-starter:pipeline-starter
+       [(~var implicit-pipeline-starter (pipeline-starter def-ctx))
         #'(rps split-done-k opts
                implicit-pipeline-starter
                iargs ... rest ...)]
