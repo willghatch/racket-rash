@@ -7,9 +7,10 @@
  =pipeline-segment=
  =basic-object-pipe/expression=
  =basic-unix-pipe=
+ =bind=
 
- transform-starter-segment
- transform-joint-segment
+ ;transform-starter-segment
+ ;transform-joint-segment
 
  (for-syntax
 
