@@ -360,11 +360,20 @@
                                                              def-ctx))
      (define-values (stxs2 names2)
        (pipeline-split-loop #'(rest ...) def-ctx (list stx1) names1))
-     #`(split-done-k
+     #;#`(split-done-k
         opts
         (let (#,@(map (λ (n) #`(#,n undefined))
                       names2))
-          (list #,@stxs2)))]
+          (list #,@stxs2)))
+     (local-expand
+      #`(split-done-k
+         opts
+         (let (#,@(map (λ (n) #`(#,n undefined))
+                       names2))
+           (list #,@stxs2)))
+      (syntax-local-context)
+      '()
+      def-ctx)]
     [(rps split-done-k opts (~var iargs (not-pipeline-op #f)) ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
