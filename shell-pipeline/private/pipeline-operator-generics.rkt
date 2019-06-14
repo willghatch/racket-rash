@@ -185,6 +185,15 @@
                (syntax-parameterize ([current-pipeline-argument
                                       (make-rename-transformer #'prev-ret)])
                  e)))
+          #;(local-expand
+           #'(object-pipeline-member-spec
+              (λ (prev-ret)
+                (syntax-parameterize ([current-pipeline-argument
+                                       (make-rename-transformer #'prev-ret)])
+                  e)))
+           'expression
+           '()
+           def-ctx)
           '())]))]))
 
 
@@ -213,6 +222,12 @@
         [(_ name)
          (define re-name (bind! def-ctx #'name #f))
          (values
-          #`(object-pipeline-member-spec (λ (arg) (set! #,re-name arg) arg))
+          #;#`(object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg))
+          (local-expand
+           (qstx/rc (object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg)))
+           'expression
+           '()
+           def-ctx
+           )
           (list (syntax-local-introduce re-name)))]))]))
 
