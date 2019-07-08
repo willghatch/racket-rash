@@ -81,7 +81,7 @@ Pipelines always start with an operator, and if none is specified the @racket[de
 ;; =map= is in the demo file still
 (require rash/demo/setup)
 ;; These two are the same.
-|> list 1 2 3 |> map (λ (x) + 2 x)
+|> list 1 2 3 |> map (λ (x) (+ 2 x))
 |> list 1 2 3 =map= + 2
 }
 
