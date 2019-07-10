@@ -91,6 +91,9 @@
 
 (define (linea-read-one-line src in outer-linea-read-func end-delim)
   ;; the current-readtable must already be parameterized to the line-readtable
+
+  (define-values [ln col pos] (port-next-location in))
+  
   (define (reverse/filter-newlines rlist)
     ;; Reverse the list, but also:
     ;; Filter out any newline symbols, and transform any symbols that
@@ -115,13 +118,16 @@
     (rec rlist '()))
 
   (define (finalize rlist)
+    (define-values [_1 _2 end] (port-next-location in))
     (if (null? rlist)
         ;; The list can only be empty if we're in a context where there are
         ;; delimiters and a list is being read.  In that case, return #f
         ;; to signal that there are empty trailing lines in the delimiter.
         #f
-        (datum->syntax #f (cons '#%linea-line
-                                (reverse/filter-newlines rlist)))))
+        (datum->syntax #f
+                       (cons '#%linea-line
+                             (reverse/filter-newlines rlist))
+                       (list src ln col pos (- end pos)))))
 
   (define (rec rlist)
     (read-and-ignore-hspace! in)
