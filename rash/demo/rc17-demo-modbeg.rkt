@@ -3,8 +3,9 @@
 (provide
  (all-from-out rash/demo/setup)
 
- (except-out (all-from-out racket/base) #%module-begin)
- (rename-out [basic-rash-module-begin #%module-begin])
+ (except-out (all-from-out racket/base) #%module-begin #%top-interaction)
+ (rename-out [basic-rash-module-begin #%module-begin]
+             [basic-rash-top-interaction #%top-interaction])
  (all-from-out rash)
 
  app
@@ -20,7 +21,7 @@
   syntax/parse
   ))
 
-(define-rash-module-begin basic-rash-module-begin
+(define-rash-module-begin basic-rash-module-begin basic-rash-top-interaction
   #:in (current-input-port)
   #:out (current-output-port)
   #:err (current-error-port)

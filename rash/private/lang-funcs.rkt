@@ -205,14 +205,17 @@ the defaults and the reader.  Something like this:
 #lang racket/base
 (require rash)
 (provide (except-out (all-from-out racket/base)
-                     #%module-begin)
+                     #%module-begin
+                     #%top-interaction)
          (all-from-out rash)
          (except-out (all-defined-out)
-                     my-mb)
-         (rename-out [my-mb #%module-begin])
+                     my-mb
+                     my-top-interaction)
+         (rename-out [my-mb #%module-begin]
+                     [my-top-interaction #%top-interaction])
          )
 (rash-hash-lang-setup
- #:module-begin-name my-mb
+ my-mb my-top-interaction
  #:default-starter =object-pipe=
  #:rash-readtable (modify-readtable-somehow basic-rash-readtable)
  ...
@@ -235,7 +238,7 @@ the current module path automatically?
 |#
 (define-syntax (rash-hash-lang-setup stx)
   (syntax-parse stx
-    [(_ mb-name arg ...)
+    [(_ mb-name:id ti-name:id arg ...)
      (define-values (tab rest-stx)
        (parse-keyword-options #'(arg ...)
                               (list*
@@ -255,6 +258,7 @@ the current module path automatically?
                       "expected #:this-module-path argument.")))
          (define-rash-module-begin
            mb-name
+           ti-name
            #,@(maybe-kw '#:this-module-path)
            #,@(maybe-kw '#:top-level-wrap)
            #,@(maybe-kw '#:in)
@@ -295,7 +299,7 @@ the current module path automatically?
 
 (define-syntax (define-rash-module-begin stx)
   (syntax-parse stx
-    [(_ rmb-name make-mb-arg ...)
+    [(_ rmb-name:id top-inter-name:id make-mb-arg ...)
      (define-values (tab rest-stx)
        (parse-keyword-options #'(make-mb-arg ...)
                               (list*
@@ -330,26 +334,26 @@ the current module path automatically?
                      (require linea/read
                               rash/private/lang-funcs
                               this-mod-path)
-                     (current-read-interaction
-                      (λ (src in)
-                        (let ([stx (linea-read-syntax src in)])
-                          (if (eof-object? stx)
-                              stx
-                              (syntax-parse stx
-                                [e #'(rash-expressions-begin
-                                      (mk-input
-                                       mk-output
-                                       mk-err-output
-                                       mk-default-starter
-                                       mk-default-line-macro)
-                                      e)])))))
+                     (current-read-interaction linea-read-syntax)
                      (current-print rash-top-level-print))
                    (rash-expressions-begin (mk-input
                                             mk-output
                                             mk-err-output
                                             mk-default-starter
                                             mk-default-line-macro)
-                                           arg (... ...)))]))))]))
+                                           arg (... ...)))]))
+           (define-syntax top-inter-name
+             (syntax-parser
+               [(_ . e)
+                #'(#%top-interaction
+                   .
+                   (rash-expressions-begin
+                    (mk-input
+                     mk-output
+                     mk-err-output
+                     mk-default-starter
+                     mk-default-line-macro)
+                    e))]))))]))
 
 (begin-for-syntax
 
