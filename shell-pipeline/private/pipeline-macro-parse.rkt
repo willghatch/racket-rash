@@ -105,7 +105,7 @@
            (~optional (~seq #:starter starter:pipeline-starter))
            (~optional (~seq #:context context)))
       ...
-      body:expr ...+)
+      body:expr ...)
      (let* ([set-in (and (attribute in)
                          #'(default-pipeline-in (λ (stx) (quote-syntax in))))]
             [set-out (and (attribute out)
@@ -115,7 +115,8 @@
             [starter-context-id
              (or (attribute context)
                  (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
-                                (syntax->list #'(body ...)))])
+                                (cond [(null? (attribute body)) (list #'here)]
+                                      [else (attribute body)]))])
                    (unless (or (not (attribute starter))
                                (for/and ([x (cdr cs)])
                                  (bound-identifier=? (car cs) x)))

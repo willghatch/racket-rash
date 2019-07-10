@@ -105,7 +105,7 @@
 
 (define-syntax (rash-expressions-begin stx)
   (syntax-parse stx
-    [(_ (input output err-output default-starter line-macro) e ...+)
+    [(_ (input output err-output default-starter line-macro) e ...)
      #`(splicing-let ([in-eval input]
                       [out-eval output]
                       [err-eval err-output])
@@ -128,11 +128,12 @@
        (~optional (~seq #:starter starter:pipeline-starter))
        (~optional (~seq #:line-macro line-macro:line-macro)))
       ...
-      body:expr ...+)
+      body:expr ...)
      (define context-id
        (or (attribute context)
            (let ([cs (map (λ (x) (datum->syntax x '#%app #'orig-macro))
-                          (syntax->list #'(body ...)))])
+                          (cond [(null? (attribute body)) (list #'here)]
+                                [else (attribute body)]))])
              (unless (for/and ([x (cdr cs)])
                        (bound-identifier=? (car cs) x))
                (raise-syntax-error

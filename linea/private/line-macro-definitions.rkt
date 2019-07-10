@@ -82,11 +82,12 @@
 
 (define-for-syntax (with-default-line-macro* stx #:context [context #f])
   (syntax-parse stx
-    [(orig-macro let-form new-default:line-macro e ...+)
+    [(orig-macro let-form new-default:line-macro e ...)
      (define default-line-macro-stx
        (or (and context (dlm context #'orig-macro))
            (let ([dlms (map (λ (x) (dlm x #'orig-macro))
-                            (syntax->list #'(e ...)))])
+                            (cond [(null? (attribute e)) (list #'here)]
+                                  [else (attribute e)]))])
              (unless (for/and ([x (cdr dlms)])
                        (bound-identifier=? (car dlms) x))
                (raise-syntax-error
