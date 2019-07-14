@@ -78,19 +78,21 @@
 
 
 
-  (define (pipeline-starter->core stx)
+  (define (pipeline-starter->core stx def-ctx)
     (cond
       [(core-pipeline-starter? stx) stx]
       [(pipeline-starter-macro? stx)
        (pipeline-starter->core
-        (apply-as-transformer pipeline-starter-macro 'expression #f stx))]
+        (apply-as-transformer pipeline-starter-macro 'expression def-ctx stx)
+        def-ctx)]
       [else (error 'pipeline-starter->core "not a pipeline starter ~a\n" stx)]))
-  (define (pipeline-joint->core stx)
+  (define (pipeline-joint->core stx def-ctx)
     (cond
       [(core-pipeline-joint? stx) stx]
       [(pipeline-joint-macro? stx)
        (pipeline-joint->core
-        (apply-as-transformer pipeline-joint-macro 'expression #f stx))]
+        (apply-as-transformer pipeline-joint-macro 'expression def-ctx stx)
+        def-ctx)]
       [else (error 'pipeline-joint->core "not a pipeline joint ~a\n" stx)]))
 
   #|
@@ -102,11 +104,11 @@
   (-> stx definition-context (values syntax (listof id)))
   |#
   (define (dispatch-pipeline-starter stx def-ctx)
-    (define core-stx (pipeline-starter->core stx))
-    (apply-as-transformer core-pipeline-starter 'expression #f core-stx def-ctx))
+    (define core-stx (pipeline-starter->core stx def-ctx))
+    (apply-as-transformer core-pipeline-starter 'expression def-ctx core-stx def-ctx))
   (define (dispatch-pipeline-joint stx def-ctx)
-    (define core-stx (pipeline-joint->core stx))
-    (apply-as-transformer core-pipeline-joint 'expression #f core-stx def-ctx))
+    (define core-stx (pipeline-joint->core stx def-ctx))
+    (apply-as-transformer core-pipeline-joint 'expression def-ctx core-stx def-ctx))
   )
 
 ;; basic definition form, wrapped by the better one in "pipeline-operators.rkt"
