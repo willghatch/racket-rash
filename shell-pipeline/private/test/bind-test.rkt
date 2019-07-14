@@ -18,7 +18,7 @@
 
 
   ;; Then check that the variable is actually bound.
-  #;(check-equal?
+  (check-equal?
      (run-pipeline =unix-pipe= (λ () (display "My name is Inigo Montoya"))
                    =basic-object-pipe= port->string
                    =bind= im-name
