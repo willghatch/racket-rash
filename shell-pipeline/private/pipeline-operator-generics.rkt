@@ -11,6 +11,7 @@
 
  ;transform-starter-segment
  ;transform-joint-segment
+ current-pipeline-argument
 
  (for-syntax
 
@@ -32,11 +33,18 @@
 (require
  "basic-unix-pipe-helper-funcs.rkt"
  "mostly-structs.rkt"
+ racket/stxparam
  (for-syntax
   racket/base
   syntax/parse
   syntax-generic2
   ))
+
+(define-syntax-parameter current-pipeline-argument
+  (λ (stx) (raise-syntax-error 'current-pipeline-argument
+                               "Can't use implicit pipeline argument here."
+                               stx)))
+
 
 (begin-for-syntax
   (define-syntax-generic core-pipeline-starter)
@@ -179,13 +187,17 @@
     (λ (stx def-ctx)
       (syntax-parse stx
         [(_ e)
+         #;(printf "just-def-ctx: ~a\n"
+                 (syntax-debug-info (internal-definition-context-introduce
+                                     def-ctx
+                                     (datum->syntax #f 'something))))
          (values
-          #'(object-pipeline-member-spec
+          #;#'(object-pipeline-member-spec
              (λ (prev-ret)
                (syntax-parameterize ([current-pipeline-argument
                                       (make-rename-transformer #'prev-ret)])
                  e)))
-          #;(local-expand
+          (local-expand
            #'(object-pipeline-member-spec
               (λ (prev-ret)
                 (syntax-parameterize ([current-pipeline-argument
