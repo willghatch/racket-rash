@@ -43,6 +43,7 @@
   syntax/keyword
   racket/dict
   "misc-utils.rkt"
+  ee-lib
   (for-syntax
    racket/base
    syntax/parse
@@ -330,18 +331,16 @@
                     )
                    arg ...))])])])]))
 
-(define-for-syntax (pipeline-split-loop stx def-ctx stxs names)
+(define-for-syntax (pipeline-split-loop stx stxs names)
   (syntax-parse stx
     [() (values stxs names)]
-    [((~var op (pipeline-joint def-ctx))
-      (~var arg (not-pipeline-op def-ctx)) ...
+    [((~var op pipeline-joint)
+      (~var arg not-pipeline-op) ...
       rest ...)
      (define-values (out-stx new-names)
        (dispatch-pipeline-joint (syntax/loc #'op
-                                  (op arg ...))
-                                def-ctx))
+                                  (op arg ...))))
      (pipeline-split-loop #'(rest ...)
-                          def-ctx
                           (append stxs (list out-stx))
                           (append names new-names))]))
 
@@ -351,39 +350,27 @@
   (syntax-parse stx
     ;; This is a continuation-passing style macro because I may want to run
     ;; the pipeline OR just create a first-class pipeline object.
-    [(_ split-done-k opts (~var starter (pipeline-starter #f))
-        (~var args (not-pipeline-op #f)) ... rest ...)
-     (define def-ctx (syntax-local-make-definition-context))
-     (define-values (stx1 names1) (dispatch-pipeline-starter (syntax/loc #'starter
-                                                               (starter args ...))
-                                                             def-ctx))
-     (define-values (stxs2 names2)
-       (pipeline-split-loop #'(rest ...) def-ctx (list stx1) names1))
-     #`(split-done-k
-        opts
-        (let (#,@(map (λ (n) #`(#,(syntax-local-introduce n) undefined))
-                      names2))
-          (list #,@stxs2)))
-     #;(local-expand
+    [(_ split-done-k opts (~var starter pipeline-starter)
+        (~var args not-pipeline-op) ... rest ...)
+     (ee-lib-boundary
+      (define-values (stx1 names1) (dispatch-pipeline-starter (syntax/loc #'starter
+                                                                (starter args ...))))
+      (define-values (stxs2 names2)
+        (pipeline-split-loop #'(rest ...) (list stx1) names1))
       #`(split-done-k
          opts
-         (let (#,@(map (λ (n) #`(#,n undefined))
+         (let (#,@(map (λ (n) #`(#,(syntax-local-introduce n) undefined))
                        names2))
-           (list #,@stxs2)))
-      (syntax-local-context)
-      '()
-      def-ctx)]
-    [(rps split-done-k opts (~var iargs (not-pipeline-op #f)) ...+ rest ...)
+           (list #,@stxs2))))]
+    [(rps split-done-k opts (~var iargs not-pipeline-op) ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
        (datum->syntax iarg1
                       '#%shell-pipeline/default-pipeline-starter
                       iarg1))
-     ;; TODO - do I need to thread these def-ctx objects around to keep the same one?  probably.
      ;; I should refactor this to be a define-for-syntax function that recurs to itself rather than a macro that rewrites to itself.
-     (define def-ctx (syntax-local-make-definition-context))
      (syntax-parse implicit-starter
-       [(~var implicit-pipeline-starter (pipeline-starter def-ctx))
+       [(~var implicit-pipeline-starter pipeline-starter)
         #'(rps split-done-k opts
                implicit-pipeline-starter
                iargs ... rest ...)]

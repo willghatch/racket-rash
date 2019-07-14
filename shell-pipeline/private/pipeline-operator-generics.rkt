@@ -24,9 +24,8 @@
 
   core-pipeline-starter
   core-pipeline-joint
-  pipeline-starter-macro
-  pipeline-joint-macro
 
+  gen:macro-pipeline-op
 
   ))
 
@@ -37,7 +36,10 @@
  (for-syntax
   racket/base
   syntax/parse
-  syntax-generic2
+  racket/generic
+  ee-lib
+  ;; for pretty-print debug
+  racket/pretty
   ))
 
 (define-syntax-parameter current-pipeline-argument
@@ -47,52 +49,70 @@
 
 
 (begin-for-syntax
-  (define-syntax-generic core-pipeline-starter)
-  (define-syntax-generic core-pipeline-joint)
-  (define-syntax-generic pipeline-starter-macro)
-  (define-syntax-generic pipeline-joint-macro)
+  (define-generics core-pipeline-op
+    (core-pipeline-starter core-pipeline-op stx)
+    (core-pipeline-joint core-pipeline-op stx))
+  (struct core-pipeline-op-struct (starter-transformer joint-transformer)
+    #:property prop:procedure
+    (λ (op stx)
+      (raise-syntax-error #f stx
+                          "Must be used as a pipeline operator"))
+    #:methods gen:core-pipeline-op
+    [(define (core-pipeline-starter op stx)
+       ((core-pipeline-op-struct-starter-transformer op) stx))
+     (define (core-pipeline-joint op stx)
+       ((core-pipeline-op-struct-joint-transformer op) stx))])
 
-  #|
-  ?? Does <syntax-generic>? return #t for an identifier bound to it or to an application form using it?
+  (define-generics macro-pipeline-op
+    (macro-pipeline-starter macro-pipeline-op stx)
+    (macro-pipeline-joint macro-pipeline-op stx))
+  (struct macro-pipeline-op-struct (starter-transformer joint-transformer as-macro)
+    #:property prop:procedure (struct-field-index as-macro)
+    #:methods gen:macro-pipeline-op
+    [(define (macro-pipeline-starter op stx)
+       ((macro-pipeline-op-struct-starter-transformer op) stx))
+     (define (macro-pipeline-joint op stx)
+       ((macro-pipeline-op-struct-joint-transformer op) stx))])
 
-  (my-generic? #'id)
-  (my-generic? #'(id arg ...))
-
-  Both, apparently!  The predicate is supposed to match on the same
-  things that the Racket macro expander matches on when detecting macro
-  uses.  So it matches the form for identifier macros as well as for
-  head-of-list macros.
-  |#
 
   ;; For splitting macro to delimit pipeline segments
-  (define-syntax-class (pipeline-starter def-ctx)
-    (pattern op:id #:when (or (core-pipeline-starter? #'(op) def-ctx)
-                              (pipeline-starter-macro? #'(op) def-ctx))))
-  (define-syntax-class (pipeline-joint def-ctx)
-    (pattern op:id #:when (or (core-pipeline-joint? #'(op) def-ctx)
-                              (pipeline-joint-macro? #'(op) def-ctx))))
-  (define-syntax-class (not-pipeline-op def-ctx)
-    (pattern (~and (~not (~var x (pipeline-joint def-ctx)))
-                   (~not (~var x (pipeline-starter def-ctx))))))
+  (define-syntax-class -core-pipeline-op
+    (pattern op:id #:when (core-pipeline-op? (lookup #'op))))
+  (define-syntax-class -macro-pipeline-op
+    (pattern op:id #:when (macro-pipeline-op? (lookup #'op))))
+
+  (define-syntax-class pipeline-op
+    (pattern (~or _:-core-pipeline-op _:-macro-pipeline-op)))
+  ;; TODO - these are used everywhere in the interface, but could be simplified to just pipeline-op.
+  (define-syntax-class pipeline-starter
+    (pattern (~or _:-core-pipeline-op _:-macro-pipeline-op)))
+  (define-syntax-class pipeline-joint
+    (pattern (~or _:-core-pipeline-op _:-macro-pipeline-op)))
+  (define-syntax-class (not-pipeline-op)
+    (pattern (~not x:pipeline-op)))
 
 
+  #|
+  TODO - These #:expression keywords on the 4 define/hygienic uses should be #:definition, but there seems to be some bug.  It is currently working with #:expression and not with #:definition.
+  |#
 
-
-  (define (pipeline-starter->core stx def-ctx)
-    (cond
-      [(core-pipeline-starter? stx) stx]
-      [(pipeline-starter-macro? stx)
+  (define/hygienic (pipeline-starter->core stx) #:expression
+    (syntax-parse stx
+      [(op:-core-pipeline-op arg ...)
+       stx]
+      [(op:-macro-pipeline-op arg ...)
        (pipeline-starter->core
-        (apply-as-transformer pipeline-starter-macro 'expression def-ctx stx)
-        def-ctx)]
+        (macro-pipeline-starter (lookup #'op)
+                                stx))]
       [else (error 'pipeline-starter->core "not a pipeline starter ~a\n" stx)]))
-  (define (pipeline-joint->core stx def-ctx)
-    (cond
-      [(core-pipeline-joint? stx) stx]
-      [(pipeline-joint-macro? stx)
+  (define/hygienic (pipeline-joint->core stx) #:expression
+    (syntax-parse stx
+      [(op:-core-pipeline-op arg ...)
+       stx]
+      [(op:-macro-pipeline-op arg ...)
        (pipeline-joint->core
-        (apply-as-transformer pipeline-joint-macro 'expression def-ctx stx)
-        def-ctx)]
+        (macro-pipeline-joint (lookup #'op)
+                              stx))]
       [else (error 'pipeline-joint->core "not a pipeline joint ~a\n" stx)]))
 
   #|
@@ -103,145 +123,135 @@
 
   (-> stx definition-context (values syntax (listof id)))
   |#
-  (define (dispatch-pipeline-starter stx def-ctx)
-    (define core-stx (pipeline-starter->core stx def-ctx))
-    (apply-as-transformer core-pipeline-starter 'expression def-ctx core-stx def-ctx))
-  (define (dispatch-pipeline-joint stx def-ctx)
-    (define core-stx (pipeline-joint->core stx def-ctx))
-    (apply-as-transformer core-pipeline-joint 'expression def-ctx core-stx def-ctx))
+
+  ;; TODO - just merge these into the ->core functions.  Call them `expand-pipeline-starter`
+  (define/hygienic (dispatch-pipeline-starter stx) #:expression
+    (define core-stx (pipeline-starter->core stx))
+    (syntax-parse core-stx
+      [(op arg ...)
+       (core-pipeline-starter (lookup #'op) core-stx)]))
+  (define/hygienic (dispatch-pipeline-joint stx) #:expression
+    (define core-stx (pipeline-joint->core stx))
+    (syntax-parse core-stx
+      [(op arg ...)
+       (core-pipeline-joint (lookup #'op) core-stx)]))
   )
 
 ;; basic definition form, wrapped by the better one in "pipeline-operators.rkt"
 (define-syntax define-pipeline-operator/no-kw
-  (syntax-parser [(_ name as-starter as-joint outside-of-rash)
-                  #'(define-syntax name
-                      (generics
-                       [pipeline-starter-macro as-starter]
-                       [pipeline-joint-macro as-joint]
-                       ;; TODO - how to do this with syntax-generics?  It was in the paper, but I don't see it in the library.
-                       ;[racket-macro outside-of-rash]
-                       ))]))
+  (syntax-parser
+    [(_ name as-starter as-joint outside-of-rash)
+     #'(define-syntax name
+         (macro-pipeline-op-struct as-starter as-joint outside-of-rash))]))
 
 (define-syntax (transform-starter-segment stx)
   (syntax-parse stx [(_ arg ...) (dispatch-pipeline-starter #'(arg ...))]))
 (define-syntax (transform-joint-segment stx)
   (syntax-parse stx [(_ arg ...) (dispatch-pipeline-joint #'(arg ...))]))
 
-(define-for-syntax (composite-pipe-helper segments def-ctx)
+(define-for-syntax (composite-pipe-helper segments)
   (for/fold ([done-stx-list '()]
              [lifted-ids '()])
             ([segment segments])
-    (let-values ([(done-stx ids) (dispatch-pipeline-joint segment def-ctx)])
+    (let-values ([(done-stx ids) (dispatch-pipeline-joint segment)])
       (values (append done-stx-list (list done-stx))
               (append lifted-ids ids)))))
 
+
 (define-syntax =composite-pipe=
-  (generics
-   [core-pipeline-starter
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(_ ((~var start-op (pipeline-starter def-ctx))
-             (~var start-arg (not-pipeline-op def-ctx)) ...)
-            ((~var join-op (pipeline-joint def-ctx))
-             (~var join-arg (not-pipeline-op def-ctx)) ...) ...)
-         (define-values (stx1 ids1)
-           (dispatch-pipeline-starter #'(start-op start-arg ...) def-ctx))
-         (define-values (stxs2 ids2)
-           (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))
-                                  def-ctx))
-         (define stxs (cons stx1 stxs2))
-         (define ids (append ids1 ids2))
-         (values
-          #`(composite-pipeline-member-spec (list #,@stxs))
-          ids)]))]
-   [core-pipeline-joint
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(_ ((~var op (pipeline-joint def-ctx))
-             (~var arg (not-pipeline-op def-ctx)) ...) ...+)
-         (define-values (stxs ids)
-           (composite-pipe-helper (syntax->list #'((op arg ...) ...)) def-ctx))
-         (values
-          #`(composite-pipeline-member-spec
-             (list #,@stxs))
-          ids)]))]))
+  (core-pipeline-op-struct
+   ;; starter
+   (λ (stx)
+     (syntax-parse stx
+       [(_ ((~var start-op (pipeline-starter))
+            (~var start-arg (not-pipeline-op)) ...)
+           ((~var join-op (pipeline-joint))
+            (~var join-arg (not-pipeline-op)) ...) ...)
+        (define-values (stx1 ids1)
+          (dispatch-pipeline-starter #'(start-op start-arg ...)))
+        (define-values (stxs2 ids2)
+          (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))))
+        (define stxs (cons stx1 stxs2))
+        (define ids (append ids1 ids2))
+        (values
+         #`(composite-pipeline-member-spec (list #,@stxs))
+         ids)]))
+   ;; joint
+   (λ (stx)
+     (syntax-parse stx
+       [(_ ((~var op (pipeline-joint))
+            (~var arg (not-pipeline-op)) ...) ...+)
+        (define-values (stxs ids)
+          (composite-pipe-helper (syntax->list #'((op arg ...) ...))))
+        (values
+         #`(composite-pipeline-member-spec
+            (list #,@stxs))
+         ids)]))))
 
 ;; For first-class segments or as an escape to construct specs with the function API.
 (define-syntax =pipeline-segment=
-  (let ([op (λ (stx def-ctx)
+  (let ([op (λ (stx)
               (syntax-parse stx
                 [(_ segment ...)
                  (values 
                   #'(composite-pipeline-member-spec (list segment ...))
                   '())]))])
-    (generics
-     [core-pipeline-starter op]
-     [core-pipeline-joint op])))
+    (core-pipeline-op-struct op op)))
 
 ;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
 (define-syntax =basic-object-pipe/expression=
-  (generics
-   [core-pipeline-starter
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(_ e) (values #'(object-pipeline-member-spec (λ () e)) '())]))]
-   [core-pipeline-joint
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(_ e)
-         #;(printf "just-def-ctx: ~a\n"
-                 (syntax-debug-info (internal-definition-context-introduce
-                                     def-ctx
-                                     (datum->syntax #f 'something))))
-         (values
-          #;#'(object-pipeline-member-spec
-             (λ (prev-ret)
-               (syntax-parameterize ([current-pipeline-argument
-                                      (make-rename-transformer #'prev-ret)])
-                 e)))
-          (local-expand
-           #'(object-pipeline-member-spec
+  (core-pipeline-op-struct
+   (λ (stx)
+     (syntax-parse stx
+       [(_ e) (values #'(object-pipeline-member-spec (λ () e)) '())]))
+   (λ (stx)
+     (syntax-parse stx
+       [(_ e)
+        (values
+         #;#'(object-pipeline-member-spec
               (λ (prev-ret)
                 (syntax-parameterize ([current-pipeline-argument
                                        (make-rename-transformer #'prev-ret)])
                   e)))
-           'expression
-           '()
-           def-ctx)
-          '())]))]))
+         (local-expand
+          #'(object-pipeline-member-spec
+             (λ (prev-ret)
+               (syntax-parameterize ([current-pipeline-argument
+                                      (make-rename-transformer #'prev-ret)])
+                 e)))
+          'expression
+          '()
+          (current-def-ctx))
+         '())]))))
 
 
-(define-for-syntax (basic-unix-pipe-tx stx def-ctx)
-  (values (basic-unix-pipe-transformer stx)
-          '()))
+(define-for-syntax (basic-unix-pipe-tx stx)
+  (values (basic-unix-pipe-transformer stx) '()))
 
 (define-syntax =basic-unix-pipe=
-  (generics
-   [core-pipeline-starter basic-unix-pipe-tx]
-   [core-pipeline-joint basic-unix-pipe-tx]))
+  (core-pipeline-op-struct basic-unix-pipe-tx basic-unix-pipe-tx))
 
+(define-syntax debug-m
+  (syntax-parser
+    [(_ (set! name e))
+     (pretty-print (syntax-debug-info #'name))
+     #`(set! name e)]))
 (define-syntax =bind=
-  (generics
-   [core-pipeline-starter
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(~and stx (_ arg1 arg ...))
-         (raise-syntax-error '=bind=
-                             "Can't be used as a pipeline starter"
-                             #'stx
-                             #'arg1)]))]
-   [core-pipeline-joint
-    (λ (stx def-ctx)
-      (syntax-parse stx
-        [(_ name)
-         (define re-name (bind! def-ctx #'name #f))
-         (values
-          #`(object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg))
-          #;(local-expand
-           (qstx/rc (object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg)))
-           'expression
-           '()
-           def-ctx
-           )
-          (list (syntax-local-introduce re-name)))]))]))
+  ;; starter
+  (core-pipeline-op-struct
+   (λ (stx)
+     (syntax-parse stx
+       [(~and stx (_ arg1 arg ...))
+        (raise-syntax-error '=bind=
+                            "Can't be used as a pipeline starter"
+                            #'stx
+                            #'arg1)]))
+  ;; joint
+   (λ (stx)
+     (syntax-parse stx
+       [(_ name)
+        (define re-name (bind! #'name #f))
+        (values
+         #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))
+         (list (syntax-local-introduce re-name)))]))))
 
