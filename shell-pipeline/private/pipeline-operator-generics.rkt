@@ -222,8 +222,8 @@
         [(_ name)
          (define re-name (bind! def-ctx #'name #f))
          (values
-          #;#`(object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg))
-          (local-expand
+          #`(object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg))
+          #;(local-expand
            (qstx/rc (object-pipeline-member-spec (λ (arg) (set! #;name #,re-name arg) arg)))
            'expression
            '()
