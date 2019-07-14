@@ -31,6 +31,7 @@
                  =bind= im-name
                  =basic-object-pipe/expression= im-name)
    "My name is Inigo Montoya")
+
   (check-equal?
      (run-pipeline =unix-pipe= (λ () (display "My name is Inigo Montoya"))
                    =basic-object-pipe= port->string
