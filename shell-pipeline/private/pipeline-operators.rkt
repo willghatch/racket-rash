@@ -114,11 +114,6 @@
 
 ;;;;;;;;;;;;;;;; Pipeline argument detection, replacement functions
 
-(define-syntax-parameter current-pipeline-argument
-  (λ (stx) (raise-syntax-error 'current-pipeline-argument
-                               "Can't use implicit pipeline argument here."
-                               stx)))
-
 (define-for-syntax (stx-contains-id? stx id)
   ;; Does the syntax contain id somethere?
   (define (rec s)

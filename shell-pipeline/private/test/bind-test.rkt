@@ -2,6 +2,13 @@
 
 (require "../../pipeline-macro.rkt")
 
+(require (for-syntax racket/base syntax/parse))
+(define-syntax (debug stx)
+  (syntax-parse stx
+    [(_ arg)
+     (printf "stx: ~a\n" (syntax-debug-info #'arg))
+     #'arg]))
+
 (module+ test
   (require rackunit)
   (require racket/port)
@@ -18,6 +25,12 @@
 
 
   ;; Then check that the variable is actually bound.
+  (check-equal?
+   (run-pipeline =unix-pipe= (λ () (display "My name is Inigo Montoya"))
+                 =basic-object-pipe= port->string
+                 =bind= im-name
+                 =basic-object-pipe/expression= im-name)
+   "My name is Inigo Montoya")
   (check-equal?
      (run-pipeline =unix-pipe= (λ () (display "My name is Inigo Montoya"))
                    =basic-object-pipe= port->string
