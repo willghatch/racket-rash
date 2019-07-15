@@ -118,7 +118,6 @@
           e ...))]))
 
 (define-for-syntax (with-rash-config* stx lm-parameterizer p-parameterizer)
-  (define def-ctx (syntax-local-make-definition-context))
   (syntax-parse stx
     [(orig-macro
       (~or
@@ -126,7 +125,7 @@
        (~optional (~seq #:in in:expr))
        (~optional (~seq #:out out:expr))
        (~optional (~seq #:err err:expr))
-       (~optional (~seq #:starter (~var starter (pipeline-starter def-ctx))))
+       (~optional (~seq #:starter starter:pipeline-starter))
        (~optional (~seq #:line-macro line-macro:line-macro)))
       ...
       body:expr ...)
