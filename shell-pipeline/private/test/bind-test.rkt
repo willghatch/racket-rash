@@ -10,7 +10,7 @@
      #'arg]))
 
 (module+ test
-  (require rackunit)
+  (require rackunit syntax/macro-testing)
   (require racket/port)
 
   ;; Sanity check that functions in place of subprocesses are supported with =unix-pipe=
@@ -38,6 +38,16 @@
                    =bind= im-name
                    =basic-object-pipe= (λ (x) (string-append im-name (string-upcase x))))
      "My name is Inigo MontoyaMY NAME IS INIGO MONTOYA")
+
+  
+  (check-exn exn?
+             (λ ()
+               (convert-compile-time-error
+                ;; a-name should not be visible before it is bound.
+                (run-pipeline =basic-object-pipe/expression= a-name
+                              =basic-object-pipe/expression= 5
+                              =bind= a-name))
+               ))
 
   #;(check-equal?
      (run-pipeline =unix-pipe= (λ () (printf "This is a test\nto be sure things\nare generally working."))
