@@ -39,8 +39,7 @@
                    =basic-object-pipe= (λ (x) (string-append im-name (string-upcase x))))
      "My name is Inigo MontoyaMY NAME IS INIGO MONTOYA")
 
-  
-  (check-exn exn?
+  (check-exn exn:fail:syntax:unbound?
              (λ ()
                (convert-compile-time-error
                 ;; a-name should not be visible before it is bound.

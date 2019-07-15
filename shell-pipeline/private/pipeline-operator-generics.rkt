@@ -104,7 +104,7 @@
   TODO - These #:expression keywords on the 4 define/hygienic uses should be #:definition, but there seems to be some bug.  It is currently working with #:expression and not with #:definition.
   |#
 
-  (define/hygienic (expand-pipeline-starter stx) #:expression
+  (define/hygienic (expand-pipeline-starter stx) #:definition
     (syntax-parse stx
       [(op:-core-pipeline-op arg ...)
        (core-pipeline-starter (lookup #'op) stx)]
@@ -113,7 +113,7 @@
         (macro-pipeline-starter (lookup #'op)
                                 stx))]
       [else (error 'expand-pipeline-starter "not a pipeline starter ~a\n" stx)]))
-  (define/hygienic (expand-pipeline-joint stx) #:expression
+  (define/hygienic (expand-pipeline-joint stx) #:definition
     (syntax-parse stx
       [(op:-core-pipeline-op arg ...)
        (core-pipeline-joint (lookup #'op) stx)]
@@ -236,5 +236,6 @@
         (define re-name (bind! #'name #f))
         (values
          #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))
-         (list (syntax-local-introduce re-name)))]))))
+         (list (syntax-local-identifier-as-binding
+                (syntax-local-introduce re-name))))]))))
 
