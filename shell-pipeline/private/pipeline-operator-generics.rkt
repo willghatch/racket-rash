@@ -9,8 +9,6 @@
  =basic-unix-pipe=
  =bind=
 
- ;transform-starter-segment
- ;transform-joint-segment
  current-pipeline-argument
 
  (for-syntax
@@ -19,8 +17,8 @@
   pipeline-joint
   not-pipeline-op
 
-  dispatch-pipeline-starter
-  dispatch-pipeline-joint
+  expand-pipeline-starter
+  expand-pipeline-joint
 
   core-pipeline-starter
   core-pipeline-joint
@@ -92,28 +90,6 @@
     (pattern (~not x:pipeline-op)))
 
 
-  #|
-  TODO - These #:expression keywords on the 4 define/hygienic uses should be #:definition, but there seems to be some bug.  It is currently working with #:expression and not with #:definition.
-  |#
-
-  (define/hygienic (pipeline-starter->core stx) #:expression
-    (syntax-parse stx
-      [(op:-core-pipeline-op arg ...)
-       stx]
-      [(op:-macro-pipeline-op arg ...)
-       (pipeline-starter->core
-        (macro-pipeline-starter (lookup #'op)
-                                stx))]
-      [else (error 'pipeline-starter->core "not a pipeline starter ~a\n" stx)]))
-  (define/hygienic (pipeline-joint->core stx) #:expression
-    (syntax-parse stx
-      [(op:-core-pipeline-op arg ...)
-       stx]
-      [(op:-macro-pipeline-op arg ...)
-       (pipeline-joint->core
-        (macro-pipeline-joint (lookup #'op)
-                              stx))]
-      [else (error 'pipeline-joint->core "not a pipeline joint ~a\n" stx)]))
 
   #|
   For binding, I need the core desugaring thing to return the syntax to make a pipeline-member-spec, but also the names of any bindings (in both original and transformed form).  Then the next pipeline segment will need to be in a new context that can see that binding and has it bound to... maybe a transformer that will get a value out of a box?  And the spec form for that binding will need to run code that sets that box.  So I need to generate a getter and setter, and in the binding-spec-generator expression I need to let-syntax it to the setter, and further in the pipeline I need to let-syntax it to the getter.  Except I also want to be able to set! it later, so I need the getter to be a set!-transformer.
@@ -124,17 +100,28 @@
   (-> stx definition-context (values syntax (listof id)))
   |#
 
-  ;; TODO - just merge these into the ->core functions.  Call them `expand-pipeline-starter`
-  (define/hygienic (dispatch-pipeline-starter stx) #:expression
-    (define core-stx (pipeline-starter->core stx))
-    (syntax-parse core-stx
-      [(op arg ...)
-       (core-pipeline-starter (lookup #'op) core-stx)]))
-  (define/hygienic (dispatch-pipeline-joint stx) #:expression
-    (define core-stx (pipeline-joint->core stx))
-    (syntax-parse core-stx
-      [(op arg ...)
-       (core-pipeline-joint (lookup #'op) core-stx)]))
+  #|
+  TODO - These #:expression keywords on the 4 define/hygienic uses should be #:definition, but there seems to be some bug.  It is currently working with #:expression and not with #:definition.
+  |#
+
+  (define/hygienic (expand-pipeline-starter stx) #:expression
+    (syntax-parse stx
+      [(op:-core-pipeline-op arg ...)
+       (core-pipeline-starter (lookup #'op) stx)]
+      [(op:-macro-pipeline-op arg ...)
+       (expand-pipeline-starter
+        (macro-pipeline-starter (lookup #'op)
+                                stx))]
+      [else (error 'expand-pipeline-starter "not a pipeline starter ~a\n" stx)]))
+  (define/hygienic (expand-pipeline-joint stx) #:expression
+    (syntax-parse stx
+      [(op:-core-pipeline-op arg ...)
+       (core-pipeline-joint (lookup #'op) stx)]
+      [(op:-macro-pipeline-op arg ...)
+       (expand-pipeline-joint
+        (macro-pipeline-joint (lookup #'op)
+                              stx))]
+      [else (error 'expand-pipeline-joint "not a pipeline joint ~a\n" stx)]))
   )
 
 ;; basic definition form, wrapped by the better one in "pipeline-operators.rkt"
@@ -144,16 +131,12 @@
      #'(define-syntax name
          (macro-pipeline-op-struct as-starter as-joint outside-of-rash))]))
 
-(define-syntax (transform-starter-segment stx)
-  (syntax-parse stx [(_ arg ...) (dispatch-pipeline-starter #'(arg ...))]))
-(define-syntax (transform-joint-segment stx)
-  (syntax-parse stx [(_ arg ...) (dispatch-pipeline-joint #'(arg ...))]))
 
 (define-for-syntax (composite-pipe-helper segments)
   (for/fold ([done-stx-list '()]
              [lifted-ids '()])
             ([segment segments])
-    (let-values ([(done-stx ids) (dispatch-pipeline-joint segment)])
+    (let-values ([(done-stx ids) (expand-pipeline-joint segment)])
       (values (append done-stx-list (list done-stx))
               (append lifted-ids ids)))))
 
@@ -168,7 +151,7 @@
            ((~var join-op (pipeline-joint))
             (~var join-arg (not-pipeline-op)) ...) ...)
         (define-values (stx1 ids1)
-          (dispatch-pipeline-starter #'(start-op start-arg ...)))
+          (expand-pipeline-starter #'(start-op start-arg ...)))
         (define-values (stxs2 ids2)
           (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))))
         (define stxs (cons stx1 stxs2))

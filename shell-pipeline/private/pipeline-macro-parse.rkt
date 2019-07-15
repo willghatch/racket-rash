@@ -339,8 +339,8 @@
       (~var arg not-pipeline-op) ...
       rest ...)
      (define-values (out-stx new-names)
-       (dispatch-pipeline-joint (syntax/loc #'op
-                                  (op arg ...))))
+       (expand-pipeline-joint (syntax/loc #'op
+                                (op arg ...))))
      (pipeline-split-loop #'(rest ...)
                           (append stxs (list out-stx))
                           (append names new-names))]))
@@ -354,8 +354,8 @@
     [(_ split-done-k opts (~var starter pipeline-starter)
         (~var args not-pipeline-op) ... rest ...)
      (ee-lib-boundary
-      (define-values (stx1 names1) (dispatch-pipeline-starter (syntax/loc #'starter
-                                                                (starter args ...))))
+      (define-values (stx1 names1) (expand-pipeline-starter (syntax/loc #'starter
+                                                              (starter args ...))))
       (define-values (stxs2 names2)
         (pipeline-split-loop #'(rest ...) (list stx1) names1))
       #`(split-done-k
@@ -381,18 +381,6 @@
            #'(iargs ... rest ...)
            iarg1)])]))
 
-#;(define-syntax (rash-pipeline-splitter/joints stx)
-  (syntax-parse stx
-    [(rpsj split-done-k opts (done-parts ...) ())
-     #'(split-done-k opts done-parts ...)]
-    [(rpsj split-done-k opts (done-parts ...)
-           (op:pipeline-joint arg:not-pipeline-op ... rest ...))
-     (with-syntax ([joint-segment-expression
-                    (dispatch-pipeline-joint (syntax/loc #'op
-                                               (op arg ...)))])
-       #'(rpsj split-done-k opts
-               (done-parts ... joint-segment-expression)
-               (rest ...)))]))
 
 (define-syntax (run-split-pipe stx)
   (syntax-parse stx
