@@ -234,7 +234,7 @@
 (define-syntax debug-m
   (syntax-parser
     [(_ (set! name e))
-     (pretty-print (syntax-debug-info #'name))
+     ;(pretty-print (syntax-debug-info #'name))
      #`(set! name e)]))
 (define-syntax =bind=
   ;; starter
