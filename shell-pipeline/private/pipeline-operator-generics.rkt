@@ -28,17 +28,17 @@
   ))
 
 (require
- "basic-unix-pipe-helper-funcs.rkt"
- "mostly-structs.rkt"
- racket/stxparam
- (for-syntax
-  racket/base
-  syntax/parse
-  racket/generic
-  ee-lib
-  ;; for pretty-print debug
-  racket/pretty
-  ))
+  "basic-unix-pipe-helper-funcs.rkt"
+  "mostly-structs.rkt"
+  racket/stxparam
+  (for-syntax
+   racket/base
+   syntax/parse
+   racket/generic
+   ee-lib
+   ;; for pretty-print debug
+   racket/pretty
+   ))
 
 (define-syntax-parameter current-pipeline-argument
   (λ (stx) (raise-syntax-error 'current-pipeline-argument
@@ -186,7 +186,12 @@
   (core-pipeline-op-struct
    (λ (stx)
      (syntax-parse stx
-       [(_ e) (values #'(object-pipeline-member-spec (λ () e)) '())]))
+       [(_ e) (values (local-expand
+                       #'(object-pipeline-member-spec (λ () e))
+                       'expression
+                       '()
+                       (current-def-ctx))
+                      '())]))
    (λ (stx)
      (syntax-parse stx
        [(_ e)
@@ -229,7 +234,7 @@
                             "Can't be used as a pipeline starter"
                             #'stx
                             #'arg1)]))
-  ;; joint
+   ;; joint
    (λ (stx)
      (syntax-parse stx
        [(_ name)
