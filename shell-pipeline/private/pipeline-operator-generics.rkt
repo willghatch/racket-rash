@@ -30,7 +30,9 @@
 (require
   "basic-unix-pipe-helper-funcs.rkt"
   "mostly-structs.rkt"
+  "block.rkt"
   racket/stxparam
+  racket/undefined
   (for-syntax
    racket/base
    syntax/parse
@@ -238,9 +240,12 @@
    (λ (stx)
      (syntax-parse stx
        [(_ name)
-        (define re-name (bind! #'name #f))
+        ;(define re-name (bind! #'name #f))
+        (define re-name (car ((lift-binds!) #'(name) #'undefined)))
         (values
          #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))
-         (list (syntax-local-identifier-as-binding
-                (syntax-local-introduce re-name))))]))))
+         #;(list (syntax-local-identifier-as-binding
+                (syntax-local-introduce re-name)))
+         '()
+         )]))))
 

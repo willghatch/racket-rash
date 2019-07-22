@@ -21,6 +21,8 @@
  &&
  \|\|
 
+ rash-block
+
  ;; TODO - some things from pipeline-operator-detect.rkt should be provided
  (for-syntax
   pipeline-starter
@@ -35,6 +37,7 @@
  "private/define-pipeline-alias.rkt"
  "private/define-simple-alias.rkt"
  "private/pipeline-macro-logicwrapper.rkt"
+ "private/block.rkt"
  (except-in "mixed-pipeline.rkt"
             run-pipeline)
 

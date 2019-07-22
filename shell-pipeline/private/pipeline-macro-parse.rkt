@@ -36,6 +36,7 @@
  "pipeline-operators.rkt"
  "../utils/bourne-expansion-utils.rkt"
  "pipeline-operator-generics.rkt"
+ "block.rkt"
  (for-syntax
   racket/base
   syntax/parse
@@ -320,17 +321,24 @@
                                         (attribute e->>))
                                     #'#t
                                     #'#f)])
-                #`(rash-pipeline-splitter/start
-                   run-split-pipe
-                   ;; Opts here are just passed through until the last macro.
-                   (
-                    bg pipeline-ret
-                    ;; env env-replace
-                    in out err
-                    strictness lazy-timeout
-                    object-to-out
-                    )
-                   arg ...))])])])]))
+                (define/syntax-parse do-pipeline
+                  #'(rash-pipeline-splitter/start
+                     run-split-pipe
+                     ;; Opts here are just passed through until the last macro.
+                     (
+                      bg pipeline-ret
+                      ;; env env-replace
+                      in out err
+                      strictness lazy-timeout
+                      object-to-out
+                      )
+                     arg ...))
+                (define context (syntax-local-context))
+                (if (and (list? context)
+                         (rash-block-context-id? (car context)))
+                    #'do-pipeline
+                    #'(rash-block
+                       do-pipeline)))])])])]))
 
 (define-for-syntax (pipeline-split-loop stx stxs names)
   (syntax-parse stx
@@ -353,16 +361,26 @@
     ;; the pipeline OR just create a first-class pipeline object.
     [(_ split-done-k opts (~var starter pipeline-starter)
         (~var args not-pipeline-op) ... rest ...)
-     (ee-lib-boundary
-      (define-values (stx1 names1) (expand-pipeline-starter (syntax/loc #'starter
-                                                              (starter args ...))))
-      (define-values (stxs2 names2)
-        (pipeline-split-loop #'(rest ...) (list stx1) names1))
-      #`(split-done-k
-         opts
-         (let (#,@(map (λ (n) #`(#,(syntax-local-introduce n) undefined))
-                       names2))
-           (list #,@stxs2))))]
+     (define-values (stx1 names1) (expand-pipeline-starter (syntax/loc #'starter
+                                                             (starter args ...))))
+     (define-values (stxs2 names2)
+       (pipeline-split-loop #'(rest ...) (list stx1) names1))
+     #`(split-done-k
+        opts
+        (list #,@stxs2))
+     #;(if (equal? 'expression
+                   (syntax-local-context))
+           #`(split-done-k
+              opts
+              (let (#,@(map (λ (n) #`(#,(syntax-local-introduce n) undefined))
+                            names2))
+                (list #,@stxs2)))
+           #`(begin
+               #,@(map (λ (n) #`(define #,(syntax-local-introduce n) undefined))
+                       names2)
+               (split-done-k
+                opts
+                (list #,@stxs2))))]
     [(rps split-done-k opts (~var iargs not-pipeline-op) ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter

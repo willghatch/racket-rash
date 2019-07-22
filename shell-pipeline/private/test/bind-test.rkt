@@ -1,4 +1,4 @@
-#lang racket/base
+#lang rash
 
 (require "../../pipeline-macro.rkt")
 
@@ -47,6 +47,8 @@
                               =basic-object-pipe/expression= 5
                               =bind= a-name))
                ))
+
+
 
   #;(check-equal?
      (run-pipeline =unix-pipe= (λ () (printf "This is a test\nto be sure things\nare generally working."))
