@@ -72,7 +72,7 @@ cat /etc/hostname |>> string-upcase
 You can also make pipelines composed entirely of Racket functions.
 
 @irash{
-|> directory-list |> map delete-file
+|> directory-list |> map file->string
 }
 
 Pipelines always start with an operator, and if none is specified the @racket[default-pipeline-starter] is inserted.  Pipeline operators are user-definable with @racket[define-pipeline-operator].  Defining new operators can help make common patterns shorter, simpler, and flatter.  For instance the @racket[=map=] operator wraps the @racket[map] function, allowing you to specify just the body of a lambda.
