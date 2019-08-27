@@ -646,6 +646,11 @@ You can use them with @tt{(require rash/prompt-helpers/git-info)}
  Determines if current branch is tracking a remote branch.
 }
 
+@defproc[(git-current-commit [dir path? (current-directory)])
+         string?]{
+ Return the current commit.
+}
+
 @defproc[(git-behind/ahead-numbers [dir path? (current-directory)])
          list?]{
  Returns a list with the number of commits behind and ahead, in that order, that the current branch is in relation to its corresponding upstream branch.

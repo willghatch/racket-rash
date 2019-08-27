@@ -10,6 +10,7 @@
  git-submodule-dirty?
  git-has-untracked?
  git-remote-tracking?
+ git-current-commit
  )
 
 (require
@@ -68,6 +69,10 @@
     (parameterize ([current-directory dir])
       #{git rev-parse --abbrev-ref '"@{upstream}" &pipeline-ret}))
   (pipeline-success? pline))
+
+(define (git-current-commit [dir (current-directory)])
+  (parameterize ([current-directory dir])
+    #{git rev-parse HEAD}))
 
 (define (git-dirty? [dir (current-directory)])
   (define pline
