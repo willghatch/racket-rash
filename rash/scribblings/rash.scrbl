@@ -272,17 +272,102 @@ There have been various changes since the talk was given, but the core ideas are
 
 @section{Rash Reference}
 
+@; TODO - I wanted a quick way to include exports from other modules into bullet lists.  But it would probably be better to make this more flexible -- allow multiple things per bullet, with optional commentary
+@(define-syntax (racket-ref-item-list stx)
+  (syntax-parse stx
+    [(_ name:id ...) #'@itemlist[@item{@racket[name]} ...]]
+    ))
+
+@subsection{shell-pipeline re-exports}
+
 Note that all the pipeline things (@racket[run-pipeline],
 @racket[=unix-pipe=], @racket[=object-pipe=],
 @racket[define-pipeline-operator], etc) are documented in the
 @secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")]
 module.
 
+But since those functions/macros are essential to using Rash, I'll also list them here:
+
+Pipeline operators:
+
+@racket-ref-item-list[
+=composite-pipe=
+=basic-unix-pipe=
+=unix-pipe=
+\|
+=basic-object-pipe/expression=
+=basic-object-pipe/form=
+=basic-object-pipe=
+\|>
+=object-pipe/expression=
+=object-pipe/form=
+=object-pipe=
+\|>>
+default-pipeline-starter
+]
+
+Defining pipeline operators:
+
+@racket-ref-item-list[
+define-pipeline-operator
+define-pipeline-alias
+define-simple-pipeline-alias
+current-pipeline-argument
+_
+expand-pipeline-arguments
+]
+
+Pipeline flags:
+
+@racket-ref-item-list[
+&bg &pipeline-ret
+&in &<
+&out &> &>! &>>
+&err
+&strict &permissive &lazy &lazy-timeout
+]
+
+Pipeline implicit option configuration (note that these are subsumed by @racket[with-rash-config]):
+
+@racket-ref-item-list[
+with-pipeline-config
+splicing-with-pipeline-config
+]
+
+
+
+@subsection{linea re-exports}
+
 All the things about reading and line-macros (@racket[define-line-macro], @racket[#%linea-line], etc) are documented in the
 @secref["linea" #:doc '(lib "linea/scribblings/linea.scrbl")]
 module.
 
+But here is an export list, so it's visible in this page:
+
+From linea/defaults:
+
+@racket-ref-item-list[
+#%linea-expressions-begin
+#%linea-line
+#%linea-s-exp
+#%linea-default-line-macro
+]
+
+From linea/line-macro (note that with-default-line-macro is subsumed by with-rash-config):
+
+@racket-ref-item-list[
+define-line-macro
+default-line-macro
+
+with-default-line-macro
+splicing-with-default-line-macro
+]
+
+
+@subsection{Rash original exports}
+
 TODO: document forms for configuring Rash besides the rash macro, document forms for creating customized versions of #lang rash (including reader modifications, default line-macro and pipeline operator, bindings available...), etc
+
 
 @defform[(with-rash-config options ... body)]{
 
