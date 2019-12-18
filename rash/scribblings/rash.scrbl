@@ -50,7 +50,7 @@ Rash can do the sorts of things you expect from shell languages, and a lot of cu
 @codeblock{
 #lang rash
 cd project-directory
-echo How many Racket files do we have?
+echo The number of Racket files in this directory:
 ls *.rkt | wc -l
 }
 
