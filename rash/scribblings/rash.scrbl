@@ -22,6 +22,7 @@ racket/port
 racket/splicing
 syntax/parse
 (prefix-in shell/pipeline-macro/ shell/pipeline-macro)
+file/glob
 ))
 
 @(define-syntax (irash stx)
@@ -85,7 +86,7 @@ Pipelines always start with an operator, and if none is specified the @racket[de
 |> list 1 2 3 =map= + 2
 }
 
-Pipeline operators are macros, and therefore can play any of the tricks that macros generally can in Racket.  The | operator can auto-quote symbols, turn asterisks into glob expansion code, etc.  The |> operator can detect whether the @racket[current-pipeline-argument] is used and insert it automatically.
+Pipeline operators are macros, and therefore can play any of the tricks that macros generally can in Racket.  The | operator can auto-quote symbols, turn asterisks into @racket[glob] expansion code, etc.  The |> operator can detect whether the @racket[current-pipeline-argument] is used and insert it automatically.
 
 If you put parentheses in the middle of a pipeline, you escape to normal Racket code.
 
@@ -196,6 +197,8 @@ echo '*.rkt
 ;; print "$HOME" literally
 echo '"$HOME"
 }
+
+Globs desugar to a use of the @racket[glob] function.
 
 TODO - I need a better documentation section on globbing generally.
 
