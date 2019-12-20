@@ -40,11 +40,11 @@ Here are some quick examples:
 We can also pipeline objects.  Object pipelines are full of functions instead of process specifications.
 
 @codeblock{
-;; This will return 2
-(run-pipeline =object-pipe= list 1 2 3 =object-pipe= second)
+;; This will return 3
+(run-pipeline =object-pipe= list 0 1 2 =object-pipe= length)
 
 ;; To save on space, let's assume %> is bound to =object-pipe=
-(run-pipeline %> list 1 2 3 %> second)
+(run-pipeline %> list 0 1 2 %> length)
 }
 
 We can mix the two:
