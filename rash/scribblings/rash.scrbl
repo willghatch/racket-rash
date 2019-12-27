@@ -504,7 +504,8 @@ A few nice things (like stderr highlighting) are in a demo-rc file you can requi
 
 @subsection{Unicode and garbled glyphs}
 
-The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}).
+The repl uses the readline module for line-editing and completion.  The readline module by default uses libedit instead of the actual libreadline for licensing reasons.  Libedit doesn't seem to handle unicode properly.  Installing the readline-gpl package fixes that (@tt{raco pkg install readline-gpl}). Note: readline-gpl may need libreadline-dev in turn. See this @hyperlink["https://github.com/racket/readline-gpl/issues/3"]{issue}. (On Linux-Debian distributions you can install by (@tt{sudo apt install --yes libreadline-dev}).)
+
 
 @subsection{Interactive functions (unstable)}
 
