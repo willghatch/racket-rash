@@ -35,6 +35,7 @@
                 rash/private/repl-startup-hint
                 (for-syntax racket/base syntax/parse))
       repl-namespace)
+(define prompt-f (namespace-variable-value 'current-prompt-function))
 (define ns-default-rash-formatter
   (parameterize ([current-namespace repl-namespace])
     (namespace-variable-value 'default-rash-formatter)))
@@ -58,7 +59,7 @@
   (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                   [exn:break:terminate? (λ (e) (clean/exit))]
                   [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
-    (option-app (current-prompt-function)
+    (option-app (prompt-f)
                 #:last-return-value last-ret-val
                 #:last-return-index n))
   (flush-output (current-output-port))
@@ -153,7 +154,7 @@
                                                           ;complete-commands
                                                           ;complete-namespaced
                                                           ))
-      (current-prompt-function
+      (prompt-f
        (dynamic-require 'rash/private/rashrc-lib 'basic-prompt))))
 
   (port-count-lines! (current-input-port))
