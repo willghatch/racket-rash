@@ -551,11 +551,28 @@ Keywords optionally given:
 
 @racket[#:last-return-value] - fairly self explanatory.  If multiple values were returned, they will be given as a list.  This will be @racket[(void)] for the prompt before the first command.  The default prompt function formats the return value with @racket[current-rash-top-level-print-formatter] before printing it.
 
-@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n] and @racket[result-n].  The default prompt function prints the number of the result before printing the result itself.
+@racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n].  The default prompt function prints the number of the result before printing the result itself.
 
 @bold{
 Unstable.  I may change how this works.  But probably it actually is stable, I just don't want to commit to it yet, especially given that the entire line editor will eventually change.
 }
+
+Example:
+@racketblock[
+(define (a-prompt #:last-return-value [last-ret #f])
+  (printf "~v >" last-ret))
+(current-prompt-function a-prompt)
+]
+
+Note that when readline is active, you probably want to use the function @racket[readline-prompt] in the prompt function, because the readline library itself wants to print something.  Eg.
+
+@racketblock[
+(require readline/pread)
+(define (a-prompt #:last-return-value [last-ret #f])
+  (printf "~v " last-ret)
+  (readline-prompt #">"))
+(current-prompt-function a-prompt)
+]
 }
 
 
