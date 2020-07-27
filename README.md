@@ -11,7 +11,7 @@ Rash is a shell language, library, and REPL for Racket.
 
 Use as a repl that is as convenient for pipelining programs as Bash is, but has all the power of Racket.  Use as a scripting language with `#lang rash`.  Embed in normal Racket files with `(require rash)`, and mix freely with any other Racket language or library.
 
-Rash is in active development, but it is largely stable (and the parts that aren't are marked as such).  I use it as my default interactive shell on my laptop.  It currently lacks the interactive polish of Zsh or Fish, but it is *so* much better as a language.  Every script I've ported from a bourne-related shell to Rash is more robust, simpler, easier to maintain, easier to expand, and much more fun.
+Rash is in active development, but it is largely stable (and the parts that aren't are marked as such).  I use it as my default interactive shell on my laptop.  It currently lacks the interactive polish of Zsh or Fish, but it is *so* much better as a language.  Every script I've ported from a Bourne-related shell to Rash is more robust, simpler, easier to maintain, easier to expand, and much more fun.
 
 
 ## Getting started
@@ -20,7 +20,7 @@ Rash is in active development, but it is largely stable (and the parts that aren
 
 Rash does work on windows, but it works better and is more useful on unix based systems.
 
-To install, you will need a working instalation of [racket](https://download.racket-lang.org/) v6.12 or later.
+To install, you will need a working installation of [racket](https://download.racket-lang.org/) v6.12 or later.
 
 ### Installation
 You can either install with racket's built in package manager, [`raco`](https://docs.racket-lang.org/raco/), or install directly from github.  If you have DrRacket installed, you can install rash with `File -> Install Package`.
