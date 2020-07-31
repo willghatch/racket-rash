@@ -21,68 +21,69 @@
   (struct block-context-id ())
   )
 
-(define-syntax (block stx)
-  (syntax-parse stx
-    [(_ body ...)
-     (define defs '())
-     (define stxs '())
-     (define tail-exprs '())
+(define-syntax block
+  (expression-macro
+   (syntax-parser
+     [(_ body ...)
+      (define defs '())
+      (define stxs '())
+      (define tail-exprs '())
 
-     (define (move-tail!)
-       (set! defs (append (map (λ (te) #`(() (begin #,te (values))))
-                               tail-exprs)
-                          defs))
-       (set! tail-exprs '()))
-     (define (this-lift-binds! binders e)
-       (move-tail!)
-       (define bound (bind! (syntax->list binders) (racket-var)))
-       (define bound-posspace (map syntax-local-introduce-splice
-                                   bound))
-       (set! defs (cons #`(#,bound-posspace #,e) defs))
-       bound)
-     (define (this-lift-syntaxes! binders e)
-       (move-tail!)
-       (define bound (bind! (syntax->list binders) (eval-transformer e)))
-       (define bound-posspace (map syntax-local-introduce-splice
-                                   bound))
-       (set! stxs (cons #`(#,bound-posspace #,e) stxs))
-       bound)
-     (define (this-lift-expression! e)
-       (when (not (syntax? e))
-         (error 'lift-expression! "not syntax: ~v" e))
-       (set! tail-exprs (cons (syntax-local-introduce e) tail-exprs)))
+      (define (move-tail!)
+        (set! defs (append (map (λ (te) #`(() (begin #,te (values))))
+                                tail-exprs)
+                           defs))
+        (set! tail-exprs '()))
+      (define (this-lift-binds! binders e)
+        (move-tail!)
+        (define bound (bind! (syntax->list binders) (racket-var)))
+        (define bound-posspace (map syntax-local-introduce-splice
+                                    bound))
+        (set! defs (cons #`(#,bound-posspace #,e) defs))
+        bound)
+      (define (this-lift-syntaxes! binders e)
+        (move-tail!)
+        (define bound (bind! (syntax->list binders) (eval-transformer e)))
+        (define bound-posspace (map syntax-local-introduce-splice
+                                    bound))
+        (set! stxs (cons #`(#,bound-posspace #,e) stxs))
+        bound)
+      (define (this-lift-expression! e)
+        (when (not (syntax? e))
+          (error 'lift-expression! "not syntax: ~v" e))
+        (set! tail-exprs (cons (syntax-local-introduce e) tail-exprs)))
 
 
-     (with-scope sc
-       (parameterize ([lift-binds! this-lift-binds!]
-                      [lift-syntaxes! this-lift-syntaxes!]
-                      [lift-expression! this-lift-expression!]
-                      [current-ctx-id (block-context-id)])
-         (let loop ([todo (syntax->list (add-scope #'(body ...) sc))])
-           (unless (null? todo)
-             (define expanded
-               (local-expand (first todo)
-                             (list (current-ctx-id))
-                             (list #'begin #'define-syntaxes #'define-values)
-                             (current-def-ctx)))
-             (syntax-parse expanded
-               #:literals (begin define-syntaxes define-values)
-               [(begin e ...)
-                (loop (append (syntax->list #'(e ...)) todo))]
-               [(define-values (x ...) e)
-                ((lift-binds!) #'(x ...) #'e)
-                (loop (cdr todo))]
-               [(define-syntaxes (x ...) e)
-                ((lift-syntaxes!) #'(x ...) #'e)
-                (loop (cdr todo))]
-               [e
-                ((lift-expression!) #'e)
-                (loop (cdr todo))])))
-         #`(letrec-syntaxes+values (#,@(reverse (map syntax-local-introduce stxs)))
-             (#,@(reverse (map syntax-local-introduce defs)))
-             #,@(if (null? tail-exprs)
-                    #'((void))
-                    (reverse (map syntax-local-introduce tail-exprs))))))]))
+      (with-scope sc
+        (parameterize ([lift-binds! this-lift-binds!]
+                       [lift-syntaxes! this-lift-syntaxes!]
+                       [lift-expression! this-lift-expression!]
+                       [current-ctx-id (block-context-id)])
+          (let loop ([todo (syntax->list (add-scope #'(body ...) sc))])
+            (unless (null? todo)
+              (define expanded
+                (local-expand (first todo)
+                              (list (current-ctx-id))
+                              (list #'begin #'define-syntaxes #'define-values)
+                              (current-def-ctx)))
+              (syntax-parse expanded
+                #:literals (begin define-syntaxes define-values)
+                [(begin e ...)
+                 (loop (append (syntax->list #'(e ...)) todo))]
+                [(define-values (x ...) e)
+                 ((lift-binds!) #'(x ...) #'e)
+                 (loop (cdr todo))]
+                [(define-syntaxes (x ...) e)
+                 ((lift-syntaxes!) #'(x ...) #'e)
+                 (loop (cdr todo))]
+                [e
+                 ((lift-expression!) #'e)
+                 (loop (cdr todo))])))
+          #`(letrec-syntaxes+values (#,@(reverse (map syntax-local-introduce stxs)))
+              (#,@(reverse (map syntax-local-introduce defs)))
+              #,@(if (null? tail-exprs)
+                     #'((void))
+                     (reverse (map syntax-local-introduce tail-exprs))))))])))
 
 
 (module+ test

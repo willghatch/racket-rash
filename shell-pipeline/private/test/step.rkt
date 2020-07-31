@@ -5,6 +5,8 @@
 
 
 ;; TODO - this errors if put inside a test submodule
-(rash-block
+
+(module+ test
+  (rash-block
    (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting)
-   (check-equal? greeting "hello"))
+   (check-equal? greeting "hello")))
