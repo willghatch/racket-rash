@@ -337,7 +337,7 @@
                 (if (and (list? context)
                          (rash-block-context-id? (car context)))
                     #'do-pipeline
-                    #'(rash-block
+                    #'(rash-block/splice
                        do-pipeline)))])])])]))
 
 (define-for-syntax (pipeline-split-loop stx stxs names)
