@@ -1,12 +1,16 @@
-#lang linea "step-lang.rkt"
-(require rackunit
-         rash
-         linea/defaults)
-
-
-;; TODO - this errors if put inside a test submodule
+#lang rash
 
 (module+ test
-  (rash-block
-   (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting)
-   (check-equal? greeting "hello")))
+  (require rackunit)
+  
+  (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting)
+  (check-equal? (run-pipeline =basic-object-pipe/expression= (string-append greeting " world"))
+                "hello world")
+  
+  (check-equal?
+   (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting
+                 =basic-object-pipe/expression= (string-append greeting " world"))
+   "hello world"))
+
+
+

@@ -21,8 +21,6 @@
  &&
  \|\|
 
- rash-block
-
  ;; TODO - some things from pipeline-operator-detect.rkt should be provided
  (for-syntax
   pipeline-starter

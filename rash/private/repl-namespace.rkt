@@ -25,7 +25,7 @@
   #:start (syntax-parser [(_ arg ...)
                           #`(#,repl-default-pipeline-starter-variable arg ...)]))
 
-(define-for-syntax repl-default-line-macro-variable #'run-pipeline/logic)
+(define-for-syntax repl-default-line-macro-variable #'run-pipeline)
 (define-line-macro set-default-line-macro!
   (syntax-parser [(_ lm)
                   (set! repl-default-line-macro-variable #'lm)
