@@ -91,21 +91,6 @@
   (define-syntax-class (not-pipeline-op)
     (pattern (~not x:pipeline-op)))
 
-
-
-  #|
-  For binding, I need the core desugaring thing to return the syntax to make a pipeline-member-spec, but also the names of any bindings (in both original and transformed form).  Then the next pipeline segment will need to be in a new context that can see that binding and has it bound to... maybe a transformer that will get a value out of a box?  And the spec form for that binding will need to run code that sets that box.  So I need to generate a getter and setter, and in the binding-spec-generator expression I need to let-syntax it to the setter, and further in the pipeline I need to let-syntax it to the getter.  Except I also want to be able to set! it later, so I need the getter to be a set!-transformer.
-  Then the outer driver thing will have the original and transformed binding names, and can arrange all the let-syntax stuff as well as an outer definition of the given names if it is in a definition context.
-
-  What arguments does it need to accept?  It needs the syntax object itself, obviously.  It needs a definition context, I guess?  Does it need a new one for each new expansion?  They should probably be parent/child definition contexts.
-
-  (-> stx definition-context (values syntax (listof id)))
-  |#
-
-  #|
-  TODO - These #:expression keywords on the 4 define/hygienic uses should be #:definition, but there seems to be some bug.  It is currently working with #:expression and not with #:definition.
-  |#
-
   (define/hygienic (expand-pipeline-starter stx) #:definition
     (syntax-parse stx
       [(op:-core-pipeline-op arg ...)
@@ -135,12 +120,10 @@
 
 
 (define-for-syntax (composite-pipe-helper segments)
-  (for/fold ([done-stx-list '()]
-             [lifted-ids '()])
+  (for/fold ([done-stx-list '()])
             ([segment segments])
-    (let-values ([(done-stx ids) (expand-pipeline-joint segment)])
-      (values (append done-stx-list (list done-stx))
-              (append lifted-ids ids)))))
+    (let ([done-stx (expand-pipeline-joint segment)])
+      (append done-stx-list (list done-stx)))))
 
 
 (define-syntax =composite-pipe=
@@ -152,35 +135,25 @@
             (~var start-arg (not-pipeline-op)) ...)
            ((~var join-op (pipeline-joint))
             (~var join-arg (not-pipeline-op)) ...) ...)
-        (define-values (stx1 ids1)
-          (expand-pipeline-starter #'(start-op start-arg ...)))
-        (define-values (stxs2 ids2)
-          (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))))
+        (define stx1 (expand-pipeline-starter #'(start-op start-arg ...)))
+        (define stxs2 (composite-pipe-helper (syntax->list #'((join-op join-arg ...) ...))))
         (define stxs (cons stx1 stxs2))
-        (define ids (append ids1 ids2))
-        (values
-         #`(composite-pipeline-member-spec (list #,@stxs))
-         ids)]))
+         #`(composite-pipeline-member-spec (list #,@stxs))]))
    ;; joint
    (λ (stx)
      (syntax-parse stx
        [(_ ((~var op (pipeline-joint))
             (~var arg (not-pipeline-op)) ...) ...+)
-        (define-values (stxs ids)
-          (composite-pipe-helper (syntax->list #'((op arg ...) ...))))
-        (values
-         #`(composite-pipeline-member-spec
-            (list #,@stxs))
-         ids)]))))
+        (define stxs (composite-pipe-helper (syntax->list #'((op arg ...) ...))))
+        #`(composite-pipeline-member-spec
+            (list #,@stxs))]))))
 
 ;; For first-class segments or as an escape to construct specs with the function API.
 (define-syntax =pipeline-segment=
   (let ([op (λ (stx)
               (syntax-parse stx
                 [(_ segment ...)
-                 (values 
-                  #'(composite-pipeline-member-spec (list segment ...))
-                  '())]))])
+                 #'(composite-pipeline-member-spec (list segment ...))]))])
     (core-pipeline-op-struct op op)))
 
 ;; Pipe for just a single expression that isn't considered pre-wrapped in parens.
@@ -188,35 +161,28 @@
   (core-pipeline-op-struct
    (λ (stx)
      (syntax-parse stx
-       [(_ e) (values (local-expand
-                       #'(object-pipeline-member-spec (λ () e))
-                       'expression
-                       '()
-                       (current-def-ctx))
-                      '())]))
+       [(_ e)
+        (local-expand
+          #'(object-pipeline-member-spec (λ () e))
+          'expression
+          '()
+          (current-def-ctx))]))
    (λ (stx)
      (syntax-parse stx
        [(_ e)
-        (values
-         #;#'(object-pipeline-member-spec
-              (λ (prev-ret)
-                (syntax-parameterize ([current-pipeline-argument
-                                       (make-rename-transformer #'prev-ret)])
-                  e)))
-         (local-expand
+        (local-expand
           #'(object-pipeline-member-spec
-             (λ (prev-ret)
-               (syntax-parameterize ([current-pipeline-argument
-                                      (make-rename-transformer #'prev-ret)])
-                 e)))
+              (λ (prev-ret)
+                 (syntax-parameterize ([current-pipeline-argument
+                                         (make-rename-transformer #'prev-ret)])
+                                      e)))
           'expression
           '()
-          (current-def-ctx))
-         '())]))))
+          (current-def-ctx))]))))
 
 
 (define-for-syntax (basic-unix-pipe-tx stx)
-  (values (basic-unix-pipe-transformer stx) '()))
+  (basic-unix-pipe-transformer stx))
 
 (define-syntax =basic-unix-pipe=
   (core-pipeline-op-struct basic-unix-pipe-tx basic-unix-pipe-tx))
@@ -240,12 +206,6 @@
    (λ (stx)
      (syntax-parse stx
        [(_ name)
-        ;(define re-name (bind! #'name #f))
         (define re-name (car ((lift-binds!) #'(name) #'undefined)))
-        (values
-         #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))
-         #;(list (syntax-local-identifier-as-binding
-                (syntax-local-introduce re-name)))
-         '()
-         )]))))
+        #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))]))))
 

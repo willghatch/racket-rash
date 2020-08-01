@@ -336,18 +336,17 @@
                 #'(rash-block/splice
                    do-pipeline))])])])]))
 
-(define-for-syntax (pipeline-split-loop stx stxs names)
+(define-for-syntax (pipeline-split-loop stx stxs)
   (syntax-parse stx
-    [() (values stxs names)]
+    [() stxs]
     [((~var op pipeline-joint)
       (~var arg not-pipeline-op) ...
       rest ...)
-     (define-values (out-stx new-names)
+     (define out-stx
        (expand-pipeline-joint (syntax/loc #'op
                                 (op arg ...))))
      (pipeline-split-loop #'(rest ...)
-                          (append stxs (list out-stx))
-                          (append names new-names))]))
+                          (append stxs (list out-stx)))]))
 
 (require racket/undefined)
 
@@ -357,26 +356,13 @@
     ;; the pipeline OR just create a first-class pipeline object.
     [(_ split-done-k opts (~var starter pipeline-starter)
         (~var args not-pipeline-op) ... rest ...)
-     (define-values (stx1 names1) (expand-pipeline-starter (syntax/loc #'starter
-                                                             (starter args ...))))
-     (define-values (stxs2 names2)
-       (pipeline-split-loop #'(rest ...) (list stx1) names1))
+     (define stx1  (expand-pipeline-starter (syntax/loc #'starter
+                                                               (starter args ...))))
+     (define stxs2
+       (pipeline-split-loop #'(rest ...) (list stx1)))
      #`(split-done-k
         opts
-        (list #,@stxs2))
-     #;(if (equal? 'expression
-                   (syntax-local-context))
-           #`(split-done-k
-              opts
-              (let (#,@(map (λ (n) #`(#,(syntax-local-introduce n) undefined))
-                            names2))
-                (list #,@stxs2)))
-           #`(begin
-               #,@(map (λ (n) #`(define #,(syntax-local-introduce n) undefined))
-                       names2)
-               (split-done-k
-                opts
-                (list #,@stxs2))))]
+        (list #,@stxs2))]
     [(rps split-done-k opts (~var iargs not-pipeline-op) ...+ rest ...)
      (define iarg1 (car (syntax->list #'(iargs ...))))
      (define implicit-starter
