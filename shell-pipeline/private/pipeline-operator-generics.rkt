@@ -187,11 +187,6 @@
 (define-syntax =basic-unix-pipe=
   (core-pipeline-op-struct basic-unix-pipe-tx basic-unix-pipe-tx))
 
-(define-syntax debug-m
-  (syntax-parser
-    [(_ (set! name e))
-     ;(pretty-print (syntax-debug-info #'name))
-     #`(set! name e)]))
 (define-syntax =bind=
   ;; starter
   (core-pipeline-op-struct
@@ -207,5 +202,5 @@
      (syntax-parse stx
        [(_ name)
         (define re-name (car ((lift-binds!) #'(name) #'undefined)))
-        #`(object-pipeline-member-spec (λ (arg) (debug-m (set! #,re-name arg)) arg))]))))
+        #`(object-pipeline-member-spec (λ (arg) (set! #,re-name arg) arg))]))))
 

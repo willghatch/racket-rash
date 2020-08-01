@@ -357,7 +357,7 @@
     [(_ split-done-k opts (~var starter pipeline-starter)
         (~var args not-pipeline-op) ... rest ...)
      (define stx1  (expand-pipeline-starter (syntax/loc #'starter
-                                                               (starter args ...))))
+                                                        (starter args ...))))
      (define stxs2
        (pipeline-split-loop #'(rest ...) (list stx1)))
      #`(split-done-k
