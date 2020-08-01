@@ -333,12 +333,8 @@
                       object-to-out
                       )
                      arg ...))
-                (define context (syntax-local-context))
-                (if (and (list? context)
-                         (rash-block-context-id? (car context)))
-                    #'do-pipeline
-                    #'(rash-block/splice
-                       do-pipeline)))])])])]))
+                #'(rash-block/splice
+                   do-pipeline))])])])]))
 
 (define-for-syntax (pipeline-split-loop stx stxs names)
   (syntax-parse stx
