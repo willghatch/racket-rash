@@ -201,6 +201,6 @@
    (λ (stx)
      (syntax-parse stx
        [(_ name)
-        (define re-name (car ((lift-binds!) #'(name) #'undefined)))
+        (define re-name ((lift-bind!) #'name #'undefined))
         #`(object-pipeline-member-spec (λ (arg) (set! #,re-name arg) arg))]))))
 
