@@ -162,23 +162,15 @@
    (λ (stx)
      (syntax-parse stx
        [(_ e)
-        (local-expand
-          #'(object-pipeline-member-spec (λ () e))
-          'expression
-          '()
-          (current-def-ctx))]))
+        #'(object-pipeline-member-spec (λ () e))]))
    (λ (stx)
      (syntax-parse stx
        [(_ e)
-        (local-expand
           #'(object-pipeline-member-spec
               (λ (prev-ret)
                  (syntax-parameterize ([current-pipeline-argument
                                          (make-rename-transformer #'prev-ret)])
-                                      e)))
-          'expression
-          '()
-          (current-def-ctx))]))))
+                                      e)))]))))
 
 
 (define-for-syntax (basic-unix-pipe-tx stx)

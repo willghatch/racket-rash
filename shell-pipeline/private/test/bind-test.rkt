@@ -1,13 +1,6 @@
-#lang rash
+#lang racket
 
-(require "../../pipeline-macro.rkt")
-
-(require (for-syntax racket/base syntax/parse))
-(define-syntax (debug stx)
-  (syntax-parse stx
-    [(_ arg)
-     (printf "stx: ~a\n" (syntax-debug-info #'arg))
-     #'arg]))
+(require rash)
 
 (module+ test
   (require rackunit syntax/macro-testing)
@@ -39,7 +32,11 @@
                    =basic-object-pipe= (λ (x) (string-append im-name (string-upcase x))))
      "My name is Inigo MontoyaMY NAME IS INIGO MONTOYA")
 
-  (check-exn exn:fail:syntax?
+  ; Can't enforce this right now because of racket/contract's syntax-local-lift-expression
+  ; bug; having =basic-object-pipe/expression= completely local-expand its Racket syntax
+  ; would trigger eager lifts in the first pass of module expansion such that
+  ; (module ... (let () (pipeline ...)) (pipeline)) would break.
+  #;(check-exn exn:fail:syntax?
              (λ ()
                (convert-compile-time-error
                 ;; a-name should not be visible before it is bound.
@@ -49,20 +46,14 @@
                ))
 
 
+  ; Make sure it work across lines.
+  (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting)
+  (check-equal? (run-pipeline =basic-object-pipe/expression= (string-append greeting " world"))
+                "hello world")
 
-  #;(check-equal?
-     (run-pipeline =unix-pipe= (λ () (printf "This is a test\nto be sure things\nare generally working."))
-                   =unix-pipe= (letrec ([f (λ (regexp)
-                                             (define l (read-line))
-                                             (when (and (not (eof-object? l))
-                                                        (regexp-match regexp l))
-                                               (displayln l))
-                                             (when (not (eof-object? l))
-                                               (f regexp))
-                                             )])
-                                 f) #px"re"
-                   =basic-object-pipe= port->string
-                   =basic-object-pipe= string-upcase)
-     "TO BE SURE THINGS\nARE GENERALLY WORKING.\n")
+  (let ()
+    (run-pipeline =basic-object-pipe/expression= "hello" =bind= greeting)
+    (check-equal? (run-pipeline =basic-object-pipe/expression= (string-append greeting " =bind="))
+                  "hello =bind="))
 
   )
