@@ -33,7 +33,7 @@ These are essentially a bunch of proof-of-concept pipeline operators.
 
 
 (require
- "../pipeline-macro.rkt"
+ shell/pipeline-macro
  racket/stream
  racket/string
  file/glob
