@@ -4,7 +4,7 @@
 (for-label shell/pipeline-macro
            (except-in racket/base _)
            racket/list
-           (only-in shell/demo/more-pipeline-operators =map= =filter=)
+           @;(only-in shell/demo/more-pipeline-operators =map= =filter=)
            @;(except-in shell/mixed-pipeline run-pipeline)
            ))
 
