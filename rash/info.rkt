@@ -13,12 +13,6 @@
                "racket-doc"
                "rackunit-lib"
                "readline-lib"
-               ;; for the make demo
-               "make"
-               ;; for csv-file->dicts in demo/setup
-               "csv-reading"
-               ;; temporarily
-               "text-table"
                ))
 
 (define test-omit-paths '("demo/use-make-dumb-example.rkt"))
