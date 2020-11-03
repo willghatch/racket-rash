@@ -201,11 +201,15 @@ This will likely be renamed to be less confusing.
 
 Examples:
 @codeblock|{
-;; A simple case -- have an alias that sets initial arguments.
-(define ls-alias (alias-func (λ args (list* 'ls '--color=auto args))))
-;; Slightly more complicated: `find` requires that its path argument go before
+;; A simple case -- have an alias that
+;; sets initial arguments.
+(define ls-alias
+  (alias-func (λ args (list* 'ls '--color=auto args))))
+;; Slightly more complicated:
+;; `find` requires that its path argument go before
 ;; its modifier flags.
-(define find-files-alias (alias-func (λ args `(find ,@args -type f))))
+(define find-files-alias
+  (alias-func (λ args `(find ,@args -type f))))
 }|
 }
 

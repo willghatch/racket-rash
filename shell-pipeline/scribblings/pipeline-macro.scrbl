@@ -50,7 +50,8 @@ We can also pipeline objects.  Object pipelines are full of functions instead of
 We can mix the two:
 
 @codeblock{
-;; Capitalized ls output.  =object-pipe= automatically converts ports to strings.
+;; Capitalized ls output.  =object-pipe=
+;; automatically converts ports to strings.
 (run-pipeline % ls -l %> string-upcase)
 }
 

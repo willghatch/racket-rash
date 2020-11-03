@@ -420,7 +420,8 @@ I don't want to commit to this, yet.
 This takes all the same options as @racket[rash], but doesn't take a code string.  It produces a transformer like @racket[rash], but with different default values for the available options.
 
 @(racketblock
-(define-syntax my-rash (make-rash-transformer #:starter =basic-object-pipe=)))
+  (define-syntax my-rash
+    (make-rash-transformer #:starter =basic-object-pipe=)))
 
 @bold{
 Unstable.
@@ -619,23 +620,24 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
 
  @interaction-eval[#:eval prompt-helper-eval
                    (require rash/prompt-helpers/string-style)]
- @examples[
- #:eval prompt-helper-eval
- (create-styled-string "example"
-                       #:bg "red"
-                       #:fg '(255 255 255)
-                       #:underlined? #t)
+@examples[
+#:eval prompt-helper-eval
+(create-styled-string "example"
+                      #:bg "red"
+                      #:fg '(255 255 255)
+                      #:underlined? #t)
 
- (create-styled-string "example"
-                       #:bg "red"
-                       #:fg '(255 255 255)
-                       #:underlined? #t
-                       #:reset-before? #f)
- (define style-function (create-styled-string #:bg "red"
-                                              #:create-function? #t))
+(create-styled-string "example"
+                      #:bg "red"
+                      #:fg '(255 255 255)
+                      #:underlined? #t
+                      #:reset-before? #f)
+(define style-function
+  (create-styled-string #:bg "red"
+                        #:create-function? #t))
 
- (style-function "I'm red!")
- ]}
+(style-function "I'm red!")
+]}
 
 
 @defproc[(color-value? [v any/c])
@@ -654,12 +656,13 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
          styled-struct?]{
  Mostly the same as @racket[create-styled-string], except a structure with a list of strings/sub-structs and a style represented by a hash is produced.  This struct can be given to @racket[styled-struct->string] to turn it into a string.  An uninterned symbol is used as the @racket[default] value for some of the optional arguments.  The function treats the @racket[default] argument to mean "use the style the outer struct provides".
 
- @examples[
- #:eval prompt-helper-eval
- (create-styled-struct "I'm green. "
-                       (create-styled-struct "Im green with red text."
-                                             #:fg "red")
-                       #:bg "green")]
+@examples[
+#:eval prompt-helper-eval
+(create-styled-struct
+ "I'm green. "
+ (create-styled-struct "Im green with red text."
+                       #:fg "red")
+ #:bg "green")]
 }
 
 
@@ -684,12 +687,12 @@ You can use them with @tt{(require rash/prompt-helpers/string-style)}
  (define example1
   (styled-struct->string
    (create-styled-struct
-    "I'm green and hilighted blue."
+    "Green and bg blue."
     (create-styled-struct
-     "Im still green but higighted yellow and underlined."
+     "green but bg yellow and underlined."
      #:bg "yellow"
      #:underlined? #t)
-    " I'm green and hilighted blue again (and not underlined)"
+    " Green and bg blue again."
     #:fg "green"
     #:bg "blue")))
 
