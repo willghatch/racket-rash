@@ -49,6 +49,7 @@ Here follows a quick overview that assumes some knowledge of shell languages lik
 Rash can do the sorts of things you expect from shell languages, and a lot of cues for syntax have been taken from traditional Bourne-derived shells.  The following program works as you would expect.@margin-note{Note that Rash is not remotely Posix Shell compliant.}
 
 @codeblock{
+#!/usr/bin/env racket
 #lang rash
 cd project-directory
 echo The number of Racket files in this directory:
