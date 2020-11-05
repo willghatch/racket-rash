@@ -80,7 +80,8 @@ You can also make pipelines composed entirely of Racket functions.
 Pipelines always start with an operator, and if none is specified the @racket[default-pipeline-starter] is inserted.  Pipeline operators are user-definable with @racket[define-pipeline-operator].  Defining new operators can help make common patterns shorter, simpler, and flatter.  For instance the @racket[=map=] operator wraps the @racket[map] function, allowing you to specify just the body of a lambda.
 
 @irash{
-;; =map= is in the demo file still
+;; =map= is in the demo file still,
+;; in the rash-demos package
 (require rash/demo/setup)
 ;; These two are the same.
 |> list 1 2 3 |> map (λ (x) (+ 2 x))
@@ -793,6 +794,7 @@ If the timeout is reached before all information is gathered, the hash is return
 
 @bold{
 Nothing in the demo directory is remotely stable!  It can all change or go away at any moment.
+The stuff documented here is in the @tt{rash-demos} package.  Maybe I should move this documentation into that package...
 }
 
 I've written various pipeline operators and line macros that I use, but I haven't decided what should be in the default language yet.  So for now they are sitting in a demo directory.  But I need some examples.  So here I'm documenting a bit.
