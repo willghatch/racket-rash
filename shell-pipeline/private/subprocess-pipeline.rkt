@@ -660,6 +660,9 @@
                           (current-inexact-milliseconds) end-time-box
                           'cleaner-goes-here default-err)]
          [cleanup-thread
+          ;; TODO - there is currently no guarantee that the cleaner, including
+          ;; any cleanup procedures from substitutions, will ever run.
+          ;; How can I get this stuff to run even when the program is aborted?
           (thread (λ ()
                     (pipeline-wait/internal pline)
                     (for ([p ports-to-close])
