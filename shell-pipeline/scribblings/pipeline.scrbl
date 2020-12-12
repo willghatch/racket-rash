@@ -191,6 +191,15 @@ Optional keys:
 @itemlist[
 @item{@racket['pipeline-done-procedure] - a procedure of one argument (the pipeline object).  This procedure will be run when the pipeline terminates, and may be used to clean up.  For example, a substitution that creates a temporary file may delete it.}
 ]
+
+@emph{Not stable.}
+I'm not committing to this API yet.
+
+Note: there is actually no guarantee that @racket['pipeline-done-procedure]s will ever run.
+In particular, if a program is aborted or crashes before the relevant pipeline finishes, the procedures will not be run.
+So don't rely on them for anything security critical.
+At the moment with substitutions I've tried, the consequence is that you are left with extra unnecessary named pipes, sockets, etc in a temporary directory.
+But don't rely on this for any important property.
 }
 @defproc[(shell-substitution? [v any/c]) bool/c]{
 Predicate for shell substitutions.
