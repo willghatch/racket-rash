@@ -175,6 +175,27 @@ Create an object that specifies a pipeline to redirect to the given file with th
 @defthing[stderr-capture-redirect special-redirect?]{}
 @defthing[shared-stderr-capture-redirect special-redirect?]{}
 
+@defproc[(shell-substitution [thunk (-> hash?)]) shell-substitution?]{
+Creates a substitution for subprocess pipeline member specs.
+Shell substitutions may be used to pass names to a subprocess that identify procedurally generated things of one kind or another.
+For example, Bash and similar shells include @tt{<(some-pipeline)} as a substitution that replaces the @tt{<()} form with the path to a named pipe in the file system that is connected to the output of @tt{some-pipeline}.
+This procedure provides user-defined substitutions.
+
+The thunk must return a @racket[hash?] with the following keys:
+Required keys:
+@itemlist[
+@item{@racket['argument] - the string that will replace the substitution object when running a subprocess pipeline.}
+]
+
+Optional keys:
+@itemlist[
+@item{@racket['pipeline-done-procedure] - a procedure of one argument (the pipeline object).  This procedure will be run when the pipeline terminates, and may be used to clean up.  For example, a substitution that creates a temporary file may delete it.}
+]
+}
+@defproc[(shell-substitution? [v any/c]) bool/c]{
+Predicate for shell substitutions.
+}
+
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.
 

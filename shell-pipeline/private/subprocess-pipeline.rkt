@@ -100,6 +100,9 @@
  stdout-redirect
  stderr-redirect
 
+ shell-substitution
+ shell-substitution?
+
  )
 
 (module+ resolve-command-path
@@ -153,13 +156,21 @@
                "Command not found: ~a" cmd))))
 
 (define (resolve-command-path cmd)
-  (let ([pathstr (if (path? cmd) cmd (~a cmd))])
-    (or (find-executable-path pathstr)
-        (and (equal? 'windows (system-type 'os))
-             (string? pathstr)
-             (find-executable-path
-              (string-append (~a cmd) ".exe")))
-        (error 'resolve-command-path "can't find executable for ~s" cmd))))
+  (if (shell-substitution? cmd)
+      ;; If it's a substitution, we need to preserve the substitution object but
+      ;; resolve the argument returned.
+      (let* ([sub-done (do-shell-substitution cmd)]
+             [sub-string (shell-substitution-done-argument sub-done)])
+        (shell-substitution-done
+         (resolve-command-path sub-string)
+         (shell-substitution-done-pipeline-done-procedure sub-done)))
+      (let ([pathstr (if (path? cmd) cmd (~a cmd))])
+        (or (find-executable-path pathstr)
+            (and (equal? 'windows (system-type 'os))
+                 (string? pathstr)
+                 (find-executable-path
+                  (string-append (~a cmd) ".exe")))
+            (error 'resolve-command-path "can't find executable for ~s" cmd)))))
 
 
 (define (resolve-spec err-default)
@@ -620,6 +631,7 @@
          [to-out (second run-members/ports)]
          [from-out (third run-members/ports)]
          [err-port-copiers (fourth run-members/ports)]
+         [done-substitutions (fifth run-members/ports)]
          [ports-to-close (append (filter port? (list to-file-port from-file-port))
                                  err-ports-to-close)]
          [from-ret-almost (if (and from-port from-out)
@@ -655,6 +667,14 @@
                       (when (input-port? p) (close-input-port p)))
                     (when (not (equal? strictness 'strict))
                       (pipeline-kill pline))
+                    (for ([done-sub done-substitutions])
+                      (define proc
+                        (shell-substitution-done-pipeline-done-procedure done-sub))
+                      (with-handlers ([(λ (e) #t)
+                                       ;; TODO - there should be a way to log
+                                       ;; exceptions in substitution cleanup functions.
+                                       (λ (e) (void))])
+                        (proc pline)))
                     (set-box! end-time-box
                               (current-inexact-milliseconds))))]
          [pline-final (struct-copy pipeline pline [cleaner cleanup-thread])])
@@ -688,6 +708,8 @@
   (define (pmi-thread? pmember)
     (and (pmi? pmember) (thread? (pmi-subproc-or-thread pmember))))
 
+  (define done-substitutions '())
+
   (define pipeline-length (length pipeline-member-specs))
   (define-values (r1-members-rev err-port-copy-threads-rev)
     (for/fold ([m-outs '()]
@@ -715,7 +737,21 @@
                                       (string-port? err-spec))
                                  err-spec
                                  #f)]
-                [argl (pipeline-member-spec-argl m)]
+                [argl-pre-substitution (pipeline-member-spec-argl m)]
+                [argl-with-substitution-dones
+                 (map (λ (x) (if (shell-substitution? x)
+                                 (do-shell-substitution x)
+                                 x))
+                      argl-pre-substitution)]
+                [substitution-dones (filter shell-substitution-done?
+                                            argl-with-substitution-dones)]
+                [_set!-subs (set! done-substitutions
+                                  (append substitution-dones
+                                          done-substitutions))]
+                [argl (map (λ (x) (if (shell-substitution-done? x)
+                                      (shell-substitution-done-argument x)
+                                      x))
+                           argl-with-substitution-dones)]
                 [success-pred* (pipeline-member-spec-success-pred m)]
                 [success-pred (cond [(list? success-pred*)
                                      (λ (v) (or (equal? 0 v)
@@ -743,6 +779,7 @@
   (define r1-members (reverse r1-members-rev))
   (define err-port-copy-threads (reverse err-port-copy-threads-rev))
 
+
   (define (run-func-members members)
     (for/fold ([m-outs '()])
               ([m members]
@@ -766,7 +803,21 @@
                                      (λ (v) (member v success-pred*))]
                                     [(procedure? success-pred*) success-pred*]
                                     [else #f])]
-                [argl (pipeline-member-spec-argl m)])
+                [argl-pre-substitution (pipeline-member-spec-argl m)]
+                [argl-with-substitution-dones
+                 (map (λ (x) (if (shell-substitution? x)
+                                 (do-shell-substitution x)
+                                 x))
+                      argl-pre-substitution)]
+                [substitution-dones (filter shell-substitution-done?
+                                            argl-with-substitution-dones)]
+                [_set!-subs (set! done-substitutions
+                                  (append substitution-dones
+                                          done-substitutions))]
+                [argl (map (λ (x) (if (shell-substitution-done? x)
+                                      (shell-substitution-done-argument x)
+                                      x))
+                           argl-with-substitution-dones)])
            (let-values ([(to-use to-ret)
                          (cond
                            [prev-is-running? (values (pmi-port-from prev) #f)]
@@ -790,22 +841,21 @@
                                     [current-error-port (if (equal? err-use 'stdout)
                                                             from-use
                                                             err-use)])
-                       (thread (mk-run-thunk m err-box ret-box)))]
+                       (thread (mk-run-thunk m argl err-box ret-box)))]
                     [ret-member (pmi to-ret from-ret err-ret
                                      ret-thread ret-box err-box argl
                                      capture-err success-pred)])
                (cons ret-member m-outs))))]
         [else (cons m m-outs)])))
 
-  (define (mk-run-thunk m-spec err-box ret-box)
+  (define (mk-run-thunk m-spec argl err-box ret-box)
     (λ ()
       (with-handlers
         ([(λ (exn) #t)
           (λ (exn)
             (set-box! err-box exn)
             (eprintf "~a\n" (exn->string exn)))])
-        (let* ([argl (pipeline-member-spec-argl m-spec)]
-               [thread-ret (apply (car argl) (cdr argl))])
+        (let* ([thread-ret (apply (car argl) (cdr argl))])
           (set-box! ret-box thread-ret)))
       (close-input-port (current-input-port))
       (close-output-port (current-output-port))
@@ -827,7 +877,8 @@
      (pmi-success-pred m)))
 
   (define out-members (map finalize-member r2-members))
-  (list out-members to-port from-port err-port-copy-threads))
+  (list out-members to-port from-port err-port-copy-threads
+        done-substitutions))
 
 
 ;;;; Misc funcs ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

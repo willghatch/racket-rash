@@ -166,6 +166,17 @@
        )))
 
 
+   (define (make-test-substitution-with-box)
+     (define b (box #f))
+     (define sub
+       (shell-substitution (λ () (hash 'argument "test-sub-string"
+                                       'pipeline-done-procedure (λ (pline)
+                                                                  (set! b pline))))))
+     (values sub box))
+   (define-values (sub1 sub1-box) (make-test-substitution-with-box))
+   (check-equal? (run-subprocess-pipeline/out (list my-echo sub1))
+                 "test-sub-string\n")
+   (check-not-false sub1-box)
 
   )
 
@@ -190,5 +201,18 @@
                        '(grep define)
                        `(,my-grep pipeline)
                        '(wc -l)))))
+
+
+   (define (make-test-substitution-with-box)
+     (define b (box #f))
+     (define sub
+       (shell-substitution (λ () (hash 'argument "test-sub-string"
+                                       'pipeline-done-procedure (λ (pline)
+                                                                  (set! b pline))))))
+     (values sub box))
+   (define-values (sub1 sub1-box) (make-test-substitution-with-box))
+   (check-equal? (run-subprocess-pipeline/out (list 'echo sub1))
+                 "test-sub-string\n")
+   (check-not-false sub1-box)
 
   )

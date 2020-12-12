@@ -35,6 +35,8 @@
           (->* (path-string-symbol?)
                (#:exists (or/c 'error 'append 'truncate))
                file-redirection-spec?)]
+
+  [shell-substitution (-> (-> shell-substitution-hash?) shell-substitution?)]
   )
 
 
@@ -45,6 +47,7 @@
  stdout-redirect
  stderr-redirect
 
+ shell-substitution?
 
  ;; These ones are not really for public consumption.
  special-redirect-type
@@ -53,6 +56,13 @@
  file-redirection-spec?
  file-redirection-spec-file
  file-redirection-spec-exists-flag
+
+ shell-substitution-thunk
+ do-shell-substitution
+ shell-substitution-done
+ shell-substitution-done?
+ shell-substitution-done-argument
+ shell-substitution-done-pipeline-done-procedure
 
  )
 
@@ -103,3 +113,24 @@
 (define stdout-redirect (special-redirect 'stdout))
 ;; TODO - this one is not supported at all, but it should be (by output ports).
 (define stderr-redirect (special-redirect 'stderr))
+
+(struct shell-substitution
+  ;; substitution-thunk must return a hash table with keys:
+  ;; required:
+  ;; 'argument : the string to send to `subprocess`
+  ;; optional:
+  ;; 'pipeline-done-procedure : a procedure (-> subprocess-pipeline? any/c) that can do cleanup for the substitution, such as delete a temporary file, named pipe, etc.
+  (thunk))
+
+(define (shell-substitution-hash? v)
+  (and (hash? v)
+       (hash-has-key? v 'argument)
+       (let ([pdp (hash-ref v 'pipeline-done-procedure #f)])
+         (or (not pdp) (and (procedure? pdp) (procedure-arity-includes? pdp 1))))))
+(struct shell-substitution-done (argument pipeline-done-procedure))
+(define (do-shell-substitution sub)
+  (define sub-thunk (shell-substitution-thunk sub))
+  (define result (sub-thunk))
+  (shell-substitution-done (hash-ref result 'argument)
+                           (hash-ref result 'pipeline-done-procedure)))
+

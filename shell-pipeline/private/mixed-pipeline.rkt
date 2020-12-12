@@ -62,6 +62,8 @@
  stdout-redirect
  stderr-redirect
 
+ shell-substitution
+ shell-substitution?
  )
 
 
