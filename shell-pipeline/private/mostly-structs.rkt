@@ -62,7 +62,7 @@
  shell-substitution-done
  shell-substitution-done?
  shell-substitution-done-argument
- shell-substitution-done-pipeline-done-procedure
+ shell-substitution-done-pipeline-done-procedures
 
  )
 
@@ -127,10 +127,16 @@
        (hash-has-key? v 'argument)
        (let ([pdp (hash-ref v 'pipeline-done-procedure #f)])
          (or (not pdp) (and (procedure? pdp) (procedure-arity-includes? pdp 1))))))
-(struct shell-substitution-done (argument pipeline-done-procedure))
-(define (do-shell-substitution sub)
-  (define sub-thunk (shell-substitution-thunk sub))
-  (define result (sub-thunk))
-  (shell-substitution-done (hash-ref result 'argument)
-                           (hash-ref result 'pipeline-done-procedure)))
+(struct shell-substitution-done (argument pipeline-done-procedures))
+(define (do-shell-substitution substitution)
+  (define (rec sub done-procs)
+    (define sub-thunk (shell-substitution-thunk sub))
+    (define result (sub-thunk))
+    (define arg (hash-ref result 'argument))
+    (define done-proc (hash-ref result 'pipeline-done-procedure #f))
+    (define new-done-procs (if done-proc (cons done-proc done-procs) done-procs))
+    (if (shell-substitution? arg)
+        (rec arg new-done-procs)
+        (shell-substitution-done (hash-ref result 'argument) new-done-procs)))
+  (rec substitution '()))
 

@@ -184,7 +184,7 @@ This procedure provides user-defined substitutions.
 The thunk must return a @racket[hash?] with the following keys:
 Required keys:
 @itemlist[
-@item{@racket['argument] - the string that will replace the substitution object when running a subprocess pipeline.}
+@item{@racket['argument] - the thing that will replace the substitution object when running a subprocess pipeline.  This should generally be a string.  If it's another substitution its thunk will be executed recursively.}
 ]
 
 Optional keys:

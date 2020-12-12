@@ -163,7 +163,7 @@
              [sub-string (shell-substitution-done-argument sub-done)])
         (shell-substitution-done
          (resolve-command-path sub-string)
-         (shell-substitution-done-pipeline-done-procedure sub-done)))
+         (shell-substitution-done-pipeline-done-procedures sub-done)))
       (let ([pathstr (if (path? cmd) cmd (~a cmd))])
         (or (find-executable-path pathstr)
             (and (equal? 'windows (system-type 'os))
@@ -668,13 +668,14 @@
                     (when (not (equal? strictness 'strict))
                       (pipeline-kill pline))
                     (for ([done-sub done-substitutions])
-                      (define proc
-                        (shell-substitution-done-pipeline-done-procedure done-sub))
-                      (with-handlers ([(λ (e) #t)
-                                       ;; TODO - there should be a way to log
-                                       ;; exceptions in substitution cleanup functions.
-                                       (λ (e) (void))])
-                        (proc pline)))
+                      (define procs
+                        (shell-substitution-done-pipeline-done-procedures done-sub))
+                      (for ([proc procs])
+                        (with-handlers ([(λ (e) #t)
+                                         ;; TODO - there should be a way to log
+                                         ;; exceptions in substitution cleanup functions.
+                                         (λ (e) (void))])
+                          (proc pline))))
                     (set-box! end-time-box
                               (current-inexact-milliseconds))))]
          [pline-final (struct-copy pipeline pline [cleaner cleanup-thread])])

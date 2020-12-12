@@ -1,6 +1,17 @@
 #lang racket/base
+(provide
+ input-port-to-named-pipe-substitution
+ with-output-to-named-pipe-substitution
+ )
 
-(require shell/pipeline)
+(require
+ shell/pipeline
+ basedir
+ racket/format
+ racket/random
+ racket/file
+ racket/port
+ )
 
 #|
 What are some good substitution ideas?
@@ -19,3 +30,39 @@ What are some good substitution ideas?
 • host-name/ip-address substitution (to a temporary virtual machine, maybe?)
 • Any other resource that you might pass a reference of to a subprocess.
 |#
+
+(define (random-name-for-temporary-file)
+  ;; Get a sufficiently random name that collisions should statistically never happen.
+  (string->immutable-string
+   (format "tmp-file_~a"
+           (apply string-append
+                  (for/list ([b (crypto-random-bytes 32)])
+                    (~r b #:base 16 #:min-width 2 #:pad-string "0"))))))
+
+(define (input-port-to-named-pipe-substitution ip)
+  (shell-substitution
+   (λ ()
+     (define tmp-file (writable-runtime-file (random-name-for-temporary-file)))
+     (make-parent-directory* tmp-file)
+     (run-subprocess-pipeline `(mkfifo --mode 700 ,tmp-file))
+     (define tmp-file-port (open-output-file tmp-file #:exists 'append))
+     (thread (λ ()
+               (copy-port ip tmp-file-port)
+               (close-output-port tmp-file-port)))
+     (hash 'argument tmp-file
+           'pipeline-done-procedure (λ (pline)
+                                      (close-output-port tmp-file-port)
+                                      (delete-file tmp-file))))))
+
+(define (with-output-to-named-pipe-substitution thunk)
+  (shell-substitution
+   (λ ()
+     (define-values (in out) (make-pipe))
+     (thread
+      (λ ()
+        (parameterize ([current-output-port out])
+          (thunk)
+          (close-output-port out))))
+     (hash 'argument (input-port-to-named-pipe-substitution in)))))
+
+;; TODO - pipeline input/output substitution where we actually get the path to the file descriptor of stdin/stdout rather than going through a named pipe.
