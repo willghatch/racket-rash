@@ -138,11 +138,12 @@
    (check-exn
     (λ (e)
       (and
+       (exn:fail:subprocess-pipeline? e)
        (string-contains?
-        (exn->string e)
+        (exn:fail:subprocess-pipeline-captured-stderr e)
         p+ep-err-str)
        (not (string-contains?
-             (exn->string e)
+             (exn:fail:subprocess-pipeline-captured-stderr e)
              (string-append p+ep-err-str p+ep-err-str)))))
     (λ ()
       (run-subprocess-pipeline/out
@@ -153,11 +154,12 @@
    (check-exn
     (λ (e)
       (and
+       (exn:fail:subprocess-pipeline? e)
        (string-contains?
-        (exn->string e)
+        (exn:fail:subprocess-pipeline-captured-stderr e)
         p+ep-err-str)
        (string-contains?
-        (exn->string e)
+        (exn:fail:subprocess-pipeline-captured-stderr e)
         (string-append p+ep-err-str p+ep-err-str))))
     (λ ()
       (run-subprocess-pipeline/out

@@ -62,6 +62,10 @@
  stdout-redirect
  stderr-redirect
 
+ exn:fail:subprocess-pipeline?
+ exn:fail:subprocess-pipeline-return
+ exn:fail:subprocess-pipeline-captured-stderr
+
  )
 
 
@@ -117,17 +121,11 @@
          (let ([stderr (u-pipeline-error-captured-stderr seg)]
                [argl (u-pipeline-error-argl seg)]
                [status (u-pipeline-status seg)])
-           (with-handlers ([(λ _ #t) (λ (e) e)])
-             (if (and stderr (not (equal? stderr "")))
-                 (error 'run-pipeline
-                        (format
-                         "unix pipeline segment ~s terminated with code ~s.  Captured stderr:\n~a\n"
-                         argl
-                         status
-                         stderr))
-                 (error 'run-pipeline
-                        (format "unix pipeline-segment ~s terminated with code ~s\n"
-                                argl status)))))]
+           (exn:fail:subprocess-pipeline
+            (format "unix pipeline segment ~s terminated with code ~s." argl status)
+            (current-continuation-marks)
+            status
+            (u-pipeline-error-captured-stderr seg)))]
         [else (unbox (object-pipeline-member-err-box seg))]))
 
 (struct pipeline

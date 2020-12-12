@@ -100,6 +100,10 @@
  stdout-redirect
  stderr-redirect
 
+ exn:fail:subprocess-pipeline?
+ exn:fail:subprocess-pipeline-return
+ exn:fail:subprocess-pipeline-captured-stderr
+
  )
 
 (module+ resolve-command-path
@@ -478,10 +482,11 @@
          [kill (pipeline-kill pline)]
          [status (pipeline-status pline)])
     (if (not (pipeline-success? pline))
-        (error 'run-subprocess-pipeline/out
-               "unsuccessful pipeline with return ~a and stderr: ~v"
-               status
-               (pipeline-error-captured-stderr pline))
+        (raise (exn:fail:subprocess-pipeline
+                (format "Unsuccessful pipeline with return ~a." status)
+                (current-continuation-marks)
+                status
+                (pipeline-error-captured-stderr pline)))
         (get-output-string out))))
 
 #;(define (run-pipeline/return #:in [in (current-input-port)]

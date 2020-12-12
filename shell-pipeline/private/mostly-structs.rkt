@@ -54,6 +54,10 @@
  file-redirection-spec-file
  file-redirection-spec-exists-flag
 
+ exn:fail:subprocess-pipeline
+ exn:fail:subprocess-pipeline?
+ exn:fail:subprocess-pipeline-return
+ exn:fail:subprocess-pipeline-captured-stderr
  )
 
 (module+ internals
@@ -103,3 +107,7 @@
 (define stdout-redirect (special-redirect 'stdout))
 ;; TODO - this one is not supported at all, but it should be (by output ports).
 (define stderr-redirect (special-redirect 'stderr))
+
+(struct exn:fail:subprocess-pipeline exn:fail
+  (return captured-stderr)
+  #:transparent)

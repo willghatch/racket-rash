@@ -175,6 +175,17 @@ Create an object that specifies a pipeline to redirect to the given file with th
 @defthing[stderr-capture-redirect special-redirect?]{}
 @defthing[shared-stderr-capture-redirect special-redirect?]{}
 
+@defproc[(exn:fail:subprocess-pipeline? [v any/c]) bool/c]{
+Predicate for exceptions raised (eg. by @racket[run-subprocess-pipeline/out]) when a subprocess return indicated a failure.
+Usually this means a subprocess exited with a non-zero exit code, but whether an exit code is treated as an error depends on the success predicate of a given pipeline member spec.
+}
+@defproc[(exn:fail:subprocess-pipeline-return [exn exn:fail-subprocess-pipeline?]) any/c]{
+Gets the exit code of the exception.
+}
+@defproc[(exn:fail:subprocess-pipeline-captured-stderr [exn exn:fail-subprocess-pipeline?]) any/c]{
+If the pipeline was set to capture stderr (with @racket[stderr-capture-redirect]), the text is available in the exception.
+}
+
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.
 
