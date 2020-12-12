@@ -106,16 +106,13 @@
 (define-syntax (rash-expressions-begin stx)
   (syntax-parse stx
     [(_ (input output err-output default-starter line-macro) e ...)
-     #`(splicing-let ([in-eval input]
-                      [out-eval output]
-                      [err-eval err-output])
-         (splicing-with-rash-config
-          #:line-macro line-macro
-          #:starter default-starter
-          #:in in-eval
-          #:out out-eval
-          #:err err-eval
-          e ...))]))
+     #`(splicing-with-rash-config
+        #:line-macro line-macro
+        #:starter default-starter
+        #:in input
+        #:out output
+        #:err err-output
+        e ...)]))
 
 (define-for-syntax (with-rash-config* stx lm-parameterizer p-parameterizer)
   (syntax-parse stx

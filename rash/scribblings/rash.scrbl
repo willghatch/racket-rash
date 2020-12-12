@@ -424,6 +424,8 @@ This takes all the same options as @racket[rash], but doesn't take a code string
   (define-syntax my-rash
     (make-rash-transformer #:starter =basic-object-pipe=)))
 
+Note that the expressions given for default input/output/error ports are evaluated for each pipeline, and so should either be function applications that produce consistent ports (eg. @racket[current-input-port]) or some expression that gives a fresh port that you want each time.
+
 @bold{
 Unstable.
 
