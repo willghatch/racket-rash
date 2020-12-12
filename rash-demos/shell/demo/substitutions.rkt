@@ -42,6 +42,10 @@ What are some good (or at least interesting) substitution ideas?
            (apply string-append
                   (for/list ([b (crypto-random-bytes 32)])
                     (~r b #:base 16 #:min-width 2 #:pad-string "0"))))))
+
+(module+ random-name-for-temporary-file
+  (provide random-name-for-temporary-file))
+
 (define (mk-temp-fifo)
   (define tmp-file (writable-runtime-file (random-name-for-temporary-file)))
   (make-parent-directory* tmp-file)
