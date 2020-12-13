@@ -175,35 +175,6 @@ Create an object that specifies a pipeline to redirect to the given file with th
 @defthing[stderr-capture-redirect special-redirect?]{}
 @defthing[shared-stderr-capture-redirect special-redirect?]{}
 
-@defproc[(shell-substitution [thunk (-> hash?)]) shell-substitution?]{
-Creates a substitution for subprocess pipeline member specs.
-Shell substitutions may be used to pass names to a subprocess that identify procedurally generated things of one kind or another.
-For example, Bash and similar shells include @tt{<(some-pipeline)} as a substitution that replaces the @tt{<()} form with the path to a named pipe in the file system that is connected to the output of @tt{some-pipeline}.
-This procedure provides user-defined substitutions.
-
-The thunk must return a @racket[hash?] with the following keys:
-Required keys:
-@itemlist[
-@item{@racket['argument] - the thing that will replace the substitution object when running a subprocess pipeline.  This should generally be a string.  If it's another substitution its thunk will be executed recursively.}
-]
-
-Optional keys:
-@itemlist[
-@item{@racket['pipeline-done-procedure] - a procedure of one argument (the pipeline object).  This procedure will be run when the pipeline terminates, and may be used to clean up.  For example, a substitution that creates a temporary file may delete it.}
-]
-
-@emph{Not stable.}
-I'm not committing to this API yet.
-
-Note: there is actually no guarantee that @racket['pipeline-done-procedure]s will ever run.
-In particular, if a program is aborted or crashes before the relevant pipeline finishes, the procedures will not be run.
-So don't rely on them for anything security critical.
-At the moment with substitutions I've tried, the consequence is that you are left with extra unnecessary named pipes, sockets, etc in a temporary directory.
-But don't rely on this for any important property.
-}
-@defproc[(shell-substitution? [v any/c]) bool/c]{
-Predicate for shell substitutions.
-}
 
 @defproc[(shellify [func procedure?]) procedure?]{
 Convenience function for putting Racket functions into pipelines.
@@ -259,3 +230,140 @@ Like @racket[or], but only treats pipeline objects as truthy if they pass @racke
 
 @bold{This is not stable.}
 }
+
+@subsection{Substitution}
+
+Most shells have various “substitutions”, where an argument to a procedure is replaced.
+For example, Bash and friends have “process substitution”, via @tt{<()} and @tt{>()}, which replaces the pipeline in the parentheses with a path to a named pipe or file descriptor for the stdin/stdout of the running pipeline.
+Since Rash is fully programmable, users can easily compute whatever they want for any argument -- fully programmable substitutions anywhere!
+However, many substitutions, such as substitutions that create a named pipe, it's nice to have automatic cleanup after a pipeline is finished so those temporary resources don't hang around in the file system.
+
+The @racket[shell-substitution] function creates a “substitution” that can have automatic cleanup when the pipeline finishes.
+This way, users can substitute references to arbitrary temporary resources that have automatic cleanup.
+
+@defproc[(shell-substitution [thunk (-> hash?)]) shell-substitution?]{
+Creates a substitution for subprocess pipeline member specs.
+Shell substitutions may be used to pass names to a subprocess that identify procedurally generated things of one kind or another.
+For example, Bash and similar shells include @tt{<(some-pipeline)} as a substitution that replaces the @tt{<()} form with the path to a named pipe in the file system that is connected to the output of @tt{some-pipeline}.
+This procedure provides user-defined substitutions.
+
+The thunk must return a @racket[hash?] with the following keys:
+Required keys:
+@itemlist[
+@item{@racket['argument] - the thing that will replace the substitution object when running a subprocess pipeline.  This should generally be a string.  If it's another substitution its thunk will be executed recursively.}
+]
+
+Optional keys:
+@itemlist[
+@item{@racket['pipeline-done-procedure] - a procedure of one argument (the pipeline object).  This procedure will be run when the pipeline terminates, and may be used to clean up.  For example, a substitution that creates a temporary file may delete it.}
+]
+
+@emph{Not stable.}
+I'm not committing to this API yet.
+
+Note: there is actually no guarantee that @racket['pipeline-done-procedure]s will ever run.
+In particular, if a program is aborted or crashes before the relevant pipeline finishes, the procedures will not be run.
+So don't rely on them for anything security critical.
+At the moment with substitutions I've tried, the consequence is that you are left with extra unnecessary named pipes, sockets, etc in a temporary directory.
+But don't rely on this for any important property.
+}
+@defproc[(shell-substitution? [v any/c]) bool/c]{
+Predicate for shell substitutions.
+}
+
+@subsubsection{Demo Substitutions}
+I've written some demo substitutions.
+At some point some substitutions should go into the “standard library” of Rash, but as always I don't like commitment.
+Let me know if you really want one and we can add useful substitutions to the “standard library”.
+But for now these are in the rash-demos package.
+
+They are all @emph{unstable}!
+
+@; TODO - I should separate the documentation into a separate package, then I can just document everything together easily.
+These are in @tt{shell/demo/substitutions}
+@itemlist[
+@item{
+@tt{with-output-to-named-pipe-substitution} -- basically a slightly generalized @tt{<()} from bash.
+It takes a thunk (that perhaps runs a pipeline), parameterizes the @racket[current-output-port] of the execution to a named pipe.
+The name of the pipe is provided to the subprocess.
+Example:
+@racketblock[
+             (require shell/demo/substitutions)
+             (run-subprocess-pipeline
+              `(cat ,(with-output-to-named-pipe-substitution
+                       (λ () (printf "hello\n")))))
+             ]
+}
+
+@item{
+@tt{with-input-from-named-pipe-substitution} -- basically a slightly generalized @tt{>()} from bash.
+It takes a thunk (that perhaps runs a pipeline), parameterizes the @racket[current-input-port] of the execution to a named pipe.
+The name of the pipe is provided to the subprocess.
+This substitution is really not very useful.
+Frankly, I've @emph{never} used this (or its bash equivalent @tt{>()}).
+Most programs that write out to a file replace that file rather than appending to it, so many places you might think to use it don't even work.
+However, some people think a shell can't be complete without it.
+So I wrote it.
+Example:
+@racketblock[
+             (require shell/demo/substitutions)
+             (run-subprocess-pipeline
+              `(echo hello)
+              `(tee ,(with-input-from-named-pipe-substitution
+                       (λ () (run-subprocess-pipeline '(md5sum -))))))
+             ]
+}
+
+@item{
+@tt{input-port-to-named-pipe-substitution} -- sends the contents of an arbitrary input port to a temporary named pipe, gives that name to the subprocess.
+}
+@item{
+@tt{output-port-to-named-pipe-substitution} -- gives the name of a temporary named pipe to a subprocess, piping the output of that named pipe to the given output port.
+}
+]
+
+This is in @tt{shell/demo/closure-substitution}:
+@itemlist[
+@item{@tt{closure-substitution} -- takes an arbitrary Racket procedure, gives to the subprocess the name of a temporary script that it generates.
+The substitution creates a thread that listens on a temporary unix domain socket, and the temporary script creates connections to that socket.
+The procedure is passed any command line arguments that the script receives, and its execution is @racket[parameterize]d so that @racket[current-input-port] and @racket[current-output-port] are the input and output of the script.
+
+Note that the procedure will only receive input if the optional argument @racket[#:read-stdin?] is true.
+
+Example:
+@racketblock[
+             (require shell/demo/closure-substitution)
+             (define my-proc
+               (let ([x 'local-variable])
+                 (λ (file-name)
+                   (printf "file-name: ~v\n" file-name)
+                   (printf "closed over x: ~v\n" x))))
+             (run-pipeline
+              `(find /bin -type f -exec ,(closure-substitution my-proc) "{}" ";"))
+             ]
+
+So now you can pass Racket functions to @tt{find -exec}.
+Thanks to Alexis King for suggesting this substitution.
+}
+]
+
+
+@subsubsection{Potential Substitutions}
+
+Besides the demo substitutions, you could imagine substitutions that pass a subrocess references to any kind of temporary resource.
+(I haven't implemented these, and many of them are of dubious value.  But these are all possible in Rash, unlike your other favorite shell.)
+
+@itemlist[
+@item{Temporary file substitution -- pass a process a temporary file to read or write, clean it up when it's done.}
+@item{Temporary directory substitution -- pass a process a temporary directory to muck about it, clean it up when it's done.}
+@item{File system substitution -- pass a process a reference to a temporary mount point, unmount the file system when the pipeline is finished.  This could actually be useful with various kinds of virtual file systems via FUSE.  Maybe this can make up just a tiny bit for Unix not having good per-process file system namespaces like Plan 9?}
+@item{User/group substitution -- for scripts that run as root, pass @tt{sudo} a user/group name/id that's been generated just for the execution of one program, and clean up the user/group after execution.}
+@item{URL substitution -- pass a URL that you've just generated to a local web server, stop the web server after the pipeline is done.}
+@item{Virtual block file substitution.  You know you want this.}
+@item{Symbolic link substitution.  Or maybe hard link substitution.  Or maybe you're on Windows and you want Junction substitution.  }
+@item{Host name / IP address substitution.  Send @tt{ssh} the name of a temporary VM you automatically spin up for a single execution.}
+]
+
+I don't know when or why you would want most of these.
+But the point is you can do this as a user without me extending the core shell language, or even against my wishes for such substitutions to exist.
+
