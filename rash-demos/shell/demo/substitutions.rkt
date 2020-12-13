@@ -19,21 +19,6 @@
  racket/port
  )
 
-#|
-What are some good (or at least interesting) substitution ideas?
-• “process substitution”, IE sub-pipeline output to named pipe substitution, a la <() and >() in Bash and friends.
-• pipeline stdout substitution (a la `$()` in bash, already covered effectively with #{}, though, since it needs no cleanup.)
-• closure substitution (idea originally from Alexis King -- give the subprocess the name of a temporary script that opens a socket to a fresh thread in the rash script that executes the given procedure on the argv and stdin, setting `current-output-port` and `current-error-port` to something that communicates over the socket).
-• temporary file substitution (IE just make a temporary file, pass the name of that file, then clean it up when the pipeline is over).
-• temporary directory substitution.
-• temporary file system substitution (IE mount a file system at a temporary directory path, pass that path to the pipeline, umount after pipeline exit.  This could actually be useful given various FUSE programmatic file systems.)
-• user/group substitution (IE as root, create a temporary user/group and pass its UID/GID to the process).  Eg. you could pass this to `sudo` to run a command as a fresh user.  I don't know why you would want to do this, though.
-• http url substitution using the web server (this one is really dumb, but, hey, it's doable).
-• temporary virtual block file substitution
-• temporary symlink substitution
-• host-name/ip-address substitution (to a temporary virtual machine, maybe?)
-• Any other resource that you might pass a reference of to a subprocess.
-|#
 
 (define (random-name-for-temporary-file)
   ;; Get a sufficiently random name that collisions should statistically never happen.
