@@ -12,6 +12,8 @@
                "racket-doc"
                "rackunit-lib"
                "readline-lib"
+               ;; for closure substitution
+               "unix-socket-lib"
                ;; for the make demo
                "make"
                ;; for csv-file->dicts in demo/setup
