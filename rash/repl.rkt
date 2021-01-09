@@ -55,7 +55,6 @@
   ;;        (eg. by closing a terminal), then it keeps running to completion
   ;;        unless it independently detects eg. its controlling terminal is dead.
   (when save-readline-history!
-    (eprintf "saving readline history\n")
     (save-readline-history!)))
 (define (clean/exit)
   (cleanup!)
