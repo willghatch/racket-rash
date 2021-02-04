@@ -173,7 +173,7 @@ Rash is primarily a combination of two libraries --
 which will explain the details of the line-oriented concrete syntax, and the
 @secref["pipeline-macro" #:doc '(lib "shell/scribblings/shell-pipeline.scrbl")],
 which will explain the details of the @racket[run-pipeline] macro and pipeline operators.
-You should read their documentation as well if you want a more thorough understanding or Rash.
+You should read their documentation as well if you want a more thorough understanding of Rash.
 
 What else belongs in a quick overview?  Pipelines with failure codes don't fail silently -- they raise exceptions.  More fine-grained behavior can be configured per-pipeline, or using aliases (eg. whether other exit codes besides 0 are successful, whether to check for success in subprocesses in the middle of a pipeline, etc).  There are probably more things I should say.  But probably the best way forward from here is to read the @racket[run-pipeline] macro documentation.
 
