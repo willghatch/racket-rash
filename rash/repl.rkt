@@ -197,17 +197,15 @@
 
   (current-namespace repl-namespace)
 
-  (for ([rcfile (list-config-files #:program "rash" "rashrc.rkt")])
-    (with-handlers ([(λ _ #t) (λ (ex)
-                                (eprintf "error in rc file ~a: ~a"
-                                         rcfile (exn->string ex)))])
-      (eval-rashrc.rkt rcfile)))
-  (for ([rcfile (list-config-files #:program "rash" "rashrc")])
-    (with-handlers ([(λ _ #t) (λ (ex)
-                                (eprintf "error in rc file ~a: ~a"
-                                         rcfile (exn->string ex)))])
-      (eval-rashrc rcfile)))
+  (define (eval-rash-file eval-fun fname)
+    (for ([rcfile (list-config-files #:program "rash" fname)])
+      (with-handlers ([(λ _ #t) (λ (ex)
+                                  (eprintf "error in rc file ~a: ~a"
+                                           rcfile (exn->string ex)))])
+        (eval-fun rcfile))))
 
+  (eval-rash-file eval-rashrc.rkt "rashrc.rkt")
+  (eval-rash-file eval-rashrc "rashrc")
   (eval '(repl-display-startup-hint))
 
   (rash-repl (void) 0 input-port-for-repl)
