@@ -16,6 +16,7 @@ rash/prompt-helpers/string-style
 rash/prompt-helpers/git-info
 racket/contract/base
 rash
+basedir
 @;(only-in rash/demo/setup in-dir =map= =filter= =foldl=)
 (except-in racket/base _ do)
 racket/port
@@ -496,6 +497,8 @@ Note that in the repl the default input/output/error-output are to the stdin/out
 
 The repl can be customized with rc files.
 First, if $HOME/.config/rash/rashrc.rkt exists, it is required at the top level of the REPL.  Then, if $HOME/.config/rash/rashrc (note the lack of .rkt) exists, it is evaluated at the top level more or less as if typed in (much like rc files for bash and friends).  Note that @tt{rashrc.rkt} files are modules, can be in any #lang, and get all the normal and good compilation guarantees that Racket modules enjoy.  @tt{rashrc} is NOT a module, and gets none of them.  @tt{rashrc} is mainly there to let you muck up the namespace that you use interactively.  Prefer @tt{rashrc.rkt}.
+
+Actually, the rc files are found using @racket[list-config-files].  You can read its docs for specifics, but the gist is that it depends on the value of the @tt{XDG_CONFIG_HOME} and @tt{XDG_CONFIG_DIRS} environment variables.  But @tt{$HOME/.config/rash/rashrc} is the default on Unix.
 
 Note that “the top-level is hopeless”.  This applies to the Rash REPL as well as @tt{rashrc} files.  But the hopelessness is mostly to do with defining macros, particularly complicated macros such as mutually recursive or macro-defining macros.  So the hopelessness doesn't affect the types of things most people are likely to do in a shell.  But if you don't remember that, you might put “hopeless” things in a @tt{rashrc} file.  Don't.  Put it in a module like @tt{rashrc.rkt} (or any other module or library you make).  (For more hopelessness, see @hyperlink["https://gist.github.com/samth/3083053"]{this}.)
 
