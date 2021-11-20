@@ -44,7 +44,7 @@
   (string-replace
    (string-replace
     (string-replace
-     (string-replace str "*" "\\*")
+     (string-replace (format "~a" str) "*" "\\*")
      "?" "\\?")
     "{" "\\{")
    "}" "\\}")
