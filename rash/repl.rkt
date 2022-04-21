@@ -60,8 +60,14 @@
   (cleanup!)
   (exit))
 
+(define (repl-read input-port)
+  (linea-read-syntax (object-name input-port) input-port))
 
-(define (rash-repl last-ret-val n input-port)
+(define (rash-repl last-ret-val n input-port expeditor-read)
+  (define read-func
+    (if expeditor-read
+        expeditor-read
+        (λ () (list (repl-read input-port)))))
   (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                   [exn:break:terminate? (λ (e) (clean/exit))]
                   [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
@@ -71,22 +77,35 @@
   (flush-output (current-output-port))
   (flush-output (current-error-port))
   (set-box! cwd-hack-box (current-directory))
-  (let* ([next-input (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
-                                     [exn:break:terminate? (λ (e) (clean/exit))]
-                                     [exn? (λ (e) (eprintf "~a\n" e)
+  (let* ([next-inputs (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
+                                      [exn:break:terminate? (λ (e) (clean/exit))]
+                                      [exn? (λ (e) (eprintf "~a\n" e)
                                               #`(void))])
-                       (linea-read-syntax (object-name input-port)
-                                          input-port))]
-         [exit? (if (equal? next-input eof) (clean/exit) #f)])
-    (let* ([ret-val-list
-            (call-with-values
-             (λ () (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
-                                   [exn:break:terminate? (λ (e) (clean/exit))]
-                                   [(λ (e) #t) (λ (e) e)])
-                     (repl-eval next-input)))
-             list)]
-           [ret-val (if (equal? (length ret-val-list)
-                                1)
+                        (read-func))]
+         [exit? (if (or (eof-object? next-inputs)
+                        (null? next-inputs))
+                    (clean/exit)
+                    #f)])
+    (let* ([eval-1
+            (λ (one-stx)
+              (call-with-values
+               (λ () (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
+                                     [exn:break:terminate? (λ (e) (clean/exit))]
+                                     [(λ (e) #t) (λ (e) e)])
+                       (repl-eval one-stx)))
+               list))]
+           [ret-val-list-list
+            (for/list ([next-input next-inputs])
+              (if (eof-object? next-input)
+                  (clean/exit)
+                  (eval-1 next-input)))]
+           [ret-val-list (map (λ (ret-val-list)
+                                (if (equal? (length ret-val-list)
+                                            1)
+                                    (car ret-val-list)
+                                    ret-val-list))
+                              ret-val-list-list)]
+           [ret-val (if (equal? (length ret-val-list) 1)
                         (car ret-val-list)
                         ret-val-list)]
            [new-n (add1 n)])
@@ -96,7 +115,7 @@
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
       ;; to be able to output before the next prompt.
       (sleep 0.01)
-      (rash-repl ret-val new-n input-port))))
+      (rash-repl ret-val new-n input-port expeditor-read))))
 
 (define (repl-eval stx #:splice [splice #f])
   (eval-syntax
@@ -214,10 +233,12 @@
   (eval-rash-file eval-rashrc "rashrc")
   (eval '(repl-display-startup-hint))
 
-  (rash-repl (void) 0 input-port-for-repl)
+  (rash-repl (void) 0 input-port-for-repl #f)
 
   (printf "and now exiting for some reason\n")
   (clean/exit))
 
 (module+ main
   (main))
+(module+ _out-for-expeditor
+  (provide rash-repl repl-read))
