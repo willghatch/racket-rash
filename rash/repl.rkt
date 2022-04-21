@@ -128,6 +128,7 @@
 
 (define (main)
   (define use-readline? (not (equal? (system-type 'os) 'windows)))
+  (define readline-persistent-history? #t)
   (define (cmdline-bool->bool b)
     (match (string-downcase b)
       ["true" #t]
@@ -143,6 +144,10 @@
    ["--readline" readline?
                  "use readline (true or false)"
                  (set! use-readline? (cmdline-bool->bool readline?))]
+   ["--readline-persistent-history" persistent-history?
+                 "persist history for readline (true or false)"
+                 (set! readline-persistent-history?
+                       (cmdline-bool->bool persistent-history?))]
    )
 
   (define input-port-for-repl (current-input-port))
@@ -177,20 +182,21 @@
       (define history-add (dynamic-require 'readline/readline 'add-history))
       (define get-preference (dynamic-require 'racket/file 'get-preference))
       (define put-preferences (dynamic-require 'racket/file 'put-preferences))
-      (for ([i (in-range (history-length))])
-        (history-delete 0))
-      (define rash-readline-input-history
-        (get-preference 'rash:repl:readline-input-history (λ () null)))
-      (for ([h rash-readline-input-history])
-        (history-add h))
-      (set! save-readline-history!
-            (λ ()
-              ;; TODO - I should trim this to a maximum length.
-              (define rash-history
-                (for/list ([i (in-range (history-length))])
-                  (history-get i)))
-              (put-preferences '(rash:repl:readline-input-history)
-                               (list rash-history))))))
+      (when readline-persistent-history?
+        (for ([i (in-range (history-length))])
+          (history-delete 0))
+        (define rash-readline-input-history
+          (get-preference 'rash:repl:readline-input-history (λ () null)))
+        (for ([h rash-readline-input-history])
+          (history-add h))
+        (set! save-readline-history!
+              (λ ()
+                ;; TODO - I should trim this to a maximum length.
+                (define rash-history
+                  (for/list ([i (in-range (history-length))])
+                    (history-get i)))
+                (put-preferences '(rash:repl:readline-input-history)
+                                 (list rash-history)))))))
 
   (port-count-lines! (current-input-port))
   (putenv "SHELL" "rash-repl")
