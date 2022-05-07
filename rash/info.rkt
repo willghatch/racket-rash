@@ -13,6 +13,7 @@
                "racket-doc"
                "rackunit-lib"
                "readline-lib"
+               "expeditor-lib"
                ))
 
 (define test-omit-paths '("demo/use-make-dumb-example.rkt"))
