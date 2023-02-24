@@ -23,4 +23,5 @@
 (define test-omit-paths '("demo/use-make-dumb-example.rkt"))
 
 (define version "0.2")
+(define license '(Apache-2.0 OR MIT))
 

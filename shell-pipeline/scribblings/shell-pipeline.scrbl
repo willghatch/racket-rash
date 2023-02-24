@@ -17,6 +17,5 @@ The Shell Pipeline package is one of the major components of the @hyperlink["htt
 The code is available
 @hyperlink["https://github.com/willghatch/racket-rash"]{on github}.
 
-This library is licensed under the terms of the LGPL version 3, or (at
-your option) any later version published by the Free Software
-Foundation (IE LGPL3+).
+This library is licensed under the terms of the MIT license and the
+Apache version 2.0 license, at your option.
