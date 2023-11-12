@@ -561,6 +561,8 @@ Keywords optionally given:
 
 @racket[#:last-return-index] - This increments once for every command run in the repl.  It will be 0 for the prompt before the first command.  This is the index that can be used for @racket[result-n].  The default prompt function prints the number of the result before printing the result itself.
 
+@racket[#:last-command-duration] - This parameter contains the time the last command took to execute in milliseconds. This is 0 for the prompt before the first command.
+
 @bold{
 Unstable.  I may change how this works.  But probably it actually is stable, I just don't want to commit to it yet, especially given that the entire line editor will eventually change.
 }

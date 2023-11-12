@@ -61,13 +61,14 @@
   (exit))
 
 
-(define (rash-repl last-ret-val n input-port)
+(define (rash-repl last-ret-val n last-command-duration input-port)
   (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                   [exn:break:terminate? (λ (e) (clean/exit))]
                   [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
     (option-app (prompt-f)
                 #:last-return-value last-ret-val
-                #:last-return-index n))
+                #:last-return-index n
+                #:last-command-duration last-command-duration))
   (flush-output (current-output-port))
   (flush-output (current-error-port))
   (set-box! cwd-hack-box (current-directory))
@@ -77,7 +78,8 @@
                                               #`(void))])
                        (linea-read-syntax (object-name input-port)
                                           input-port))]
-         [exit? (if (equal? next-input eof) (clean/exit) #f)])
+         [exit? (if (equal? next-input eof) (clean/exit) #f)]
+         [start-time (current-milliseconds)])
     (let* ([ret-val-list
             (call-with-values
              (λ () (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
@@ -85,6 +87,7 @@
                                    [(λ (e) #t) (λ (e) e)])
                      (repl-eval next-input)))
              list)]
+           [command-duration (- (current-milliseconds) start-time)]
            [ret-val (if (equal? (length ret-val-list)
                                 1)
                         (car ret-val-list)
@@ -96,7 +99,7 @@
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
       ;; to be able to output before the next prompt.
       (sleep 0.01)
-      (rash-repl ret-val new-n input-port))))
+      (rash-repl ret-val new-n command-duration input-port))))
 
 (define (repl-eval stx #:splice [splice #f])
   (eval-syntax
@@ -214,7 +217,7 @@
   (eval-rash-file eval-rashrc "rashrc")
   (eval '(repl-display-startup-hint))
 
-  (rash-repl (void) 0 input-port-for-repl)
+  (rash-repl (void) 0 0 input-port-for-repl)
 
   (printf "and now exiting for some reason\n")
   (clean/exit))
