@@ -113,11 +113,11 @@
                                        (map (λ (p) (build-path pstr p))
                                             (directory-list pstr))
                                        '())])
-        (map string->bytes/utf-8
-             (map (λ (p) (if (directory-exists? p)
-                             (string-append p "/")
-                             p))
-                  (map path->string (append possibles dir-exists-possibles))))))))
+
+        (map (λ (p) (if (directory-exists? p)
+                        (string-append p "/")
+                        p))
+             (map path->string (append possibles dir-exists-possibles)))))))
 
 (define (print-ret-maybe last-ret ret-number)
   (let ([str ((current-rash-top-level-print-formatter) last-ret)])
