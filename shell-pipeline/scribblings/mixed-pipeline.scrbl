@@ -4,7 +4,7 @@
 (for-label
 racket/base
 racket/contract/base
-(except-in shell/mixed-pipeline run-pipeline)
+(except-in shell/mixed-pipeline run-pipeline special-redirect? stderr-capture-redirect)
 (only-in shell/pipeline run-subprocess-pipeline
                         [pipeline? shell/pipeline/pipeline?])
 (only-in shell/pipeline-macro run-pipeline)
