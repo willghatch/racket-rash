@@ -17,6 +17,13 @@
  racket/cmdline
  racket/match
 
+ expeditor
+ (only-in expeditor/private/param
+          current-expeditor-completer
+          ee-common-identifiers)
+ (only-in syntax-color/racket-lexer racket-lexer)
+ (only-in "private/drracket-submit-predicate.rkt" submit-predicate)
+
 
  (for-syntax
   racket/base
@@ -61,7 +68,7 @@
   (exit))
 
 
-(define (rash-repl last-ret-val n last-command-duration input-port)
+(define (rash-repl last-ret-val n last-command-duration reader)
   (with-handlers ([exn:break:hang-up? (λ (e) (clean/exit))]
                   [exn:break:terminate? (λ (e) (clean/exit))]
                   [(λ _ #t) (λ (e) (eprintf "error in prompt function: ~a\n" e))])
@@ -76,8 +83,7 @@
                                      [exn:break:terminate? (λ (e) (clean/exit))]
                                      [exn? (λ (e) (eprintf "~a\n" e)
                                               #`(void))])
-                       (linea-read-syntax (object-name input-port)
-                                          input-port))]
+                       (reader))]
          [exit? (if (equal? next-input eof) (clean/exit) #f)]
          [start-time (current-milliseconds)])
     (let* ([ret-val-list
@@ -99,7 +105,7 @@
       ;; Sleep just long enough to give any filter ports (eg a highlighted stderr)
       ;; to be able to output before the next prompt.
       (sleep 0.01)
-      (rash-repl ret-val new-n command-duration input-port))))
+      (rash-repl ret-val new-n command-duration reader))))
 
 (define (repl-eval stx #:splice [splice #f])
   (eval-syntax
@@ -130,77 +136,6 @@
       (repl-eval #:splice #t stxs)))
 
 (define (main)
-  (define use-readline? (not (equal? (system-type 'os) 'windows)))
-  (define readline-persistent-history? #t)
-  (define (cmdline-bool->bool b)
-    (match (string-downcase b)
-      ["true" #t]
-      ["false" #f]
-      [else (error
-             'command-line
-             "--readline flag requires literal \"true\" or \"false\" strings")]
-      ))
-
-  (command-line
-   #:program "rash-repl"
-   #:once-each
-   ["--readline" readline?
-                 "use readline (true or false)"
-                 (set! use-readline? (cmdline-bool->bool readline?))]
-   ["--readline-persistent-history" persistent-history?
-                 "persist history for readline (true or false)"
-                 (set! readline-persistent-history?
-                       (cmdline-bool->bool persistent-history?))]
-   )
-
-  (define input-port-for-repl (current-input-port))
-  (when use-readline?
-    (let ()
-      (define pre-readline-input-port
-        (dynamic-require 'readline 'pre-readline-input-port
-                         (λ () (error 'readline-didnt-require-right))))
-      (set! input-port-for-repl (current-input-port))
-      (current-input-port pre-readline-input-port)
-
-      (define set-completion-function!
-        (dynamic-require 'readline/readline 'set-completion-function!))
-      (set-completion-function! (make-composite-completer complete-paths
-                                                          ;complete-commands
-                                                          ;complete-namespaced
-                                                          ))
-      (prompt-f
-       (dynamic-require 'rash/private/rashrc-lib 'basic-prompt))
-
-      ;;;; Input History
-      ;; The readline library automatically loads the history from the racket-prefs
-      ;; file, meaning we get the normal racket repl history.
-      ;; It also saves the old version of the history on exit to that same file
-      ;; (after potentially saving the new history as well...).
-      ;; So we will make some effort to manage the history manually.
-      ;; We will clear the history, load a different history,
-      ;; then save the history when exiting.
-      (define history-length (dynamic-require 'readline/readline 'history-length))
-      (define history-delete (dynamic-require 'readline/readline 'history-delete))
-      (define history-get (dynamic-require 'readline/readline 'history-get))
-      (define history-add (dynamic-require 'readline/readline 'add-history))
-      (define get-preference (dynamic-require 'racket/file 'get-preference))
-      (define put-preferences (dynamic-require 'racket/file 'put-preferences))
-      (when readline-persistent-history?
-        (for ([i (in-range (history-length))])
-          (history-delete 0))
-        (define rash-readline-input-history
-          (get-preference 'rash:repl:readline-input-history (λ () null)))
-        (for ([h rash-readline-input-history])
-          (history-add h))
-        (set! save-readline-history!
-              (λ ()
-                ;; TODO - I should trim this to a maximum length.
-                (define rash-history
-                  (for/list ([i (in-range (history-length))])
-                    (history-get i)))
-                (put-preferences '(rash:repl:readline-input-history)
-                                 (list rash-history)))))))
-
   (port-count-lines! (current-input-port))
   (putenv "SHELL" "rash-repl")
 
@@ -217,7 +152,27 @@
   (eval-rash-file eval-rashrc "rashrc")
   (eval '(repl-display-startup-hint))
 
-  (rash-repl (void) 0 0 input-port-for-repl)
+  ;; TODO:
+  ;; 1. persistent history?
+  ;; 2. prompt-function
+  (call-with-expeditor
+   (lambda (reader)
+     (current-expeditor-reader
+      (lambda (input-port)
+        (linea-read-syntax (object-name input-port) input-port)))
+     (current-expeditor-ready-checker
+      (lambda (input-port) (submit-predicate input-port #f)))
+     (current-expeditor-lexer racket-lexer)
+     (current-expeditor-color-enabled #t)
+     (parameterize ([current-expeditor-completer
+                     (lambda (prefix)
+                       (values (map string->symbol
+                                    ((make-composite-completer complete-paths
+                                                               complete-commands
+                                                               complete-namespaced) prefix))
+                               (ee-common-identifiers)))
+                     ])
+       (rash-repl (void) 0 0 reader))))
 
   (printf "and now exiting for some reason\n")
   (clean/exit))
